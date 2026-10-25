@@ -1,0 +1,47 @@
+name: Link Expo project
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+  setup:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo 'Add EXPO_TOKEN to GitHub Actions secrets before linking.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm run eas:setup
+      - run: npm run check
+      - run: npm run export:android
+      - name: Save public EAS project identifier
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add eas-project.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: link RoutineLog to Expo project'
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+      - name: Show project link
+        run: node scripts/project-link.mjs
