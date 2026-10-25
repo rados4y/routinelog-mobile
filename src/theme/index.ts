@@ -1,0 +1,67 @@
+import { StyleSheet } from 'react-native';
+
+export const colors = {
+  background: '#0c0e10',
+  panel: '#14171a',
+  panelSecondary: '#1a1e22',
+  border: '#2a3036',
+  text: '#f4f7f8',
+  muted: '#919aa3',
+  accent: '#7c5cff',
+  accentLight: '#b3a2ff',
+  success: '#35c46a',
+  warning: '#f2a93b',
+  danger: '#ef5b5b',
+};
+export const common = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  spread: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  grow: { flex: 1 },
+  title: {
+    color: colors.text,
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
+  subtitle: { color: colors.muted, fontSize: 14, lineHeight: 22 },
+  heading: {
+    color: colors.text,
+    fontSize: 19,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  text: { color: colors.text, fontSize: 16, lineHeight: 23 },
+  small: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  card: {
+    backgroundColor: colors.panel,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    gap: 14,
+  },
+  section: { gap: 16 },
+  field: {
+    backgroundColor: colors.panelSecondary,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 16,
+    minHeight: 50,
+  },
+  label: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+});
