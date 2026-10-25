@@ -133,6 +133,12 @@ cele tygodniowe i granice okien, pending/overdue/missed, statystyki siedmiu dni,
 repozytoria, seed, błędy zapisu, CRUD, done/skipped/undo i ponowne wczytanie.
 Brak snapshotów całych ekranów.
 
+`npm run test:e2e` sprawdza w Chromium interfejs 393×851: done/skipped/undo, historię,
+statystyki, dodawanie/edycję/usuwanie, włączanie/wyłączanie i zapis po odświeżeniu.
+Wymaga wcześniejszego `npx expo export --platform web` i przeglądarki Playwright.
+CI instaluje przeglądarkę i wykonuje te kroki automatycznie; raport błędu jest artefaktem.
+To test wersji web tej samej aplikacji React Native, nie zastępuje testu na fizycznym Androidzie.
+
 ### Android i Expo Go
 
 Użytkownik telefonu nie musi wykonywać komend. Codex uruchamia serwer Expo z tunelem

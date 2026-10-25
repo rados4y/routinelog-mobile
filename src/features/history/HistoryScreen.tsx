@@ -43,7 +43,11 @@ export function HistoryScreen() {
           />
         )}
         {entries.map((entry) => (
-          <View key={entry.id} style={common.card}>
+          <View
+            key={entry.id}
+            testID={`history-entry-${entry.id}`}
+            style={common.card}
+          >
             <View style={common.row}>
               <Text style={{ fontSize: 27 }}>{entry.routineIcon}</Text>
               <View style={common.grow}>

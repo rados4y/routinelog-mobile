@@ -7,6 +7,7 @@ test('phone-sized UI: status, history, stats, CRUD and persistence', async ({
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
   await expect(page.getByText('Twój plan dnia')).toBeVisible();
+  await page.screenshot({ path: 'test-results/today.png' });
   const medicine = page.getByTestId('occurrence-seed-1');
   await medicine.getByRole('button', { name: 'Wykonane', exact: true }).click();
   await expect(
@@ -19,11 +20,15 @@ test('phone-sized UI: status, history, stats, CRUD and persistence', async ({
   await medicine.getByRole('button', { name: 'Cofnij status' }).click();
   await medicine.getByRole('button', { name: 'Pomiń', exact: true }).click();
   await expect(medicine.getByText('Pominięte', { exact: true })).toBeVisible();
-  await page.getByText('Historia', { exact: true }).click();
-  await expect(page.getByText('Wziąć lek', { exact: true })).toBeVisible();
-  await page.getByText('Statystyki', { exact: true }).last().click();
+  await page.getByRole('tab', { name: 'Historia', exact: true }).click();
+  await expect(
+    page
+      .locator('[data-testid^="history-entry-"]')
+      .getByText('Wziąć lek', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('tab', { name: 'Statystyki', exact: true }).click();
   await expect(page.getByText('Regularność', { exact: true })).toBeVisible();
-  await page.getByText('Rutyny', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Rutyny', exact: true }).click();
   await page.getByRole('button', { name: 'Dodaj rutynę', exact: true }).click();
   await page
     .getByLabel('Nazwa rutyny', { exact: true })
