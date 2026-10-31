@@ -1,0 +1,40 @@
+name: Quality checks
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run format:check
+      - run: npx expo install --check
+      - run: npx expo config --type public
+      - run: npm run export:android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-js-bundle
+          path: dist
+          retention-days: 7
+      - name: Export web for interaction tests
+        run: npx expo export --platform web
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+      - name: Check phone-sized user flows
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-details
+          path: test-results
+          retention-days: 7

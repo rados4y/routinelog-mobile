@@ -1,0 +1,57 @@
+name: CI and EAS Update
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+  deployment-readiness:
+    needs: quality
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.ready.outputs.enabled }}
+      channel: ${{ steps.ready.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: ready
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: node scripts/deployment-readiness.mjs
+  update:
+    needs: [quality, deployment-readiness]
+    if: needs.deployment-readiness.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: eas-${{ needs.deployment-readiness.outputs.channel }}
+      cancel-in-progress: false
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_CHANNEL: ${{ needs.deployment-readiness.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify a compatible Android runtime exists
+        id: runtime
+        run: node scripts/check-runtime.mjs
+      - name: Publish compatible OTA update
+        if: steps.runtime.outputs.compatible == 'true'
+        run: eas update --channel "$EAS_CHANNEL" --environment "$EAS_CHANNEL" --platform android --message "GitHub $GITHUB_SHA" --non-interactive

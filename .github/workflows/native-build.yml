@@ -1,0 +1,39 @@
+name: Android native build
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Build profile (use only for first installation or native runtime changes)
+        type: choice
+        options: [preview, development, production]
+        default: preview
+        required: true
+permissions:
+  contents: read
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+  build:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_PROFILE: ${{ inputs.profile }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate Expo configuration
+        run: |
+          test -n "$EXPO_TOKEN" || { echo 'EXPO_TOKEN is required'; exit 1; }
+          node -e "if (!require('./eas-project.json').projectId) throw new Error('Run Link Expo project first')"
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build Android and wait for result
+        run: eas build --platform android --profile "$EAS_PROFILE" --non-interactive --wait
