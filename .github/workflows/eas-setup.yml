@@ -20,6 +20,20 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Diagnose missing Expo credential
+        if: env.EXPO_TOKEN == ''
+        env:
+          ROUTINELOG_SECRET_CONTEXT: ${{ toJSON(secrets) }}
+          ROUTINELOG_VARIABLE_CONTEXT: ${{ toJSON(vars) }}
+        run: |
+          node --input-type=module <<'NODE'
+          const secretNames = Object.keys(JSON.parse(process.env.ROUTINELOG_SECRET_CONTEXT || '{}'))
+            .filter((name) => name !== 'GITHUB_TOKEN').sort();
+          const variableNames = Object.keys(JSON.parse(process.env.ROUTINELOG_VARIABLE_CONTEXT || '{}')).sort();
+          console.log('Available Actions secret names:', JSON.stringify(secretNames));
+          console.log('Available Actions variable names:', JSON.stringify(variableNames));
+          console.log('Credential values are omitted. EXPO_TOKEN must be an Actions repository secret.');
+          NODE
       - name: Check token
         run: |
           if [ -z "$EXPO_TOKEN" ]; then

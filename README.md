@@ -155,7 +155,10 @@ z jego launchera. Nie budujemy APK dla zwykłych zmian JS.
 ## Expo / EAS bez terminala użytkownika
 
 Jedyny sekret obecnego etapu: **EXPO_TOKEN** w GitHub → Settings → Secrets and variables → Actions.
-Nie umieszczaj tokenu w plikach, issue, PR ani rozmowie. Publiczny identyfikator EAS zapisuje
+Nie umieszczaj tokenu w plikach, issue, PR ani rozmowie.
+Gdy workflow nie otrzymuje `EXPO_TOKEN`, diagnostyka pokazuje wyłącznie nazwy
+dostępnych sekretów i zmiennych Actions, aby rozpoznać pomyłkę nazwy lub zakresu.
+Wartości poświadczeń nie trafiają do diagnostyki. Publiczny identyfikator EAS zapisuje
 `eas-project.json`; opcjonalny override `EXPO_PUBLIC_EAS_PROJECT_ID` jest publiczny.
 `.env.example` nie zawiera sekretów, `.env*` są ignorowane.
 
