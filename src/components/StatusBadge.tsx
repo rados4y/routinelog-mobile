@@ -15,9 +15,7 @@ export function StatusBadge({
   status: OccurrenceStatus;
   overdue?: boolean;
 }) {
-  const info = overdue
-    ? { text: 'Po czasie', color: colors.warning }
-    : statusInfo[status];
+  const info = getStatusInfo(status, overdue);
   return (
     <Text
       style={[
@@ -28,6 +26,11 @@ export function StatusBadge({
       {info.text}
     </Text>
   );
+}
+export function getStatusInfo(status: OccurrenceStatus, overdue = false) {
+  return overdue
+    ? { text: 'Po czasie', color: colors.warning }
+    : statusInfo[status];
 }
 const styles = StyleSheet.create({
   badge: {

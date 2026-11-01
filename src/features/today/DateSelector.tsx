@@ -1,4 +1,4 @@
-import { ScrollView, Pressable, Text, StyleSheet } from 'react-native';
+import { ScrollView, Pressable, Text, StyleSheet, View } from 'react-native';
 import { addDays, calendarDate, dateLabel } from '../../domain/dates';
 import { colors } from '../../theme';
 
@@ -33,14 +33,15 @@ export function DateSelector({
             <Text style={[styles.number, date === selected && styles.light]}>
               {calendarDate(date).getDate()}
             </Text>
-            <Text
+            <View
               style={[
                 styles.dot,
-                { color: date === today ? colors.accentLight : 'transparent' },
+                {
+                  backgroundColor:
+                    date === today ? colors.accentLight : 'transparent',
+                },
               ]}
-            >
-              ●
-            </Text>
+            />
           </Pressable>
         ),
       )}
@@ -48,13 +49,14 @@ export function DateSelector({
   );
 }
 const styles = StyleSheet.create({
-  row: { gap: 9 },
+  row: { flexGrow: 1, justifyContent: 'space-between', gap: 4 },
   day: {
-    width: 48,
-    paddingVertical: 11,
+    width: 44,
+    minHeight: 54,
+    paddingVertical: 6,
     alignItems: 'center',
-    gap: 7,
-    borderRadius: 17,
+    gap: 2,
+    borderRadius: 12,
     backgroundColor: colors.panel,
     borderWidth: 1,
     borderColor: colors.border,
@@ -62,11 +64,11 @@ const styles = StyleSheet.create({
   selected: { backgroundColor: colors.accent, borderColor: colors.accent },
   weekday: {
     color: colors.muted,
-    fontSize: 11,
+    fontSize: 10,
     textTransform: 'uppercase',
     fontWeight: '600',
   },
-  number: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  number: { color: colors.text, fontSize: 18, fontWeight: '700' },
   light: { color: colors.text },
-  dot: { fontSize: 7, height: 8 },
+  dot: { width: 3, height: 3, borderRadius: 2 },
 });

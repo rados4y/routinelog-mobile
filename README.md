@@ -28,7 +28,8 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
 ## Funkcje
 
 - Dzisiaj: siedem dat wokół bieżącego dnia, podsumowanie, pierścień i pasek postępu.
-- Plan: emoji, kategoria, godzina, harmonogram, notatka; wykonaj, pomiń, cofnij.
+- Plan: kompaktowe wiersze z emoji, godziną, kategorią i harmonogramem; checkbox
+  wykonania/cofnięcia dostępny od razu. Dotknięcie wiersza rozwija notatkę i opcję pominięcia.
 - Rutyny: dodawanie, edycja, włączanie/wyłączanie i usuwanie z potwierdzeniem.
 - Harmonogramy: codziennie, Pn–Pt, wybrane dni, 3×/tydzień, raz/tydzień, co N dni,
   skróty co 7 i co 30 dni. Dzień początkowy interwału jest edytowalny.

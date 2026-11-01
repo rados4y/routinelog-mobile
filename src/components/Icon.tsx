@@ -14,6 +14,7 @@ const paths = {
   undo: 'M3 10h11a6 6 0 0 1 0 12M3 10l5-5m-5 5 5 5',
   close: 'm6 6 12 12M6 18 18 6',
   edit: 'm16 3 5 5-12 12-6 1 1-6L16 3m-3 3 5 5',
+  chevronDown: 'm6 9 6 6 6-6',
 };
 export type IconName = keyof typeof paths;
 export function Icon({

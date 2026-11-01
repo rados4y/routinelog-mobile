@@ -8,25 +8,41 @@ export function Screen({
   title,
   subtitle,
   action,
+  compact = false,
 }: {
   children: ReactNode;
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  compact?: boolean;
 }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          compact && styles.compactContent,
+        ]}
       >
         <View style={common.spread}>
           <View style={common.grow}>
-            <Text accessibilityRole="header" style={common.title}>
+            <Text
+              accessibilityRole="header"
+              style={[common.title, compact && styles.compactTitle]}
+            >
               {title}
             </Text>
             {subtitle && (
-              <Text style={[common.subtitle, styles.subtitle]}>{subtitle}</Text>
+              <Text
+                style={[
+                  common.subtitle,
+                  styles.subtitle,
+                  compact && styles.compactSubtitle,
+                ]}
+              >
+                {subtitle}
+              </Text>
             )}
           </View>
           {action}
@@ -64,6 +80,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   subtitle: { marginTop: 6 },
+  compactContent: { padding: 16, paddingTop: 12, paddingBottom: 24, gap: 12 },
+  compactTitle: { fontSize: 24, letterSpacing: -0.7 },
+  compactSubtitle: { fontSize: 12, lineHeight: 18, marginTop: 2 },
   empty: { alignItems: 'center', paddingVertical: 36 },
   emptyIcon: { fontSize: 32, color: colors.accentLight },
   center: { textAlign: 'center' },
