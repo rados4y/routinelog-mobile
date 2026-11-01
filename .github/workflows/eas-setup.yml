@@ -20,6 +20,17 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Explain missing Expo credential
+        if: env.EXPO_TOKEN == ''
+        env:
+          ROUTINELOG_EXPO_VARIABLE_PRESENT: ${{ vars.EXPO_TOKEN != '' }}
+        run: |
+          if [ "$ROUTINELOG_EXPO_VARIABLE_PRESENT" = 'true' ]; then
+            echo 'EXPO_TOKEN exists as an Actions variable. Save its value as a repository secret instead.'
+          else
+            echo 'No EXPO_TOKEN repository secret is available to this workflow.'
+          fi
+          echo 'Open https://github.com/rados4y/routinelog-mobile/settings/secrets/actions and use Repository secrets.'
       - name: Check token
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
