@@ -37,6 +37,7 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="notion" />
           <Stack.Screen
             name="routine-editor"
             options={{ presentation: 'modal' }}

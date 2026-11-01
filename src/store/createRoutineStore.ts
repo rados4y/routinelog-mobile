@@ -6,6 +6,7 @@ import { createLog } from '../domain/log';
 import type { Routine, RoutineInput, RoutineLog } from '../domain/models';
 import { createRoutine, updateRoutine } from '../domain/routine';
 import { occurrencesForDate } from '../domain/schedule';
+import type { SyncLocal } from '../data/sync';
 
 export interface RoutineState {
   routines: Routine[];
@@ -16,6 +17,8 @@ export interface RoutineState {
   error: string | null;
   load(): Promise<void>;
   clearError(): void;
+  applySyncedRoutine: SyncLocal['applyRoutine'];
+  applySyncedLog: SyncLocal['applyLog'];
   saveRoutine(input: RoutineInput, id?: string): Promise<boolean>;
   toggleRoutine(id: string): Promise<boolean>;
   deleteRoutine(id: string): Promise<boolean>;
@@ -70,6 +73,27 @@ export function createRoutineStore(
       saving: false,
       error: null,
       clearError: () => set({ error: null }),
+      applySyncedRoutine: async (expected, next) => {
+        if (!get().ready || get().saving) return false;
+        const current = get().routines.find((item) => item.id === next.id);
+        if (JSON.stringify(current) !== JSON.stringify(expected)) return false;
+        return perform(() => save(next));
+      },
+      applySyncedLog: async (expected, next, id) => {
+        if (!get().ready || get().saving) return false;
+        const current = get().logs.find((item) => item.id === id);
+        if (JSON.stringify(current) !== JSON.stringify(expected)) return false;
+        return perform(async () => {
+          if (next) await repos.logs.save(next);
+          else await repos.logs.remove(id);
+          set({
+            logs: [
+              ...get().logs.filter((item) => item.id !== id),
+              ...(next ? [next] : []),
+            ],
+          });
+        });
+      },
       load: async () => {
         if (get().loading) return;
         set({ loading: true, error: null });

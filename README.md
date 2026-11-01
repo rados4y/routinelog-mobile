@@ -1,8 +1,8 @@
 # RoutineLog
 
 Mobilny dziennik rutyn na Androida: plan dnia, elastyczne cele tygodniowe,
-zarządzanie rutynami, historia i statystyki. Pierwsza wersja działa lokalnie,
-bez konta i backendu. Interfejs jest po polsku.
+zarządzanie rutynami, historia i statystyki. Dane działają lokalnie, z opcjonalną
+dwukierunkową synchronizacją z Notion. Interfejs jest po polsku.
 
 **Current runtime: Expo Go compatible**
 
@@ -37,9 +37,12 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
 - Statystyki: ostatnie siedem dni, wykonania/pominięcia/niewykonania, regularność, wykres.
 - Seed pięciu rutyn tylko przy pierwszym uruchomieniu. Błędy odczytu nie kasują danych.
 - Loading/error/empty states, granica błędów Routera, podstawowa dostępność.
+- Notion: miesięczne tabele z dniami w wierszach i rutynami w kolumnach;
+  synchronizacja nazw, opisów, ustawień i statusów w obie strony.
 
 Godzina rutyny porządkuje plan; ta wersja **nie wysyła powiadomień**.
-Dane są na jednym urządzeniu. Odinstalowanie aplikacji lub wyczyszczenie jej danych je usuwa.
+Odinstalowanie aplikacji lub wyczyszczenie jej danych usuwa lokalny zapis.
+Instaluj aktualizację APK na istniejącą aplikację, bez jej odinstalowywania.
 
 ## Architektura
 
@@ -53,6 +56,7 @@ src/features/insights/      statystyki
 src/domain/                 modele, daty, harmonogramy, historia, statystyki
 src/data/                   repozytoria, wersjonowany zapis i seed
 src/store/                  operacje domenowe i adapter Zustand
+src/integrations/notion/     adapter API, synchronizacja i bezpieczne poświadczenia
 src/theme/                  paleta i wspólne style
 src/utils/                  zegar odświeżany także po powrocie do aplikacji
 scripts/                    powiązanie EAS, sprawdzenie runtime i bramki deploymentu
@@ -80,7 +84,7 @@ Usuwanie jest miękkie, aby zachować historię.
 `RoutineLog`: `id`, `routineId`, `scheduledFor`, `status`, `completedAt`, `value`,
 `note`, `source`, `createdAt`, `updatedAt`; kopia nazwy i ikony zachowuje czytelność historii.
 `scheduledFor` to lokalna data kalendarzowa `YYYY-MM-DD`; znaczniki czasu są ISO UTC.
-Źródła: `app`, `chatgpt`, `automation`. Jedna rutyna ma jeden jawny wynik na dzień.
+Źródła: `app`, `chatgpt`, `automation`, `notion`. Jedna rutyna ma jeden jawny wynik na dzień.
 Pola `value`, `unit` i `target` są przygotowane do późniejszych celów ilościowych.
 
 ### Harmonogramy i niewykonania
@@ -109,11 +113,81 @@ liczby dni; kolejne zakresy i agregacje nie wymagają zmiany warstwy zapisu.
 ### Dalszy backend
 
 Adapter `SupabaseRoutineRepository`/`SupabaseLogRepository` może zastąpić lokalny zapis
-przy inicjalizacji store'a. UI pozostaje niezależne od dostawcy. Synchronizacja będzie
-wymagała migracji identyfikatorów, konfliktów, tombstone'ów i kont; nie jest jeszcze wdrożona.
+przy inicjalizacji store'a. UI pozostaje niezależne od dostawcy. Synchronizacja z przyszłym
+backendem wymaga osobnego protokołu kont, konfliktów i tombstone'ów. Adapter Notion
+działa niezależnie od lokalnych repozytoriów, przez porównanie trzech wersji.
 Przyszłe API/MCP może używać tych samych modeli i operacji: `get_today`, `get_overdue`,
 `create_routine`, `update_routine`, `pause_routine`, `complete_routine`, `skip_routine`,
 `undo_completion`, `get_history`, `get_stats`. Ten etap nie zawiera backendu ani MCP.
+
+## Synchronizacja z Notion
+
+Strona [RoutineLog](https://www.notion.so/40beab5cb7ea81449829c988a35f285b)
+zawiera podstrony `YYYY-MM · nazwa miesiąca`, a w każdej jest tabela `YYYY-MM`.
+Każdy dzień miesiąca ma jeden wiersz (`Dzień`, `Data`); pozostałe edytowalne kolumny
+typu select, checkbox lub tekst reprezentują rutyny. Pozostaw kolumnę daty `Data`.
+Publiczny identyfikator strony jest w `notion-project.json`; nie jest poświadczeniem.
+
+W aplikacji przycisk **N** na ekranie Dzisiaj/Rutyny otwiera połączenie. Użytkownik
+tworzy **osobisty token Notion** z uprawnieniem **Notion API** w
+[Developer portal → Personal access tokens](https://www.notion.so/developers/tokens),
+dla konta i workspace ze stroną RoutineLog, i wkleja go wyłącznie w aplikacji.
+Uprawnienia Notion w ChatGPT nie przenoszą się do zainstalowanej aplikacji.
+PAT działa z uprawnieniami swojego właściciela; przy jego wygaśnięciu trzeba go odnowić.
+Własna integracja wewnętrzna również działa, jeśli ma dostęp do strony i odczyt/zapis treści.
+
+Token trafia do `expo-secure-store` (Android Keystore), a nie do AsyncStorage,
+repozytorium, logów, `EXPO_PUBLIC_*` ani GitHub Secrets. Nie ma wspólnego sekretu
+zaszytego w aplikacji. Wersja web nie zapisuje tokenów i nie wykonuje połączenia
+do Notion; dostępny jest ekran informacyjny. Dla aplikacji udostępnianej wielu
+użytkownikom należy zastąpić osobisty PAT publiczną integracją OAuth z backendem.
+
+- Dodanie kolumny w bieżącym miesiącu tworzy rutynę (domyślnie codzienną o 08:00).
+  Nazwa może zaczynać się od emoji. Zmiana nazwy zachowuje tożsamość rutyny, bo
+  połączenie używa stabilnego ID kolumny, a nie samej nazwy.
+- Opis kolumny zawiera notatkę oraz czytelne pola `Kategoria`, `Godzina`, `Plan`,
+  `Aktywna`, `Cel`, `Jednostka` i link otwierający rutynę w aplikacji. Plany:
+  `codziennie`, `dni 1,3,5` (Pn=1), `3x/tydzień`, `co 7 dni od 2026-11-01`.
+  Pól i linku nie trzeba ręcznie dodawać: synchronizacja je uzupełnia.
+- Select ma opcje `Wykonane`, `Pominięte`, `Niewykonane`; puste pole cofa oznaczenie.
+  Tekst akceptuje też `x`, `✓`, `done`, `skip`, `missed`. Nieznane wartości zatrzymują
+  synchronizację zamiast być traktowane jako cofnięcie. Checkbox przenosi done/undo;
+  pominięcia pozostają lokalne, dopóki kolumna jest checkboxem.
+- Usunięcie znanej kolumny w bieżącym miesiącu miękko usuwa rutynę z planu.
+  Usunięcie rutyny w aplikacji usuwa jej kolumnę tylko z bieżącego miesiąca.
+  Starsze tabele i zapisane logi pozostają archiwum. Zmiana statusu w archiwum
+  nadal działa w obie strony. Brak wiersza dnia zostaje naprawiony z lokalnych wpisów.
+- Nowy miesiąc powstaje przy pierwszej synchronizacji w tym miesiącu. Przy przejściu
+  silnik najpierw odczytuje ostatnią tabelę, a potem tworzy nową bez zmiany archiwum.
+  Edycje nazw/ustawień w starszych miesiącach nie zmieniają już bieżących rutyn.
+- Lokalny, walidowany ledger porównuje bazową, lokalną i zdalną wersję każdego
+  pola/statusu. Pozwala przenieść cofnięcie także po pracy offline i restarcie.
+  Równoległe zmiany różnych pól są łączone; rozbieżność tego samego pola wymaga
+  wyboru **Zachowaj wersję z aplikacji / z Notion** na ekranie połączenia.
+  Usunięcie znanej kolumny wygrywa ze zmianą jej ustawień w telefonie.
+- Błędy sieci, brak uprawnień, niepełna paginacja i nieznane typy danych nie są
+  interpretowane jako usunięcie. Zapisy do API nie są automatycznie ponawiane po
+  niejednoznacznym błędzie: kolejna synchronizacja najpierw odczytuje stan Notion.
+  Lokalne edycje podczas żądania sieciowego chroni compare-and-save w store.
+- Synchronizacja działa po otwarciu, po lokalnym zapisie i co minutę na pierwszym
+  planie. Po zamknięciu procesu nie działa. Ręczny przycisk ponawia ją po błędzie.
+  Nie jest to mechanizm powiadomień ani działanie w tle Androida.
+- Tabele odtwarzają aktualne ustawienia rutyn i statusy, ale nie zastępują pełnej
+  kopii danych: dokładny czas wykonania, wartości i notatki logów oraz historyczne
+  rewizje rutyn pozostają lokalne. Czas wykonania importu to ostatnia edycja wiersza
+  Notion, nie potwierdzony czas wykonania czynności. Niewykonania wyliczane przez
+  domenę nie są zapisywane jako nowe ręczne logi w tabeli. Przyszłe oznaczenia są
+  ignorowane do dnia, którego dotyczą.
+
+API używa wersji `2026-03-11`, `data_sources` i paginacji. Własny adapter HTTP jest
+oddzielony od silnika synchronizacji, a silnik od interfejsu i repozytoriów.
+Referencje: [osobiste tokeny](https://developers.notion.com/guides/get-started/personal-access-tokens),
+[data sources](https://developers.notion.com/reference/data-source),
+[schemat kolumn](https://developers.notion.com/reference/property-object),
+[SecureStore](https://docs.expo.dev/versions/v57.0.0/sdk/securestore/).
+
+Dodanie SecureStore w wersji 1.1.0 wymaga nowego APK (Android versionCode 2).
+Następne zmiany czystego JS ponownie korzystają z OTA do tego runtime.
 
 ## Development i testy
 

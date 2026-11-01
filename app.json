@@ -2,12 +2,12 @@
   "expo": {
     "name": "RoutineLog",
     "slug": "routinelog-mobile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "routinelog",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0c0e10",
-    "android": { "package": "pl.rados4y.routinelog" },
+    "android": { "package": "pl.rados4y.routinelog", "versionCode": 2 },
     "plugins": ["expo-router"],
     "experiments": { "typedRoutes": true },
     "web": { "bundler": "metro", "output": "static", "name": "RoutineLog" }

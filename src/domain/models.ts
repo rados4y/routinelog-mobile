@@ -60,7 +60,7 @@ export const logSchema = z.object({
   completedAt: z.iso.datetime().nullable(),
   value: z.number().nullable(),
   note: z.string(),
-  source: z.enum(['app', 'chatgpt', 'automation']),
+  source: z.enum(['app', 'chatgpt', 'automation', 'notion']),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   routineName: z.string(),

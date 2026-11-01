@@ -90,4 +90,28 @@ describe('routine operations', () => {
     await store.getState().load();
     expect(store.getState().ready).toBe(true);
   });
+  it('does not let a delayed sync overwrite newer local edits or completions', async () => {
+    const { store } = await setup();
+    const expected = store
+      .getState()
+      .routines.find((item) => item.id === 'seed-1')!;
+    await store
+      .getState()
+      .saveRoutine({ ...expected, name: 'Nowsza nazwa' }, expected.id);
+    expect(
+      await store
+        .getState()
+        .applySyncedRoutine(expected, { ...expected, name: 'Spóźniona nazwa' }),
+    ).toBe(false);
+    await store.getState().setStatus(expected.id, monday, 'done');
+    expect(
+      await store
+        .getState()
+        .applySyncedLog(undefined, undefined, `${expected.id}:${monday}`),
+    ).toBe(false);
+    expect(
+      store.getState().routines.find((item) => item.id === expected.id)?.name,
+    ).toBe('Nowsza nazwa');
+    expect(store.getState().logs[0]?.status).toBe('done');
+  });
 });

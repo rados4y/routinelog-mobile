@@ -8,6 +8,7 @@ import type { Routine } from '../../domain/models';
 import { scheduleLabel } from '../../domain/schedule';
 import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
+import { NotionButton } from '../../integrations/notion/NotionButton';
 
 export function RoutinesScreen() {
   const routines = useRoutines((s) => s.routines)
@@ -21,6 +22,7 @@ export function RoutinesScreen() {
     <View style={common.grow}>
       <Screen
         title="Twoje rutyny"
+        action={<NotionButton />}
         subtitle={`${routines.filter((routine) => routine.active).length} aktywnych · Twój rytm, Twoje zasady`}
       >
         <View style={styles.hint}>

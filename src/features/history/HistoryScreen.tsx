@@ -14,6 +14,7 @@ const sources = {
   app: 'Aplikacja',
   chatgpt: 'ChatGPT',
   automation: 'Automatycznie',
+  notion: 'Notion',
 };
 export function HistoryScreen() {
   const routines = useRoutines((s) => s.routines);
