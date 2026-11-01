@@ -11,6 +11,7 @@ import { colors, common } from '../../theme';
 import { useNow } from '../../utils/useNow';
 import { DateSelector } from './DateSelector';
 import { OccurrenceCard } from './OccurrenceCard';
+import { NotionButton } from '../../integrations/notion/NotionButton';
 
 export function TodayScreen() {
   const now = useNow();
@@ -29,11 +30,7 @@ export function TodayScreen() {
       compact
       title="RoutineLog"
       subtitle={dateLabel(today)}
-      action={
-        <View style={styles.brand}>
-          <Text style={styles.brandText}>R.</Text>
-        </View>
-      }
+      action={<NotionButton />}
     >
       <DateSelector
         today={today}
@@ -105,17 +102,6 @@ export function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  brand: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#41336a',
-    backgroundColor: '#201a32',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandText: { color: colors.accentLight, fontSize: 16, fontWeight: '800' },
   summary: {
     padding: 10,
     gap: 6,

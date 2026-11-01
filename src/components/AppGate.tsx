@@ -3,6 +3,7 @@ import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { useRoutines } from '../store/useRoutines';
 import { colors, common } from '../theme';
 import { Button } from './Button';
+import { AutoSync } from '../integrations/notion/AutoSync';
 
 export function AppGate({ children }: { children: ReactNode }) {
   const ready = useRoutines((s) => s.ready);
@@ -33,6 +34,7 @@ export function AppGate({ children }: { children: ReactNode }) {
     );
   return (
     <View style={styles.root}>
+      <AutoSync />
       {children}
       {error && (
         <View style={styles.error}>

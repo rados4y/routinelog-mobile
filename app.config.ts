@@ -8,6 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'RoutineLog',
     slug: 'routinelog-mobile',
+    plugins: [...(config.plugins ?? []), 'expo-secure-store'],
     ...(projectId
       ? {
           extra: { ...config.extra, eas: { projectId } },
