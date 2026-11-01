@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
+import { findCompatibleBuild } from './runtime-compatibility.mjs';
 
 const channel = process.env.EAS_CHANNEL;
 if (!['development', 'preview', 'production'].includes(channel))
@@ -36,8 +37,15 @@ const builds = JSON.parse(
     { encoding: 'utf8' },
   ),
 );
-const compatible = Boolean(
-  runtime && builds.some((build) => build.runtimeVersion === runtime),
+const compatible = Boolean(findCompatibleBuild(builds, runtime));
+console.log(
+  `Finished ${channel} Android runtimes: ${JSON.stringify(
+    builds.map(({ id, runtime: buildRuntime, appBuildVersion }) => ({
+      id,
+      runtimeVersion: buildRuntime?.version ?? null,
+      appBuildVersion,
+    })),
+  )}`,
 );
 const message = compatible
   ? `Compatible Android runtime: ${runtime}. Publishing OTA.`

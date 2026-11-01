@@ -1,12 +1,12 @@
 import { readFileSync, appendFileSync } from 'node:fs';
+import { getDeploymentChannel } from './deployment-channel.mjs';
 
 const { projectId } = JSON.parse(readFileSync('eas-project.json', 'utf8'));
-const channel =
-  process.env.EVENT_NAME === 'pull_request'
-    ? 'preview'
-    : process.env.REF_NAME === 'main'
-      ? 'production'
-      : 'development';
+const channel = getDeploymentChannel(
+  process.env.EVENT_NAME,
+  process.env.REF_NAME,
+  process.env.REQUESTED_CHANNEL,
+);
 const reason =
   process.env.IS_FORK === 'true'
     ? 'Fork PR: deployment skipped.'

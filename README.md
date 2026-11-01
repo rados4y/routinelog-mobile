@@ -181,6 +181,11 @@ EAS branch i Git branch są odrębnymi pojęciami. Wspólny preview oznacza, że
 pomyślny PR zastępuje poprzedni podgląd; każda publikacja zawiera SHA w wiadomości.
 Forki nie otrzymują sekretów ani deploymentu.
 
+Ręczne uruchomienie **CI and EAS Update** pozwala wybrać `channel`: `preview`,
+`development` lub `production`. Domyślny podgląd to `preview`, również z brancha
+`main`. Dzięki temu Codex może wysłać OTA do zainstalowanego testowego APK po
+scaleniu PR. Automatyczne mapowanie push/PR pozostaje zgodne z tabelą powyżej.
+
 `app.config.ts` włącza `expo-updates`, `updates.url` i `runtimeVersion: {policy: 'fingerprint'}`
 dopiero po powiązaniu projektu. Fingerprint oblicza zgodność native podczas buildów i OTA.
 Publikacje podają jawnie `--environment`, zgodnie z wymaganiem SDK 55+.
