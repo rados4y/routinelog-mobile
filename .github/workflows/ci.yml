@@ -4,6 +4,13 @@ on:
     branches: ['**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      channel:
+        description: EAS Update channel
+        type: choice
+        options: [preview, development, production]
+        default: preview
+        required: true
 permissions:
   contents: read
 concurrency:
@@ -26,6 +33,7 @@ jobs:
           IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
+          REQUESTED_CHANNEL: ${{ inputs.channel }}
         run: node scripts/deployment-readiness.mjs
   update:
     needs: [quality, deployment-readiness]
