@@ -146,9 +146,11 @@ export class NotionSync {
       if (!supportedColumn(column)) continue;
       const data = this.local.read();
       const linkedId = linkedRoutineId(column);
-      let routine = data.routines.find(
-        (item) => item.id === (binding?.routineId ?? linkedId),
-      );
+      const routineId =
+        binding?.routineId ??
+        linkedId ??
+        `notion-${ref.databaseId}-${encodeURIComponent(column.id)}`;
+      let routine = data.routines.find((item) => item.id === routineId);
       if (!routine)
         routine = data.routines.find(
           (item) =>
@@ -156,12 +158,9 @@ export class NotionSync {
             (columnName(item) === column.name || item.name === column.name),
         );
       if (!routine) {
-        const id =
-          linkedId ??
-          `notion-${ref.databaseId}-${encodeURIComponent(column.id)}`;
         const created = createRoutine(
           inputFromColumn(column),
-          id,
+          routineId,
           this.clock(),
         );
         if (!manageRoutines) {
@@ -295,11 +294,12 @@ export class NotionSync {
     let createdDays = false;
     for (const date of daysInMonth(ref.month)) {
       if (table.rows.some((row) => row.date === date)) continue;
-      await this.remote.createDay(table, date);
       // A recreated day should get the local entries, rather than act as an undo of every cell.
+      // Record this intent before the request: its response may be lost after Notion saves the row.
       for (const id of Object.keys(ledger.cells))
         if (id.endsWith(`:${date}`)) delete ledger.cells[id];
       await persist();
+      await this.remote.createDay(table, date);
       createdDays = true;
     }
     if (createdDays) table = await this.remote.readMonth(ref);

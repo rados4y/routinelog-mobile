@@ -386,6 +386,49 @@ describe('monthly, bidirectional Notion synchronization', () => {
     await sync().run();
     expect(store.getState().logs).toEqual([]);
   });
+  it('keeps completions when a recreated day was saved remotely but the response was lost', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().setStatus('test-routine', monday, 'done');
+    await sync().run();
+    remote.table.rows = remote.table.rows.filter((row) => row.date !== monday);
+    const create = remote.createDay.bind(remote);
+    vi.spyOn(remote, 'createDay').mockImplementationOnce(async (...args) => {
+      await create(...args);
+      throw new Error('response lost');
+    });
+    await expect(sync().run()).rejects.toThrow('response lost');
+    await sync().run();
+    expect(remote.day.cells.column1).toBe('done');
+    expect(store.getState().logs[0]?.status).toBe('done');
+  });
+  it('recovers an interrupted column import even if its new routine was renamed locally', async () => {
+    const { store, remote, sync } = await setup();
+    await sync().run();
+    remote.table.columns.push({
+      id: 'fresh',
+      name: '📚 Czytanie',
+      description: '',
+      type: 'select',
+    });
+    remote.table.rows.forEach((row) => {
+      row.cells.fresh = 'pending';
+    });
+    vi.spyOn(remote, 'updateColumns').mockRejectedValueOnce(
+      new Error('offline'),
+    );
+    await expect(sync().run()).rejects.toThrow('offline');
+    const imported = store
+      .getState()
+      .routines.find((item) => item.name === 'Czytanie')!;
+    await store
+      .getState()
+      .saveRoutine({ ...imported, name: 'Nowsza nazwa' }, imported.id);
+    await sync().run('app');
+    expect(
+      remote.table.columns.find((column) => column.id === 'fresh')?.name,
+    ).toBe('📚 Nowsza nazwa');
+    expect(store.getState().routines).toHaveLength(2);
+  });
   it('retains skipped locally when the user chose a checkbox column', async () => {
     const { store, remote, sync } = await setup();
     remote.table.columns[2]!.type = 'checkbox';
