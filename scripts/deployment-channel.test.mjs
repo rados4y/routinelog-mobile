@@ -36,9 +36,10 @@ describe('EAS deployment destination', () => {
     ).toThrow('Invalid EAS channel');
   });
 
-  it('preserves routing for callers without manual input', () => {
-    expect(getDeploymentChannel('workflow_dispatch', 'main')).toBe(
-      'production',
+  it('defaults manual releases to preview when input is missing', () => {
+    expect(getDeploymentChannel('workflow_dispatch', 'main')).toBe('preview');
+    expect(getDeploymentChannel('workflow_dispatch', 'feat/settings')).toBe(
+      'preview',
     );
   });
 });

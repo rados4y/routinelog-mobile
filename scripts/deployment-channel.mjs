@@ -2,11 +2,12 @@ const channels = ['development', 'preview', 'production'];
 
 /** Choose a release destination independently of credentials and persistence. */
 export function getDeploymentChannel(eventName, refName, requestedChannel) {
-  if (eventName === 'workflow_dispatch' && requestedChannel) {
-    if (!channels.includes(requestedChannel)) {
-      throw new Error(`Invalid EAS channel: ${requestedChannel}`);
+  if (eventName === 'workflow_dispatch') {
+    const channel = requestedChannel || 'preview';
+    if (!channels.includes(channel)) {
+      throw new Error(`Invalid EAS channel: ${channel}`);
     }
-    return requestedChannel;
+    return channel;
   }
   if (eventName === 'pull_request') return 'preview';
   return refName === 'main' ? 'production' : 'development';
