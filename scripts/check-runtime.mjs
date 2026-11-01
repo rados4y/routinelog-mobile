@@ -39,6 +39,15 @@ const builds = JSON.parse(
 const compatible = Boolean(
   runtime && builds.some((build) => build.runtimeVersion === runtime),
 );
+console.log(
+  `Finished ${channel} Android runtimes: ${JSON.stringify(
+    builds.map(({ id, runtimeVersion, appBuildVersion }) => ({
+      id,
+      runtimeVersion,
+      appBuildVersion,
+    })),
+  )}`,
+);
 const message = compatible
   ? `Compatible Android runtime: ${runtime}. Publishing OTA.`
   : `OTA skipped: no finished ${channel} Android build matches runtime ${runtime}. Run Android native build for this profile; no APK is built automatically.`;
