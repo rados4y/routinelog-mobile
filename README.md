@@ -149,6 +149,10 @@ użytkownikom należy zastąpić osobisty PAT publiczną integracją OAuth z bac
   `Aktywna`, `Cel`, `Jednostka` i link otwierający rutynę w aplikacji. Plany:
   `codziennie`, `dni 1,3,5` (Pn=1), `3x/tydzień`, `co 7 dni od 2026-11-01`.
   Pól i linku nie trzeba ręcznie dodawać: synchronizacja je uzupełnia.
+  API Notion ogranicza opis kolumny do 280 znaków łącznie z ustawieniami.
+  Zbyt długi opis jest zgłaszany przed wysłaniem żądania; notatki nie są automatycznie
+  obcinane ani usuwane. Przy zapisie opisu adapter podaje istniejący typ kolumny
+  z pustymi ustawieniami, co zachowuje opcje select i zapisane wartości.
 - Select ma opcje `Wykonane`, `Pominięte`, `Niewykonane`; puste pole cofa oznaczenie.
   Tekst akceptuje też `x`, `✓`, `done`, `skip`, `missed`. Nieznane wartości zatrzymują
   synchronizację zamiast być traktowane jako cofnięcie. Checkbox przenosi done/undo;
