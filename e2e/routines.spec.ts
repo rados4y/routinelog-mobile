@@ -9,17 +9,19 @@ test('phone-sized UI: status, history, stats, CRUD and persistence', async ({
   await expect(page.getByText('Twój plan dnia')).toBeVisible();
   await page.screenshot({ path: 'test-results/today.png' });
   const medicine = page.getByTestId('occurrence-seed-1');
-  await medicine.getByRole('button', { name: 'Wykonane', exact: true }).click();
-  await expect(
-    medicine.getByRole('button', { name: 'Cofnij status' }),
-  ).toBeVisible();
+  await medicine.getByRole('checkbox').click();
+  await expect(medicine.getByRole('checkbox')).toBeChecked();
   await page.reload();
+  await expect(medicine.getByRole('checkbox')).toBeChecked();
+  await medicine.getByRole('checkbox').click();
+  await medicine
+    .getByRole('button', { name: 'Szczegóły rutyny: Wziąć lek', exact: true })
+    .click();
   await expect(
-    medicine.getByRole('button', { name: 'Cofnij status' }),
+    medicine.getByText('Po śniadaniu', { exact: true }),
   ).toBeVisible();
-  await medicine.getByRole('button', { name: 'Cofnij status' }).click();
   await medicine.getByRole('button', { name: 'Pomiń', exact: true }).click();
-  await expect(medicine.getByText('Pominięte', { exact: true })).toBeVisible();
+  await expect(medicine).toContainText('Pominięte');
   await page.getByRole('tab', { name: 'Historia', exact: true }).click();
   await expect(
     page

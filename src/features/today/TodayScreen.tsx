@@ -23,8 +23,10 @@ export function TodayScreen() {
   const progress = completion(occurrences);
   const selectedTitle =
     selected === today ? 'Dzisiaj' : dateLabel(selected, { weekday: 'long' });
+
   return (
     <Screen
+      compact
       title="RoutineLog"
       subtitle={dateLabel(today)}
       action={
@@ -41,33 +43,31 @@ export function TodayScreen() {
       <View style={[common.card, styles.summary]}>
         <View style={common.row}>
           <View style={common.grow}>
-            <Text style={styles.eyebrow}>MAŁE KROKI. WIELKA ZMIANA.</Text>
-            <Text style={[common.heading, styles.dayTitle]}>
-              {selectedTitle}
-            </Text>
-            <Text style={common.subtitle}>
-              <Text style={styles.doneCount}>{progress.done}</Text> z{' '}
-              {progress.total} rutyn wykonanych
+            <Text style={styles.dayTitle}>{selectedTitle}</Text>
+            <Text style={styles.summaryCount}>
+              <Text style={styles.doneCount}>
+                {progress.done} / {progress.total}
+              </Text>{' '}
+              wykonanych
             </Text>
           </View>
-          <ProgressRing percent={progress.percent} />
+          <ProgressRing percent={progress.percent} size={48} />
         </View>
         <View
           accessibilityRole="progressbar"
+          accessibilityLabel="Realizacja planu dnia"
           accessibilityValue={{ min: 0, max: 100, now: progress.percent }}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress.percent}
           style={styles.track}
         >
           <View style={[styles.fill, { width: `${progress.percent}%` }]} />
         </View>
-        <Text style={common.small}>
-          {progress.total > 0 && progress.done === progress.total
-            ? 'Dobra robota! Twój plan jest wykonany. ✨'
-            : 'Każda wykonana rutyna to krok do przodu.'}
-        </Text>
       </View>
-      <View style={common.section}>
+      <View style={styles.plan}>
         <View style={common.spread}>
-          <Text accessibilityRole="header" style={common.heading}>
+          <Text accessibilityRole="header" style={styles.planTitle}>
             Twój plan dnia
           </Text>
           <Text style={common.small}>{occurrences.length} rutyn</Text>
@@ -103,37 +103,46 @@ export function TodayScreen() {
     </Screen>
   );
 }
+
 const styles = StyleSheet.create({
   brand: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#41336a',
     backgroundColor: '#201a32',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandText: { color: colors.accentLight, fontSize: 21, fontWeight: '800' },
-  summary: { borderColor: '#3a3055', backgroundColor: '#181520' },
-  eyebrow: {
-    color: colors.accentLight,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+  brandText: { color: colors.accentLight, fontSize: 16, fontWeight: '800' },
+  summary: {
+    padding: 10,
+    gap: 6,
+    borderRadius: 16,
+    borderColor: '#3a3055',
+    backgroundColor: '#181520',
   },
   dayTitle: {
-    fontSize: 24,
-    marginTop: 12,
-    marginBottom: 7,
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
     textTransform: 'capitalize',
+  },
+  summaryCount: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
   },
   doneCount: { color: colors.text, fontWeight: '700' },
   track: {
-    height: 6,
+    height: 3,
     backgroundColor: colors.border,
-    borderRadius: 4,
+    borderRadius: 3,
     overflow: 'hidden',
   },
-  fill: { height: 6, backgroundColor: colors.accent, borderRadius: 4 },
+  fill: { height: 3, backgroundColor: colors.accent, borderRadius: 3 },
+  plan: { gap: 8 },
+  planTitle: { color: colors.text, fontSize: 17, fontWeight: '700' },
 });
