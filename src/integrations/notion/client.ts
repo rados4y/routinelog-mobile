@@ -8,6 +8,36 @@ const paginationSchema = z.object({
 const pause = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 export type NotionFetch = (url: string, init: RequestInit) => Promise<Response>;
+const apiErrorSchema = z.object({
+  code: z
+    .enum([
+      'validation_error',
+      'invalid_request',
+      'invalid_json',
+      'restricted_resource',
+      'object_not_found',
+      'conflict_error',
+      'rate_limited',
+      'internal_server_error',
+      'service_unavailable',
+    ])
+    .optional(),
+});
+
+export function requestStage(path: string, method: string): string {
+  if (/^data_sources\/[^/]+\/query(?:\?|$)/.test(path))
+    return 'pobieranie wpisów z tabeli';
+  if (path.startsWith('data_sources/') && method === 'PATCH')
+    return 'zapis ustawień kolumn rutyn';
+  if (path.startsWith('pages/') && method === 'PATCH')
+    return 'zapis wykonania rutyny';
+  if (path.startsWith('blocks/')) return 'odczyt stron miesięcy';
+  if (path === 'pages' && method === 'POST')
+    return 'utworzenie strony lub dnia';
+  if (path === 'databases' && method === 'POST')
+    return 'utworzenie tabeli miesiąca';
+  return 'odczyt danych Notion';
+}
 
 // Only this fixed HTTPS origin receives the user's token. Errors never echo bodies or credentials.
 export class NotionClient {
@@ -61,8 +91,13 @@ export class NotionClient {
         throw new Error(
           'Brak dostępu do strony RoutineLog w Notion. Sprawdź konto, uprawnienia tokenu i udostępnienie strony połączeniu.',
         );
+      const details = apiErrorSchema.safeParse(
+        await response.json().catch(() => undefined),
+      );
+      const code = details.success ? details.data.code : undefined;
+      // Never surface Notion's free-form message, which may echo request content.
       throw new Error(
-        `Notion nie przyjął zmiany (${response.status}). Żadne dane lokalne nie zostały usunięte. Spróbuj ponownie.`,
+        `Notion: ${requestStage(path, method)} — błąd ${response.status}${code ? ` (${code})` : ''}. Synchronizacja została przerwana. Dane pozostają zapisane na telefonie.`,
       );
     }
     throw new Error('Notion chwilowo ogranicza zapytania. Spróbuj za chwilę.');

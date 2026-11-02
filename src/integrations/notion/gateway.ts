@@ -198,8 +198,35 @@ export class HttpNotionGateway implements NotionGateway {
     table: MonthTable,
     patches: Record<string, unknown>,
   ): Promise<MonthTable> {
+    const properties: Record<string, unknown> = {};
+    for (const [key, patch] of Object.entries(patches)) {
+      if (!patch || typeof patch !== 'object') {
+        properties[key] = patch;
+        continue;
+      }
+      const fields = patch as Record<string, unknown>;
+      const column = table.columns.find(
+        (item) => item.id === key || item.name === key,
+      );
+      if (
+        typeof fields.description === 'string' &&
+        [...fields.description].length > 280
+      ) {
+        throw new Error(
+          `Opis „${column?.name ?? key}” w Notion może mieć maksymalnie 280 znaków łącznie z ustawieniami rutyny. Skróć notatkę tej rutyny w aplikacji. Pełna notatka pozostaje zapisana na telefonie.`,
+        );
+      }
+      // Description updates require the existing type's settings. Empty settings
+      // preserve options; sending a regenerated options list could remove custom values.
+      properties[key] =
+        column &&
+        Object.hasOwn(fields, 'description') &&
+        !Object.hasOwn(fields, column.type)
+          ? { ...fields, [column.type]: {} }
+          : fields;
+    }
     await this.client.call(`data_sources/${table.dataSourceId}`, 'PATCH', {
-      properties: patches,
+      properties,
     });
     return this.readMonth(table);
   }
