@@ -3,11 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { addDays, dateLabel } from '../../domain/dates';
 import { getStats } from '../../domain/insights';
 import { historyForRange } from '../../domain/history';
-import {
-  occurrencesForDate,
-  routineForEntry,
-  scheduleLabel,
-} from '../../domain/schedule';
+import { occurrencesForDate, scheduleLabel } from '../../domain/schedule';
 import type { Routine, RoutineLog } from '../../domain/models';
 import { HabitIcon, categoryColors } from '../../components/HabitIcon';
 import { Icon } from '../../components/Icon';
@@ -15,6 +11,7 @@ import { ToolButton } from '../../components/HabitScreen';
 import { useRoutineActions } from '../../components/RoutineActionsProvider';
 import { useRoutines } from '../../store/useRoutines';
 import { nextActionLabel, statusLabels } from '../../domain/status';
+import { entryBlockReason } from '../../domain/entry';
 import { colors, common } from '../../theme';
 
 export function RoutineCard({
@@ -80,8 +77,13 @@ export function RoutineCard({
               (item) =>
                 item.routineId === routine.id && item.scheduledFor === date,
             );
-            const canMark =
-              date <= today && Boolean(log || routineForEntry(routine, date));
+            const canMark = !entryBlockReason(
+              routine,
+              date,
+              'calendar',
+              Boolean(log),
+              today,
+            );
             const occurrence = occurrencesForDate(
               [routine],
               logs,
@@ -100,8 +102,8 @@ export function RoutineCard({
                 accessibilityLabel={`Status: ${routine.name}, ${dateLabel(date)}. ${statusLabels[log?.status ?? 'pending']}. ${nextActionLabel(log?.status)}`}
                 accessibilityState={{ disabled: !canMark || saving }}
                 disabled={!canMark || saving}
-                onPress={() => cycleStatus(routine.id, date)}
-                style={styles.weekDay}
+                onPress={() => cycleStatus(routine.id, date, 'calendar')}
+                style={[styles.weekDay, !canMark && { opacity: 0.4 }]}
               >
                 <Text style={styles.weekLabel}>
                   {dateLabel(date, { weekday: 'short' }).replace('.', '')}

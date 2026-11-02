@@ -22,8 +22,14 @@ export function historyForRange(
   to: string,
   now = new Date(),
 ): HistoryEntry[] {
+  const routineIds = new Set(routines.map((routine) => routine.id));
   const result: HistoryEntry[] = logs
-    .filter((log) => log.scheduledFor >= from && log.scheduledFor <= to)
+    .filter(
+      (log) =>
+        routineIds.has(log.routineId) &&
+        log.scheduledFor >= from &&
+        log.scheduledFor <= to,
+    )
     .map((log) => ({ ...log, inferred: false, missingCount: 1 }));
   const today = localDate(now);
   for (let date = from; date <= to && date < today; date = addDays(date, 1)) {

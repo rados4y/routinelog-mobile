@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { ChecklistItem, OccurrenceStatus } from '../domain/models';
-import { routineOn } from '../domain/routine';
+import { routineForStatusEntry, type EntryMode } from '../domain/entry';
 import { nextStatus } from '../domain/status';
 import { routineStore, useRoutines } from '../store/useRoutines';
 import { Button } from './Button';
@@ -20,10 +20,16 @@ type Prompt = {
   date: string;
   name: string;
   items: ChecklistItem[];
+  mode: EntryMode;
 };
 type Actions = {
-  cycleStatus(id: string, date: string): void;
-  requestStatus(id: string, date: string, status: OccurrenceStatus): void;
+  cycleStatus(id: string, date: string, mode?: EntryMode): void;
+  requestStatus(
+    id: string,
+    date: string,
+    status: OccurrenceStatus,
+    mode?: EntryMode,
+  ): void;
 };
 const Context = createContext<Actions | null>(null);
 export function useRoutineActions() {
@@ -43,26 +49,36 @@ export function RoutineActionsProvider({ children }: { children: ReactNode }) {
     id: string,
     date: string,
     status: OccurrenceStatus,
+    mode: EntryMode = 'scheduled',
   ) => {
     const state = routineStore.getState();
     if (state.saving || prompting.current) return;
     const original = state.routines.find((item) => item.id === id);
-    const routine = original && routineOn(original, date);
+    const hasLog = state.logs.some(
+      (item) => item.routineId === id && item.scheduledFor === date,
+    );
+    const routine =
+      original && routineForStatusEntry(original, date, mode, hasLog);
     if (status === 'done' && routine?.checklist?.length) {
       prompting.current = true;
       setPrompt({
         id,
         date,
         name: routine.name,
+        mode,
         items: routine.checklist.map((item) => ({ ...item })),
       });
-    } else void state.setStatus(id, date, status);
+    } else void state.setStatus(id, date, status, undefined, mode);
   };
-  const cycleStatus = (id: string, date: string) => {
+  const cycleStatus = (
+    id: string,
+    date: string,
+    mode: EntryMode = 'scheduled',
+  ) => {
     const log = routineStore
       .getState()
       .logs.find((item) => item.routineId === id && item.scheduledFor === date);
-    requestStatus(id, date, nextStatus(log?.status));
+    requestStatus(id, date, nextStatus(log?.status), mode);
   };
   return (
     <Context.Provider value={{ requestStatus, cycleStatus }}>
@@ -91,6 +107,7 @@ function CompletionSheet({
         ...item,
         checked: checked.includes(item.id),
       })),
+      prompt.mode,
     );
     if (ok) onClose();
     else

@@ -667,3 +667,29 @@ it('preserves a retired Notion column until its unconfirmed checklist result is 
     status: 'skipped',
   });
 });
+
+it('requires checklist confirmation for a remote completion before the local import date', async () => {
+  const { store, remote, sync } = await setup();
+  await store
+    .getState()
+    .saveRoutine(
+      { ...routine(), checklist: [{ id: 'step', text: 'Krok' }] },
+      'test-routine',
+    );
+  remote.table.rows.find((row) => row.date === '2026-10-11')!.cells.column1 =
+    'done';
+  await expect(sync().run()).rejects.toThrow('Potwierdź listę kroków');
+  expect(store.getState().logs).toEqual([]);
+  expect(
+    await store
+      .getState()
+      .setStatus(
+        'test-routine',
+        '2026-10-11',
+        'done',
+        [{ id: 'step', text: 'Krok', checked: true }],
+        'calendar',
+      ),
+  ).toBe(true);
+  await expect(sync().run()).resolves.toBeUndefined();
+});

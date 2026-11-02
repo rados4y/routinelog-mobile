@@ -72,3 +72,18 @@ describe('history and statistics', () => {
     });
   });
 });
+
+it('scopes per-routine history and statistics to that routine even with a shared log collection', () => {
+  const r = routine();
+  const other = { ...r, id: 'other', name: 'Inna rutyna' };
+  const now = new Date(`${monday}T12:00:00`);
+  const logs = [createLog(other, monday, 'done', now)];
+  expect(historyForRange([r], logs, monday, monday, now)).toEqual([]);
+  expect(getStats([r], logs, now)).toMatchObject({ done: 0, regularity: 0 });
+  expect(getStats([other], logs, now)).toMatchObject({
+    done: 1,
+    regularity: 100,
+  });
+  expect(getStats([r, other], logs, now).done).toBe(1);
+  expect(getStats([], logs, now).done).toBe(0);
+});

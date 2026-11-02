@@ -15,7 +15,12 @@ import {
   ChecklistIncompleteError,
   requireCompleteChecklist,
 } from '../domain/checklist';
-import { occurrencesForDate, routineForEntry } from '../domain/schedule';
+import {
+  entryBlockReason,
+  EntryUnavailableError,
+  routineForStatusEntry,
+  type EntryMode,
+} from '../domain/entry';
 import type { SyncLocal } from '../data/sync';
 
 export interface RoutineState {
@@ -37,6 +42,7 @@ export interface RoutineState {
     date: string,
     status: OccurrenceStatus,
     checklist?: ChecklistResult[],
+    mode?: EntryMode,
   ): Promise<boolean>;
 }
 export function createRoutineStore(
@@ -55,7 +61,8 @@ export function createRoutineStore(
       } catch (error) {
         set({
           error:
-            error instanceof ChecklistIncompleteError
+            error instanceof ChecklistIncompleteError ||
+            error instanceof EntryUnavailableError
               ? error.message
               : 'Nie udało się zapisać zmian. Dane na ekranie nie zostały zmienione. Spróbuj ponownie.',
         });
@@ -103,7 +110,9 @@ export function createRoutineStore(
               (item) => item.id === next.routineId,
             );
             requireCompleteChecklist(
-              routine ? routineOn(routine, next.scheduledFor)?.checklist : [],
+              routine
+                ? (routineOn(routine, next.scheduledFor) ?? routine).checklist
+                : [],
               next.checklist,
             );
           }
@@ -163,9 +172,12 @@ export function createRoutineStore(
             deletedAt: clock().toISOString(),
           });
         }),
-      setStatus: (id, date, status, checklist) =>
+      setStatus: (id, date, status, checklist, mode = 'scheduled') =>
         perform(async () => {
-          if (date > localDate(clock())) throw new Error('Przyszły dzień.');
+          if (date > localDate(clock()))
+            throw new EntryUnavailableError(
+              'Przyszły termin — status możesz zapisać najwcześniej tego dnia.',
+            );
           const existing = get().logs.find(
             (item) => item.routineId === id && item.scheduledFor === date,
           );
@@ -176,18 +188,22 @@ export function createRoutineStore(
             });
             return;
           }
-          const occurrence = occurrencesForDate(
-            get().routines,
-            get().logs,
+          const original = find(id);
+          const reason = entryBlockReason(
+            original,
             date,
-            clock(),
-          ).find((item) => item.routine.id === id);
-          const routine =
-            occurrence?.routine ??
-            (existing
-              ? routineOn(find(id), date)
-              : routineForEntry(find(id), date));
-          if (!routine) throw new Error('Rutyna nie jest zaplanowana.');
+            mode,
+            Boolean(existing),
+            localDate(clock()),
+          );
+          if (reason) throw new EntryUnavailableError(reason);
+          const routine = routineForStatusEntry(
+            original,
+            date,
+            mode,
+            Boolean(existing),
+          );
+          if (!routine) throw new EntryUnavailableError('Rutyna niedostępna.');
           const log = createLog(routine, date, status, clock(), checklist);
           if (existing) {
             log.createdAt = existing.createdAt;

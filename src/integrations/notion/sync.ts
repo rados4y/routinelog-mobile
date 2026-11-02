@@ -376,7 +376,7 @@ export class NotionSync {
         if (
           merged === 'done' &&
           existing?.status !== 'done' &&
-          routineOn(routine, row.date)?.checklist?.length
+          (routineOn(routine, row.date) ?? routine).checklist?.length
         ) {
           this.pendingChecklists.add(`${routine.name} · ${row.date}`);
           this.awaitingRoutineIds.add(routine.id);

@@ -208,3 +208,101 @@ describe('checklist persistence and status cycle', () => {
     expect(store.getState().logs).toEqual([]);
   });
 });
+
+describe('manual calendar persistence', () => {
+  const clock = () => new Date('2026-11-02T12:00:00');
+  async function setup() {
+    const repos = repositories(new MemoryStorage());
+    const store = createRoutineStore(repos, clock);
+    await store.getState().load();
+    return { repos, store };
+  }
+  it('cycles a newly imported Sunday routine on both an earlier date and an off-schedule Monday', async () => {
+    const { store, repos } = await setup();
+    const original = store
+      .getState()
+      .routines.find((r) => r.id === 'preset-book')!;
+    for (const date of ['2026-11-01', '2026-11-02']) {
+      for (const status of ['done', 'missed', 'skipped', 'pending'] as const) {
+        expect(
+          await store
+            .getState()
+            .setStatus(original.id, date, status, undefined, 'calendar'),
+        ).toBe(true);
+        const reload = createRoutineStore(repos, clock);
+        await reload.getState().load();
+        expect(
+          reload
+            .getState()
+            .logs.find(
+              (log) =>
+                log.routineId === original.id && log.scheduledFor === date,
+            )?.status ?? 'pending',
+        ).toBe(status);
+      }
+    }
+    expect(store.getState().routines.find((r) => r.id === original.id)).toEqual(
+      original,
+    );
+  });
+  it('enforces checklist proof before import and rejects future entries', async () => {
+    const { store } = await setup();
+    const original = store
+      .getState()
+      .routines.find((r) => r.id === 'preset-book')!;
+    const checklist = [{ id: 'step', text: 'Przeczytać rozdział' }];
+    await store.getState().saveRoutine({ ...original, checklist }, original.id);
+    expect(
+      await store
+        .getState()
+        .setStatus(original.id, '2026-11-01', 'done', undefined, 'calendar'),
+    ).toBe(false);
+    expect(
+      await store
+        .getState()
+        .setStatus(
+          original.id,
+          '2026-11-01',
+          'done',
+          [{ ...checklist[0]!, checked: true }],
+          'calendar',
+        ),
+    ).toBe(true);
+    expect(
+      await store
+        .getState()
+        .setStatus(
+          original.id,
+          '2026-11-03',
+          'done',
+          [{ ...checklist[0]!, checked: true }],
+          'calendar',
+        ),
+    ).toBe(false);
+    expect(store.getState().error).toContain('Przyszły termin');
+    expect(store.getState().logs).toHaveLength(1);
+  });
+  it('keeps a calendar entry visible on the daily view without inserting automatic occurrences', async () => {
+    const { store } = await setup();
+    await store
+      .getState()
+      .setStatus('preset-book', '2026-11-01', 'done', undefined, 'calendar');
+    expect(
+      occurrencesForDate(
+        store.getState().routines,
+        store.getState().logs,
+        '2026-11-01',
+        clock(),
+      ).find((o) => o.routine.id === 'preset-book')?.status,
+    ).toBe('done');
+    await store.getState().setStatus('preset-book', '2026-11-01', 'pending');
+    expect(
+      occurrencesForDate(
+        store.getState().routines,
+        store.getState().logs,
+        '2026-11-01',
+        clock(),
+      ).some((o) => o.routine.id === 'preset-book'),
+    ).toBe(false);
+  });
+});

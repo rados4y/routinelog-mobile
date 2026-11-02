@@ -37,8 +37,10 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
   i „Ostatni”, ordinalne dni tygodnia w miesiącu, daty roczne, cele N×/tydzień
   lub N×/miesiąc, co N dni. Anulowanie nie zmienia zapisanego harmonogramu.
 - Dotknięcie daty w karcie rutyny lub jej kalendarzu używa tego samego cyklu.
-  Główny kalendarz ekranu Dzisiaj nadal służy do wyboru dnia. Przyszłych terminów
-  oraz niezaplanowanych dat nie można oznaczać. Puste oznaczenie wcześniejszego dnia
+  Główny kalendarz ekranu Dzisiaj nadal służy do wyboru dnia. Kalendarze rutyn
+  pozwalają ręcznie uzupełnić dzisiaj i wcześniejsze dni także poza harmonogramem
+  lub sprzed importu rutyny. Nie zmienia to daty startu ani automatycznych terminów.
+  Wybranie przyszłej daty pokazuje wyjaśnienie i blokuje zapis. Puste oznaczenie wcześniejszego dnia
   nadal może być wyliczane jako niewykonanie w historii.
 - Opcjonalna lista kroków w edytorze (do 30 pozycji): wykonanie otwiera panel,
   w którym należy zaznaczyć wszystkie kroki. Anulowanie nie zmienia wyniku,
@@ -93,6 +95,9 @@ Nowy format wymaga jawnej migracji; nieznane wersje wyświetlają błąd zamiast
 `createRoutineStore` przyjmuje repozytoria, zegar i generator identyfikatorów.
 Zapis jest potwierdzany przed zmianą stanu UI; podczas zapisu kolejne operacje są blokowane.
 Wybrana data i formularz pozostają stanem UI, niezależnym od danych domenowych.
+`src/domain/entry` rozdziela ręczny zapis kalendarza od automatycznego harmonogramu.
+Jawne logi sprzed importu pozostają widoczne i edytowalne bez tworzenia zaległości.
+Historia i statystyki filtrują współdzielone logi po identyfikatorach wybranych rutyn.
 
 ### Model danych
 
