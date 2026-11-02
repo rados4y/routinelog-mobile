@@ -22,7 +22,7 @@ test('daily checkbox and routine calendars share the four-state cycle', async ({
     page
       .getByTestId('routine-preset-book')
       .getByRole('button', { name: /^Status:.*\b2 listopada/ }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   const card = page.getByTestId('routine-preset-dog');
   const date = card.getByRole('button', { name: /^Status:.*\b2 listopada/ });
   for (const status of [
@@ -54,8 +54,18 @@ test('daily checkbox and routine calendars share the four-state cycle', async ({
       new RegExp(`\\. ${status}\\.`),
     );
   }
+  await page
+    .getByRole('button', { name: /^Status:.*\b3 listopada/ })
+    .last()
+    .click();
   await expect(
-    page.getByRole('button', { name: /^Status:.*\b3 listopada/ }).last(),
+    page.getByText(
+      'Przyszły termin — status możesz zapisać najwcześniej tego dnia.',
+      { exact: true },
+    ),
+  ).toBeInViewport({ ratio: 1 });
+  await expect(
+    page.getByRole('button', { name: 'Wykonane', exact: true }),
   ).toBeDisabled();
   await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
 });
@@ -168,4 +178,60 @@ test('checklists require every step, cancel safely, persist and protect every co
   await expect(history).toContainText('✓ Rozciąganie');
   await expect(history).toContainText('✓ Oddech');
   await expect(history).not.toContainText('Nowy krok');
+});
+
+test.describe('touchscreen date buttons', () => {
+  test.use({ hasTouch: true });
+  test('records the screenshot book and family routines on past dates without changing their schedules', async ({
+    page,
+  }) => {
+    await openApp(page, '/routines');
+    const book = page.getByTestId('routine-preset-book');
+    const pawel = page.getByTestId('routine-preset-pawel');
+    const day = (card: typeof book) =>
+      card.getByRole('button', { name: /^Status:.*\b1 listopada/ });
+    for (const card of [book, pawel]) {
+      for (const status of [
+        'Wykonane',
+        'Niewykonane',
+        'Pominięte',
+        'Bez oznaczenia',
+      ]) {
+        await day(card).tap();
+        await expect(day(card)).toHaveAccessibleName(
+          new RegExp(`\\. ${status}\\.`),
+        );
+      }
+    }
+    await day(book).tap();
+    await expect(
+      pawel.getByRole('button', { name: /^Postępy:.*regularność 0%/ }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(day(book)).toHaveAccessibleName(/\. Wykonane\./);
+    await book
+      .getByRole('button', {
+        name: 'Otwórz kalendarz: Book: umysł ponad nastrojem',
+        exact: true,
+      })
+      .tap();
+    const date = page
+      .getByRole('button', { name: /^Status: Book:.*\b1 listopada/ })
+      .last();
+    for (const status of [
+      'Niewykonane',
+      'Pominięte',
+      'Bez oznaczenia',
+      'Wykonane',
+    ]) {
+      await date.tap();
+      await expect(date).toHaveAccessibleName(new RegExp(`\\. ${status}\\.`));
+    }
+    await page.getByRole('button', { name: 'Zamknij', exact: true }).tap();
+    await page.getByRole('tab', { name: 'Dzisiaj', exact: true }).tap();
+    await page.getByRole('button', { name: /niedziela, 1 listopada/ }).tap();
+    await expect(
+      page.getByTestId('occurrence-preset-book').getByRole('checkbox'),
+    ).toBeChecked();
+  });
 });

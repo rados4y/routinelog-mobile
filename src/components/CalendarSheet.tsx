@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { addDays, dateLabel, localDate, weekday } from '../domain/dates';
 import { monthStart, monthEnd, shiftMonth } from '../domain/schedule/windows';
-import { occurrencesForDate, routineForEntry } from '../domain/schedule';
+import { occurrencesForDate } from '../domain/schedule';
 import type { Routine } from '../domain/models';
 import { useRoutines } from '../store/useRoutines';
 import { categoryColors } from './HabitIcon';
@@ -18,6 +18,8 @@ import { Icon } from './Icon';
 import { Sheet } from './Sheet';
 import { ToolButton } from './HabitScreen';
 import { Button } from './Button';
+import { entryBlockReason } from '../domain/entry';
+import { useNow } from '../utils/useNow';
 import { colors, common } from '../theme';
 
 export function CalendarSheet({
@@ -38,20 +40,23 @@ export function CalendarSheet({
   const logs = useRoutines((state) => state.logs);
   const { requestStatus: setStatus, cycleStatus } = useRoutineActions();
   const saving = useRoutines((state) => state.saving);
+  const error = useRoutines((state) => state.error);
   const { width } = useWindowDimensions();
   const cellWidth = (Math.min(width, 660) - 46) / 7;
   const days = Array.from(
     { length: Number(monthEnd(month).slice(-2)) },
     (_, i) => addDays(month, i),
   );
-  const today = localDate();
+  const today = localDate(useNow());
   const log = routine
     ? logs.find(
         (item) => item.routineId === routine.id && item.scheduledFor === date,
       )
     : undefined;
-  const canMark =
-    routine && date <= today && Boolean(log || routineForEntry(routine, date));
+  const reason = routine
+    ? entryBlockReason(routine, date, 'calendar', Boolean(log), today)
+    : undefined;
+  const canMark = Boolean(routine && !reason);
   const tint = routine ? categoryColors[routine.category] : colors.accentLight;
   return (
     <Sheet
@@ -74,6 +79,16 @@ export function CalendarSheet({
           onPress={() => setMonth(shiftMonth(month, 1))}
         />
       </View>
+      {!!reason && (
+        <Text accessibilityRole="alert" style={common.small}>
+          {reason}
+        </Text>
+      )}
+      {!!error && (
+        <Text accessibilityRole="alert" style={{ color: colors.danger }}>
+          {error}
+        </Text>
+      )}
       <View style={styles.grid}>
         {['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'].map((day) => (
           <Text key={day} style={[styles.label, { width: cellWidth }]}>
@@ -92,8 +107,13 @@ export function CalendarSheet({
             : undefined;
           const canCycle =
             !routine ||
-            (value <= today &&
-              Boolean(status || routineForEntry(routine, value)));
+            !entryBlockReason(
+              routine,
+              value,
+              'calendar',
+              Boolean(status),
+              today,
+            );
           const planned = routine
             ? occurrencesForDate([routine], logs, value).length > 0
             : false;
@@ -106,15 +126,27 @@ export function CalendarSheet({
                   ? `Status: ${routine.name}, ${dateLabel(value)}. ${statusLabels[status ?? 'pending']}. ${nextActionLabel(status)}`
                   : dateLabel(value)
               }
+              accessibilityHint={
+                routine && !canCycle
+                  ? entryBlockReason(
+                      routine,
+                      value,
+                      'calendar',
+                      Boolean(status),
+                      today,
+                    )
+                  : undefined
+              }
               accessibilityState={{
                 selected: date === value,
-                disabled: !canCycle || (Boolean(routine) && saving),
+                disabled: Boolean(routine) && saving,
               }}
-              disabled={!canCycle || (Boolean(routine) && saving)}
+              disabled={Boolean(routine) && saving}
               onPress={() => {
                 setDate(value);
-                if (routine) cycleStatus(routine.id, value);
-                else {
+                if (routine) {
+                  if (canCycle) cycleStatus(routine.id, value, 'calendar');
+                } else {
                   onSelect?.(value);
                   onClose();
                 }
@@ -175,34 +207,38 @@ export function CalendarSheet({
               label="Wykonane"
               disabled={!canMark || saving}
               tone="success"
-              onPress={() => void setStatus(routine.id, date, 'done')}
+              onPress={() =>
+                void setStatus(routine.id, date, 'done', 'calendar')
+              }
             />
             <Button
               label="Niewykonane"
               disabled={!canMark || saving}
               tone="danger"
-              onPress={() => setStatus(routine.id, date, 'missed')}
+              onPress={() => setStatus(routine.id, date, 'missed', 'calendar')}
             />
             <Button
               label="Pomiń"
               disabled={!canMark || saving}
               tone="warning"
-              onPress={() => void setStatus(routine.id, date, 'skipped')}
+              onPress={() =>
+                void setStatus(routine.id, date, 'skipped', 'calendar')
+              }
             />
             {log && (
               <Button
                 label="Cofnij status"
                 disabled={saving}
-                onPress={() => void setStatus(routine.id, date, 'pending')}
+                onPress={() =>
+                  void setStatus(routine.id, date, 'pending', 'calendar')
+                }
               />
             )}
           </View>
-          {!canMark && !log && (
-            <Text style={common.small}>
-              Tego dnia rutyna nie jest zaplanowana lub termin jest w
-              przyszłości.
-            </Text>
-          )}
+          <Text style={common.small}>
+            Dotknij daty: wykonane → niewykonane → pominięte → bez oznaczenia.
+            Wpis poza harmonogramem nie zmienia planu rutyny.
+          </Text>
         </>
       )}
       {!routine && (

@@ -111,14 +111,13 @@ export function occurrencesForDate(
   const today = localDate(now);
   return routines
     .flatMap((original): Occurrence[] => {
-      const routine = routineOn(original, date);
       const log = logs.find(
         (item) => item.routineId === original.id && item.scheduledFor === date,
       );
+      const routine = routineOn(original, date) ?? (log ? original : undefined);
       if (
         !routine ||
-        !routine.active ||
-        (!log && !matchesSchedule(routine.schedule, date))
+        (!log && (!routine.active || !matchesSchedule(routine.schedule, date)))
       )
         return [];
       const weeklyProgress =
