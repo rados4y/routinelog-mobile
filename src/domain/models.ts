@@ -75,6 +75,22 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 export type Schedule = z.infer<typeof scheduleSchema>;
+export const checklistItemSchema = z.object({
+  id: z.string().min(1).max(100),
+  text: z.string().trim().min(1, 'Wypełnij lub usuń pusty krok.').max(200),
+});
+export const checklistSchema = z
+  .array(checklistItemSchema)
+  .max(30)
+  .refine(
+    (items) => new Set(items.map((item) => item.id)).size === items.length,
+    'Kroki muszą mieć odrębne identyfikatory.',
+  );
+export type ChecklistItem = z.infer<typeof checklistItemSchema>;
+export const checklistResultSchema = checklistItemSchema.extend({
+  checked: z.boolean(),
+});
+export type ChecklistResult = z.infer<typeof checklistResultSchema>;
 export const routineInputSchema = z.object({
   name: z.string().trim().min(1, 'Podaj nazwę rutyny.').max(100),
   icon: z.string().trim().min(1).max(16),
@@ -87,6 +103,7 @@ export const routineInputSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Podaj godzinę HH:MM.'),
   note: z.string().max(1000),
+  checklist: checklistSchema.optional(),
 });
 export type RoutineInput = z.infer<typeof routineInputSchema>;
 export const routineSchema = routineInputSchema.extend({
@@ -114,6 +131,7 @@ export const logSchema = z.object({
   updatedAt: z.iso.datetime(),
   routineName: z.string(),
   routineIcon: z.string(),
+  checklist: z.array(checklistResultSchema).max(30).optional(),
 });
 export type RoutineLog = z.infer<typeof logSchema>;
 export type OccurrenceStatus = 'pending' | RoutineLog['status'];

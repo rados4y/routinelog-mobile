@@ -3,8 +3,18 @@ import type { Repositories } from '../data/repositories';
 import { seedOnce } from '../data/seed';
 import { localDate } from '../domain/dates';
 import { createLog } from '../domain/log';
-import type { Routine, RoutineInput, RoutineLog } from '../domain/models';
-import { createRoutine, updateRoutine } from '../domain/routine';
+import type {
+  ChecklistResult,
+  OccurrenceStatus,
+  Routine,
+  RoutineInput,
+  RoutineLog,
+} from '../domain/models';
+import { createRoutine, routineOn, updateRoutine } from '../domain/routine';
+import {
+  ChecklistIncompleteError,
+  requireCompleteChecklist,
+} from '../domain/checklist';
 import { occurrencesForDate, routineForEntry } from '../domain/schedule';
 import type { SyncLocal } from '../data/sync';
 
@@ -25,7 +35,8 @@ export interface RoutineState {
   setStatus(
     id: string,
     date: string,
-    status: 'done' | 'skipped' | 'pending',
+    status: OccurrenceStatus,
+    checklist?: ChecklistResult[],
   ): Promise<boolean>;
 }
 export function createRoutineStore(
@@ -41,10 +52,12 @@ export function createRoutineStore(
       try {
         await work();
         return true;
-      } catch {
+      } catch (error) {
         set({
           error:
-            'Nie udało się zapisać zmian. Dane na ekranie nie zostały zmienione. Spróbuj ponownie.',
+            error instanceof ChecklistIncompleteError
+              ? error.message
+              : 'Nie udało się zapisać zmian. Dane na ekranie nie zostały zmienione. Spróbuj ponownie.',
         });
         return false;
       } finally {
@@ -85,6 +98,15 @@ export function createRoutineStore(
         const current = get().logs.find((item) => item.id === id);
         if (JSON.stringify(current) !== JSON.stringify(expected)) return false;
         return perform(async () => {
+          if (next?.status === 'done' && current?.status !== 'done') {
+            const routine = get().routines.find(
+              (item) => item.id === next.routineId,
+            );
+            requireCompleteChecklist(
+              routine ? routineOn(routine, next.scheduledFor)?.checklist : [],
+              next.checklist,
+            );
+          }
           if (next) await repos.logs.save(next);
           else await repos.logs.remove(id);
           set({
@@ -141,7 +163,7 @@ export function createRoutineStore(
             deletedAt: clock().toISOString(),
           });
         }),
-      setStatus: (id, date, status) =>
+      setStatus: (id, date, status, checklist) =>
         perform(async () => {
           if (date > localDate(clock())) throw new Error('Przyszły dzień.');
           const existing = get().logs.find(
@@ -161,10 +183,17 @@ export function createRoutineStore(
             clock(),
           ).find((item) => item.routine.id === id);
           const routine =
-            occurrence?.routine ?? routineForEntry(find(id), date);
+            occurrence?.routine ??
+            (existing
+              ? routineOn(find(id), date)
+              : routineForEntry(find(id), date));
           if (!routine) throw new Error('Rutyna nie jest zaplanowana.');
-          const log = createLog(routine, date, status, clock());
-          if (existing) log.createdAt = existing.createdAt;
+          const log = createLog(routine, date, status, clock(), checklist);
+          if (existing) {
+            log.createdAt = existing.createdAt;
+            log.note = existing.note;
+            log.value = existing.value;
+          }
           await repos.logs.save(log);
           set({
             logs: [...get().logs.filter((item) => item.id !== log.id), log],

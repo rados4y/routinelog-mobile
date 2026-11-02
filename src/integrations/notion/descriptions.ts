@@ -167,6 +167,7 @@ export function inputFromColumn(
       ? fields.Jednostka || null
       : (fallback?.unit ?? null),
     note: note.join('\n').trim(),
+    checklist: fallback?.checklist,
   });
   if (!result.success)
     throw new Error(

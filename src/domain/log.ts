@@ -1,14 +1,20 @@
 import { localDate } from './dates';
-import type { Routine, RoutineLog } from './models';
+import type { ChecklistResult, Routine, RoutineLog } from './models';
+import { requireCompleteChecklist } from './checklist';
 
 export function createLog(
   routine: Routine,
   date: string,
-  status: 'done' | 'skipped',
+  status: RoutineLog['status'],
   now = new Date(),
+  checklist: ChecklistResult[] = [],
 ): RoutineLog {
   if (date > localDate(now))
     throw new Error('Nie można oznaczyć przyszłego dnia.');
+  const completedChecklist =
+    status === 'done'
+      ? requireCompleteChecklist(routine.checklist, checklist)
+      : [];
   return {
     id: `${routine.id}:${date}`,
     routineId: routine.id,
@@ -22,5 +28,6 @@ export function createLog(
     updatedAt: now.toISOString(),
     routineName: routine.name,
     routineIcon: routine.icon,
+    ...(completedChecklist.length ? { checklist: completedChecklist } : {}),
   };
 }

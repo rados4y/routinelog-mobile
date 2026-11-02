@@ -49,7 +49,15 @@ export function historyForRange(
         continue;
       const deficit = Math.max(
         0,
-        window.target - windowDone(routine.id, window, logs),
+        window.target -
+          windowDone(routine.id, window, logs) -
+          logs.filter(
+            (log) =>
+              log.routineId === routine.id &&
+              log.status === 'missed' &&
+              log.scheduledFor >= window.start &&
+              log.scheduledFor <= window.end,
+          ).length,
       );
       if (deficit) result.push(missed(routine, date, deficit));
     }

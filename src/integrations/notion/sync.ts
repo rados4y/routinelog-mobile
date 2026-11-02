@@ -1,7 +1,7 @@
 import type { KeyValueStorage } from '../../data/repositories';
 import { addDays, localDate } from '../../domain/dates';
 import { routineInputSchema, type RoutineLog } from '../../domain/models';
-import { createRoutine, updateRoutine } from '../../domain/routine';
+import { createRoutine, routineOn, updateRoutine } from '../../domain/routine';
 import {
   cellWrite,
   columnName,
@@ -53,9 +53,13 @@ const fieldLabels = {
   unit: 'Jednostka',
   reminderTime: 'Godzina',
   note: 'Opis',
+  checklist: 'Lista kroków',
 };
 
 export class NotionSync {
+  private pendingChecklists = new Set<string>();
+  private awaitingRoutineIds = new Set<string>();
+  private blockedRetirement = false;
   constructor(
     private root: string,
     private remote: NotionGateway,
@@ -64,6 +68,9 @@ export class NotionSync {
     private clock = () => new Date(),
   ) {}
   async run(choice?: ConflictChoice): Promise<void> {
+    this.pendingChecklists.clear();
+    this.awaitingRoutineIds.clear();
+    this.blockedRetirement = false;
     const current = localDate(this.clock()).slice(0, 7);
     const refs = await this.remote.listMonths();
     const authority = refs
@@ -99,6 +106,10 @@ export class NotionSync {
         continue;
       await this.month(ref, false, choice);
     }
+    if (this.pendingChecklists.size)
+      throw new Error(
+        `Potwierdź listę kroków w aplikacji dla: ${[...this.pendingChecklists].slice(0, 3).join(', ')}${this.pendingChecklists.size > 3 ? '…' : ''}. Te wykonania z Notion czekają na potwierdzenie. Pozostałe zmiany zostały zsynchronizowane.${this.blockedRetirement ? ' Dla usuniętej rutyny wycofaj wykonanie w Notion; do tego czasu kolumna pozostaje zachowana.' : ''}`,
+      );
   }
   private async month(
     ref: MonthRef,
@@ -184,6 +195,8 @@ export class NotionSync {
         for (const field of Object.keys(
           localInput,
         ) as (keyof typeof localInput)[]) {
+          // Checklists are local-only; the compact Notion column description cannot hold them.
+          if (field === 'checklist') continue;
           Object.assign(merged, {
             [field]: mergeValue(
               binding?.base[field],
@@ -248,7 +261,18 @@ export class NotionSync {
       // Preserve remote-only completions before dropping retired columns. A separate
       // delete also frees names for replacement routines with different identities.
       await this.syncCells(table, ledger, persist, choice);
-      table = await this.remote.updateColumns(table, deletions);
+      // Do not erase remote-only results that are still waiting for local checklist proof.
+      for (const binding of ledger.bindings) {
+        if (
+          Object.hasOwn(deletions, binding.propertyId) &&
+          this.awaitingRoutineIds.has(binding.routineId)
+        ) {
+          delete deletions[binding.propertyId];
+          this.blockedRetirement = true;
+        }
+      }
+      if (Object.keys(deletions).length)
+        table = await this.remote.updateColumns(table, deletions);
     }
     const patches: Record<string, unknown> = {};
     const existingRoutineIds = new Set(
@@ -349,6 +373,15 @@ export class NotionSync {
           `${routine.name} · ${row.date}`,
           choice,
         );
+        if (
+          merged === 'done' &&
+          existing?.status !== 'done' &&
+          routineOn(routine, row.date)?.checklist?.length
+        ) {
+          this.pendingChecklists.add(`${routine.name} · ${row.date}`);
+          this.awaitingRoutineIds.add(routine.id);
+          continue;
+        }
         if (merged !== remoteStatus)
           writes[column.id] = cellWrite(column, merged);
         if (merged !== localStatus) {

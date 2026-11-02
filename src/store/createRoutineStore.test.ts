@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { repositories } from '../data/repositories';
 import { MemoryStorage, monday, routine } from '../test/fixtures';
+import { createLog } from '../domain/log';
 import { occurrencesForDate } from '../domain/schedule';
 import { createRoutineStore } from './createRoutineStore';
 
@@ -131,5 +132,79 @@ describe('routine operations', () => {
       store.getState().routines.find((item) => item.id === expected.id)?.name,
     ).toBe('Nowsza nazwa');
     expect(store.getState().logs[0]?.status).toBe('done');
+  });
+});
+
+describe('checklist persistence and status cycle', () => {
+  const clock = () => new Date(`${monday}T12:00:00`);
+  const items = [
+    { id: 'one', text: 'Pierwszy krok' },
+    { id: 'two', text: 'Drugi krok' },
+  ];
+  const proof = items.map((item) => ({ ...item, checked: true }));
+  async function setup() {
+    const repos = repositories(new MemoryStorage());
+    const store = createRoutineStore(repos, clock, () => 'checklist');
+    await store.getState().load();
+    await store.getState().saveRoutine({ ...routine(), checklist: items });
+    return { store, repos };
+  }
+  it('rejects incomplete completion, preserves previous status, and persists complete proof', async () => {
+    const { store, repos } = await setup();
+    await store.getState().setStatus('checklist', monday, 'skipped');
+    expect(
+      await store
+        .getState()
+        .setStatus('checklist', monday, 'done', proof.slice(0, 1)),
+    ).toBe(false);
+    expect(store.getState().logs[0]?.status).toBe('skipped');
+    expect(
+      await store.getState().setStatus('checklist', monday, 'done', proof),
+    ).toBe(true);
+    const reload = createRoutineStore(repos, clock);
+    await reload.getState().load();
+    expect(reload.getState().logs[0]?.checklist).toEqual(proof);
+    await reload
+      .getState()
+      .saveRoutine(
+        { ...routine(), checklist: [{ id: 'one', text: 'Zmieniony krok' }] },
+        'checklist',
+      );
+    expect(reload.getState().logs[0]?.checklist).toEqual(proof);
+    await reload.getState().setStatus('checklist', monday, 'pending');
+    expect(
+      await reload.getState().setStatus('checklist', monday, 'done', proof),
+    ).toBe(false);
+    expect(reload.getState().logs).toEqual([]);
+  });
+  it('persists the entire four-state cycle and clears old proof before a new attempt', async () => {
+    const { store, repos } = await setup();
+    for (const status of ['done', 'missed', 'skipped', 'pending'] as const) {
+      expect(
+        await store.getState().setStatus('checklist', monday, status, proof),
+      ).toBe(true);
+      const reload = createRoutineStore(repos, clock);
+      await reload.getState().load();
+      expect(reload.getState().logs[0]?.status ?? 'pending').toBe(status);
+      if (status !== 'done')
+        expect(reload.getState().logs[0]?.checklist).toBeUndefined();
+    }
+    expect(await store.getState().setStatus('checklist', monday, 'done')).toBe(
+      false,
+    );
+    expect(await repos.logs.list()).toEqual([]);
+  });
+  it('rejects a new synchronized done without checklist proof', async () => {
+    const { store } = await setup();
+    const log = {
+      ...createLog(routine(), monday, 'done', clock()),
+      id: `checklist:${monday}`,
+      routineId: 'checklist',
+      source: 'notion' as const,
+    };
+    expect(await store.getState().applySyncedLog(undefined, log, log.id)).toBe(
+      false,
+    );
+    expect(store.getState().logs).toEqual([]);
   });
 });
