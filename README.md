@@ -27,15 +27,21 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
 
 ## Funkcje
 
-- Dzisiaj: siedem dat wokół bieżącego dnia, podsumowanie, pierścień i pasek postępu.
-- Plan: kompaktowe wiersze z emoji, godziną, kategorią i harmonogramem; checkbox
-  wykonania/cofnięcia dostępny od razu. Dotknięcie wiersza rozwija notatkę i opcję pominięcia.
-- Rutyny: dodawanie, edycja, włączanie/wyłączanie i usuwanie z potwierdzeniem.
-- Harmonogramy: codziennie, Pn–Pt, wybrane dni, 3×/tydzień, raz/tydzień, co N dni,
-  skróty co 7 i co 30 dni. Dzień początkowy interwału jest edytowalny.
+- Dzisiaj: ciemny, zwarty plan z różowym akcentem, siedmioma datami, wyszukiwaniem,
+  filtrem kategorii i kalendarzem. Wykonanie/cofnięcie jest dostępne od razu w wierszu;
+  dotknięcie nazwy rozwija harmonogram, notatkę, pominięcie i edycję.
+- Rutyny: karty z tygodniowym paskiem dni, kolorową ikoną kategorii, kalendarzem,
+  rzeczywistą regularnością i serią ostatnich 30 dni. Menu pozwala edytować, wyłączyć
+  lub usunąć rutynę z potwierdzeniem. FAB tworzy rutynę z obu głównych ekranów.
+- Pełnoekranowy wybór częstotliwości: codziennie, dni tygodnia, dni miesiąca 1–31
+  i „Ostatni”, ordinalne dni tygodnia w miesiącu, daty roczne, cele N×/tydzień
+  lub N×/miesiąc, co N dni. Anulowanie nie zmienia zapisanego harmonogramu.
 - Historia: zapisane wyniki oraz wyliczone niewykonania, źródło, data i czas wykonania.
 - Statystyki: ostatnie siedem dni, wykonania/pominięcia/niewykonania, regularność, wykres.
-- Seed pięciu rutyn tylko przy pierwszym uruchomieniu. Błędy odczytu nie kasują danych.
+- Pięć rutyn z referencji: niedzielna książka, rozmowy z Pawłem (ostatni dzień),
+  Piotrkiem (15.), rodzicami (15. i ostatni) oraz spacer z psem (1×/tydzień).
+  Jednorazowa migracja zastępuje poprzedni aktywny zestaw, zachowując historię.
+  Kolejne uruchomienia nie nadpisują zmian użytkownika.
 - Loading/error/empty states, granica błędów Routera, podstawowa dostępność.
 - Notion: miesięczne tabele z dniami w wierszach i rutynami w kolumnach;
   synchronizacja nazw, opisów, ustawień i statusów w obie strony.
@@ -67,6 +73,13 @@ UI wywołuje operacje store'a; nie odczytuje AsyncStorage. `RoutineRepository` i
 `LogRepository` mają metody `list/save/remove`, a adapter pamięci ma jawny interfejs.
 Każda encja ma osobny klucz i kopertę `{version: 1, data}` z walidacją Zod.
 Seed ma osobny znacznik i odzyskuje częściowy zapis bez duplikowania ani nadpisywania rekordów.
+`@routinelog/seed-version = 2` oznacza zastosowany zestaw z referencji. Przejście z
+wersji 1 archiwizuje dotychczasowe rutyny (również własne, zgodnie z prośbą właściciela),
+zachowuje logi i rewizje, a następnie dodaje pięć nowych, stabilnych identyfikatorów.
+Zapis znacznika następuje dopiero po zakończeniu; ponowienie odzyskuje przerwany import.
+Rozmowy z Pawłem i rodzicami zaczynają się od zaległego ostatniego dnia poprzedniego
+miesiąca, aby odtworzyć plan z referencji. Nie importujemy przykładowych wykonań,
+serii ani procentów. Nowe rutyny synchronizują się z istniejącym połączeniem Notion.
 Nowy format wymaga jawnej migracji; nieznane wersje wyświetlają błąd zamiast resetować dane.
 
 `createRoutineStore` przyjmuje repozytoria, zegar i generator identyfikatorów.
@@ -80,6 +93,8 @@ Wybrana data i formularz pozostają stanem UI, niezależnym od danych domenowych
 `revisions` i `deletedAt` zachowują harmonogram i aktywność wcześniejszych dni.
 Zmiana działa od lokalnego dnia edycji; zmiany w tym samym dniu zastępują jego plan.
 Usuwanie jest miękkie, aby zachować historię.
+Opcjonalny `sortOrder` zachowuje kolejność kart niezależnie od kolejności kluczy
+AsyncStorage. To lokalna kolejność prezentacji, nie część edytowalnych pól Notion.
 
 `RoutineLog`: `id`, `routineId`, `scheduledFor`, `status`, `completedAt`, `value`,
 `note`, `source`, `createdAt`, `updatedAt`; kopia nazwy i ikony zachowuje czytelność historii.
@@ -90,7 +105,9 @@ Pola `value`, `unit` i `target` są przygotowane do późniejszych celów ilośc
 ### Harmonogramy i niewykonania
 
 Silnik w `src/domain/schedule` to czyste funkcje. `Schedule` jest unią dyskryminowaną:
-`daily`, `weekdays`, `interval`, `weeklyTarget`. Nowe rodzaje okien/cykli należy
+`daily`, `weekdays`, `interval`, `weeklyTarget`, `monthlyTarget`, `monthlyDays`,
+`monthlyWeekdays`, `yearlyDates`. Moduł `schedule/windows` centralizuje daty i okna.
+Nowe rodzaje okien/cykli należy
 rozszerzać tutaj, wraz z walidacją i testami, zamiast dodawać warunki do ekranów.
 
 - `pending`: zaplanowane, bez decyzji, niezakończony termin.
@@ -100,6 +117,14 @@ rozszerzać tutaj, wraz z walidacją i testami, zamiast dodawać warunki do ekra
 - Cel tygodniowy nie ma dziennego `missed` ani `overdue`. Tydzień trwa Pn–Nd.
   Po jego zakończeniu historia wylicza jeden wpis na niedzielę z liczbą brakujących wykonań.
   Edycja celu w trakcie tygodnia stosuje cel obowiązujący na koniec okna.
+- Cel miesięczny rozliczamy na koniec miesiąca. Terminy elastyczne (dni tygodnia,
+  miesiąca i roku) są widoczne od terminu do wykonania lub pominięcia, najpóźniej
+  do następnego terminu. Dopiero zamknięcie okna może wyliczyć jedno niewykonanie.
+  Nie tworzymy zaległego okna sprzed początkowej daty harmonogramu; otwarte cele
+  tygodniowe/miesięczne mogą zacząć się w trakcie okresu. Kalendarz pozwala uzupełnić
+  wcześniejsze wykonania także po zamknięciu okna.
+- Dzień 31 nie jest automatycznie przesuwany na 30. lub 28.; temu służy osobna
+  opcja „Ostatni”. Data 29 lutego jest obsługiwana również w planie rocznym.
 - Niewykonania wyliczamy, nie utrwalamy: późniejsze oznaczenie zakończonego dnia
   automatycznie poprawia historię i statystyki.
 - Rutyny nie istnieją przed datą utworzenia; pauza i edycja nie przepisują wcześniejszych dni.
@@ -148,6 +173,8 @@ użytkownikom należy zastąpić osobisty PAT publiczną integracją OAuth z bac
 - Opis kolumny zawiera notatkę oraz czytelne pola `Kategoria`, `Godzina`, `Plan`,
   `Aktywna`, `Cel`, `Jednostka` i link otwierający rutynę w aplikacji. Plany:
   `codziennie`, `dni 1,3,5` (Pn=1), `3x/tydzień`, `co 7 dni od 2026-11-01`.
+  Dodatkowo: `miesiąc 15,ostatni elastycznie`, `tygodnie ostatni dni 1 elastycznie`,
+  `rok 29.2,2.11` i `4x/miesiąc`. Flaga `elastycznie` jest zachowywana w obie strony.
   Pól i linku nie trzeba ręcznie dodawać: synchronizacja je uzupełnia.
   API Notion ogranicza opis kolumny do 280 znaków łącznie z ustawieniami.
   Zbyt długi opis jest zgłaszany przed wysłaniem żądania; notatki nie są automatycznie
@@ -161,6 +188,9 @@ użytkownikom należy zastąpić osobisty PAT publiczną integracją OAuth z bac
   Usunięcie rutyny w aplikacji usuwa jej kolumnę tylko z bieżącego miesiąca.
   Starsze tabele i zapisane logi pozostają archiwum. Zmiana statusu w archiwum
   nadal działa w obie strony. Brak wiersza dnia zostaje naprawiony z lokalnych wpisów.
+  Przed usunięciem kolumn silnik najpierw uzgadnia ich wpisy, aby zachować również
+  wykonania istniejące tylko w Notion. Usunięcia są osobnym żądaniem, co pozwala
+  zastąpić rutynę nową o tej samej nazwie, zachowując odrębne historie.
 - Nowy miesiąc powstaje przy pierwszej synchronizacji w tym miesiącu. Przy przejściu
   silnik najpierw odczytuje ostatnią tabelę, a potem tworzy nową bez zmiany archiwum.
   Edycje nazw/ustawień w starszych miesiącach nie zmieniają już bieżących rutyn.

@@ -39,11 +39,15 @@ describe('versioned record repositories', () => {
   });
   it('recovers a partial seed without duplicating records', async () => {
     const repos = repositories(new MemoryStorage());
-    await repos.routines.save({ ...routine(), id: 'seed-1', name: 'Zachowaj' });
+    await repos.routines.save({
+      ...routine(),
+      id: 'preset-book',
+      name: 'Zachowaj',
+    });
     await seedOnce(repos);
     expect(await repos.routines.list()).toHaveLength(5);
     expect(
-      (await repos.routines.list()).find((r) => r.id === 'seed-1')?.name,
+      (await repos.routines.list()).find((r) => r.id === 'preset-book')?.name,
     ).toBe('Zachowaj');
   });
 });

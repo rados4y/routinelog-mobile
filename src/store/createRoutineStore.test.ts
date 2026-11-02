@@ -32,14 +32,14 @@ describe('routine operations', () => {
   });
   it('supports done, skipped, undo and reload from durable records', async () => {
     const { store, repos } = await setup();
-    await store.getState().setStatus('seed-1', monday, 'done');
+    await store.getState().setStatus('preset-dog', monday, 'done');
     expect(store.getState().logs[0]?.status).toBe('done');
-    await store.getState().setStatus('seed-1', monday, 'skipped');
+    await store.getState().setStatus('preset-dog', monday, 'skipped');
     expect(store.getState().logs).toHaveLength(1);
     const reloaded = createRoutineStore(repos, clock);
     await reloaded.getState().load();
     expect(reloaded.getState().logs[0]?.status).toBe('skipped');
-    await reloaded.getState().setStatus('seed-1', monday, 'pending');
+    await reloaded.getState().setStatus('preset-dog', monday, 'pending');
     expect(await repos.logs.list()).toEqual([]);
     expect(
       occurrencesForDate(reloaded.getState().routines, [], monday, clock())[0]
@@ -48,15 +48,33 @@ describe('routine operations', () => {
   });
   it('retains historical logs when a routine is deleted', async () => {
     const { store } = await setup();
-    await store.getState().setStatus('seed-1', monday, 'done');
-    await store.getState().deleteRoutine('seed-1');
+    await store.getState().setStatus('preset-dog', monday, 'done');
+    await store.getState().deleteRoutine('preset-dog');
     expect(store.getState().logs).toHaveLength(1);
-    expect(store.getState().logs[0]?.routineName).toBe('Wziąć lek');
+    expect(store.getState().logs[0]?.routineName).toBe(
+      'Wyjście na spacer z psem',
+    );
+  });
+  it('can backfill a weekly completion after its window closed', async () => {
+    const { repos } = await setup();
+    const later = createRoutineStore(
+      repos,
+      () => new Date('2026-10-20T12:00:00'),
+    );
+    await later.getState().load();
+    expect(
+      await later.getState().setStatus('preset-dog', '2026-10-13', 'done'),
+    ).toBe(true);
+    expect(later.getState().logs[0]).toMatchObject({
+      routineId: 'preset-dog',
+      scheduledFor: '2026-10-13',
+      status: 'done',
+    });
   });
   it('rejects future completion and unscheduled routines', async () => {
     const { store } = await setup();
     expect(
-      await store.getState().setStatus('seed-1', '2026-10-13', 'done'),
+      await store.getState().setStatus('preset-dog', '2026-10-13', 'done'),
     ).toBe(false);
     expect(await store.getState().setStatus('missing', monday, 'done')).toBe(
       false,
@@ -68,13 +86,13 @@ describe('routine operations', () => {
     vi.spyOn(repos.logs, 'save').mockRejectedValueOnce(
       new Error('Storage full'),
     );
-    expect(await store.getState().setStatus('seed-1', monday, 'done')).toBe(
+    expect(await store.getState().setStatus('preset-dog', monday, 'done')).toBe(
       false,
     );
     expect(store.getState().logs).toEqual([]);
     expect(store.getState().error).toBeTruthy();
     expect(store.getState().saving).toBe(false);
-    expect(await store.getState().setStatus('seed-1', monday, 'done')).toBe(
+    expect(await store.getState().setStatus('preset-dog', monday, 'done')).toBe(
       true,
     );
   });
@@ -94,7 +112,7 @@ describe('routine operations', () => {
     const { store } = await setup();
     const expected = store
       .getState()
-      .routines.find((item) => item.id === 'seed-1')!;
+      .routines.find((item) => item.id === 'preset-dog')!;
     await store
       .getState()
       .saveRoutine({ ...expected, name: 'Nowsza nazwa' }, expected.id);

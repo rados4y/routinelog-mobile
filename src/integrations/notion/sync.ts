@@ -20,6 +20,7 @@ import {
   type ConflictChoice,
   type MonthLedger,
   type MonthRef,
+  type MonthTable,
   type NotionGateway,
   type SyncLocal,
 } from './models';
@@ -230,7 +231,7 @@ export class NotionSync {
       await persist();
     }
     const data = this.local.read();
-    const patches: Record<string, unknown> = {};
+    const deletions: Record<string, unknown> = {};
     if (manageRoutines && currentMonth) {
       for (const binding of ledger.bindings) {
         const routine = data.routines.find(
@@ -240,9 +241,16 @@ export class NotionSync {
           routine?.deletedAt &&
           table.columns.some((column) => column.id === binding.propertyId)
         )
-          patches[binding.propertyId] = null;
+          deletions[binding.propertyId] = null;
       }
     }
+    if (Object.keys(deletions).length) {
+      // Preserve remote-only completions before dropping retired columns. A separate
+      // delete also frees names for replacement routines with different identities.
+      await this.syncCells(table, ledger, persist, choice);
+      table = await this.remote.updateColumns(table, deletions);
+    }
+    const patches: Record<string, unknown> = {};
     const existingRoutineIds = new Set(
       ledger.bindings
         .filter((binding) =>
@@ -303,6 +311,14 @@ export class NotionSync {
       createdDays = true;
     }
     if (createdDays) table = await this.remote.readMonth(ref);
+    await this.syncCells(table, ledger, persist, choice);
+  }
+  private async syncCells(
+    table: MonthTable,
+    ledger: MonthLedger,
+    persist: () => Promise<void>,
+    choice?: ConflictChoice,
+  ): Promise<void> {
     for (const row of table.rows) {
       if (row.date > localDate(this.clock())) continue;
       const writes: Record<string, unknown> = {};

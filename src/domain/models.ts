@@ -15,6 +15,7 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('weekdays'),
     days: z.array(z.number().int().min(1).max(7)).min(1).max(7),
+    flexible: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal('interval'),
@@ -24,6 +25,53 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('weeklyTarget'),
     count: z.number().int().min(1).max(7),
+  }),
+  z
+    .object({
+      kind: z.literal('monthlyDays'),
+      days: z.array(z.number().int().min(1).max(31)).max(31),
+      lastDay: z.boolean(),
+      flexible: z.boolean(),
+    })
+    .refine(
+      (value) => value.days.length > 0 || value.lastDay,
+      'Wybierz co najmniej jeden dzień.',
+    ),
+  z
+    .object({
+      kind: z.literal('monthlyWeekdays'),
+      weeks: z.array(z.number().int().min(1).max(5)).max(5),
+      lastWeek: z.boolean(),
+      days: z.array(z.number().int().min(1).max(7)).min(1).max(7),
+      flexible: z.boolean(),
+    })
+    .refine(
+      (value) => value.weeks.length > 0 || value.lastWeek,
+      'Wybierz tydzień miesiąca.',
+    ),
+  z.object({
+    kind: z.literal('yearlyDates'),
+    dates: z
+      .array(
+        z
+          .object({
+            month: z.number().int().min(1).max(12),
+            day: z.number().int().min(1).max(31),
+          })
+          .refine(
+            (value) =>
+              value.day <=
+              new Date(Date.UTC(2000, value.month, 0)).getUTCDate(),
+            'Nieprawidłowy dzień miesiąca.',
+          ),
+      )
+      .min(1)
+      .max(366),
+    flexible: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal('monthlyTarget'),
+    count: z.number().int().min(1).max(31),
   }),
 ]);
 export type Schedule = z.infer<typeof scheduleSchema>;
@@ -47,6 +95,7 @@ export const routineSchema = routineInputSchema.extend({
   updatedAt: z.iso.datetime(),
   effectiveFrom: dateSchema,
   deletedAt: z.iso.datetime().nullable(),
+  sortOrder: z.number().nonnegative().optional(),
   revisions: z.array(
     z.object({ from: dateSchema, until: dateSchema, data: routineInputSchema }),
   ),
@@ -75,4 +124,10 @@ export interface Occurrence {
   overdue: boolean;
   log?: RoutineLog;
   weeklyProgress?: { done: number; target: number };
+  windowProgress?: {
+    done: number;
+    target: number;
+    start: LocalDate;
+    end: LocalDate;
+  };
 }

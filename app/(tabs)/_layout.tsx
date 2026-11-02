@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '../../src/components/Icon';
 import { colors } from '../../src/theme';
@@ -15,7 +16,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accentLight,
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           backgroundColor: colors.panel,
@@ -35,7 +36,20 @@ export default function TabsLayout() {
           options={{
             title: tab.title,
             tabBarAccessibilityLabel: tab.title,
-            tabBarIcon: ({ color }) => <Icon name={tab.icon} color={color} />,
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={{
+                  width: 64,
+                  height: 34,
+                  borderRadius: 24,
+                  backgroundColor: focused ? '#3c1d27' : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon name={tab.icon} color={color} size={24} />
+              </View>
+            ),
           }}
         />
       ))}

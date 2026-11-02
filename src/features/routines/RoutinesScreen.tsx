@@ -1,160 +1,175 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '../../components/Button';
-import { Icon } from '../../components/Icon';
-import { Screen, EmptyState } from '../../components/Screen';
+import { HabitScreen, ToolButton } from '../../components/HabitScreen';
+import { EmptyState } from '../../components/Screen';
+import { Sheet } from '../../components/Sheet';
+import { CalendarSheet } from '../../components/CalendarSheet';
 import type { Routine } from '../../domain/models';
-import { scheduleLabel } from '../../domain/schedule';
+import { localDate } from '../../domain/dates';
 import { useRoutines } from '../../store/useRoutines';
-import { colors, common } from '../../theme';
+import { common } from '../../theme';
 import { NotionButton } from '../../integrations/notion/NotionButton';
+import { useNow } from '../../utils/useNow';
+import { useRoutineFilter } from './useRoutineFilter';
+import { RoutineCard } from './RoutineCard';
+import { RoutineInsights } from './RoutineInsights';
 
 export function RoutinesScreen() {
-  const routines = useRoutines((s) => s.routines)
-    .filter((routine) => !routine.deletedAt)
-    .sort((a, b) => a.reminderTime.localeCompare(b.reminderTime));
-  const saving = useRoutines((s) => s.saving);
-  const toggle = useRoutines((s) => s.toggleRoutine);
-  const remove = useRoutines((s) => s.deleteRoutine);
-  const [deleting, setDeleting] = useState<Routine | null>(null);
+  const today = localDate(useNow());
+  const filter = useRoutineFilter();
+  const [inactiveOnly, setInactiveOnly] = useState(false);
+  const routines = useRoutines((state) => state.routines)
+    .filter(
+      (routine) =>
+        !routine.deletedAt &&
+        (!inactiveOnly || !routine.active) &&
+        filter.matches(routine),
+    )
+    .sort(
+      (a, b) =>
+        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+        a.createdAt.localeCompare(b.createdAt),
+    );
+  const logs = useRoutines((state) => state.logs);
+  const saving = useRoutines((state) => state.saving);
+  const toggle = useRoutines((state) => state.toggleRoutine);
+  const remove = useRoutines((state) => state.deleteRoutine);
+  const [options, setOptions] = useState<Routine | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [calendar, setCalendar] = useState<{
+    routine: Routine;
+    date: string;
+  } | null>(null);
+  const [insights, setInsights] = useState<Routine | null>(null);
   return (
-    <View style={common.grow}>
-      <Screen
-        title="Twoje rutyny"
-        action={<NotionButton />}
-        subtitle={`${routines.filter((routine) => routine.active).length} aktywnych · Twój rytm, Twoje zasady`}
-      >
-        <View style={styles.hint}>
-          <Text style={styles.hintIcon}>✦</Text>
-          <Text style={[common.subtitle, common.grow]}>
-            Nie musisz robić wszystkiego naraz. Zacznij od jednej dobrej rutyny.
-          </Text>
-        </View>
-        <View style={common.section}>
-          {!routines.length && (
-            <EmptyState
-              title="Zacznij od małego kroku"
-              description="Dodaj swoją pierwszą rutynę przyciskiem +."
+    <>
+      <HabitScreen
+        title="Rutyny"
+        tools={
+          <>
+            <ToolButton
+              icon="search"
+              label="Szukaj rutyn"
+              selected={filter.search}
+              onPress={filter.toggleSearch}
             />
-          )}
-          {routines.map((routine) => (
-            <View
+            <ToolButton
+              icon="filter"
+              label="Filtruj rutyny"
+              selected={filter.filters || filter.activeFilter}
+              onPress={filter.toggleFilters}
+            />
+            <ToolButton
+              icon="archive"
+              label="Pokaż wyłączone rutyny"
+              selected={inactiveOnly}
+              onPress={() => setInactiveOnly(!inactiveOnly)}
+            />
+            <NotionButton />
+          </>
+        }
+        fixed={filter.panel}
+      >
+        {inactiveOnly && <Text style={common.subtitle}>Wyłączone rutyny</Text>}
+        {routines.length ? (
+          routines.map((routine) => (
+            <RoutineCard
               key={routine.id}
-              testID={`routine-${routine.id}`}
-              style={common.card}
-            >
-              <View style={common.row}>
-                <Text style={styles.emoji}>{routine.icon}</Text>
-                <View style={common.grow}>
-                  <Text style={common.heading}>{routine.name}</Text>
-                  <Text style={common.small}>
-                    {routine.category} · {routine.reminderTime}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.state,
-                    { color: routine.active ? colors.success : colors.muted },
-                  ]}
-                >
-                  {routine.active ? 'Aktywna' : 'Wyłączona'}
-                </Text>
-              </View>
-              <Text style={common.subtitle}>
-                {scheduleLabel(routine.schedule)}
-              </Text>
-              <View style={common.wrap}>
-                <Button
-                  label="Edytuj"
-                  icon="edit"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/routine-editor',
-                      params: { id: routine.id },
-                    })
-                  }
-                  compact
-                />
-                <Button
-                  label={routine.active ? 'Wyłącz' : 'Włącz'}
-                  disabled={saving}
-                  onPress={() => void toggle(routine.id)}
-                  compact
-                />
-                <Button
-                  label="Usuń"
-                  tone="danger"
-                  disabled={saving}
-                  onPress={() => setDeleting(routine)}
-                  compact
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-      </Screen>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Dodaj rutynę"
-        onPress={() => router.push('/routine-editor')}
-        style={styles.fab}
-      >
-        <Icon name="plus" size={28} color={colors.text} />
-      </Pressable>
-      <Modal
-        visible={!!deleting}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDeleting(null)}
-      >
-        <View style={styles.overlay}>
-          <View accessibilityViewIsModal style={common.card}>
-            <Text style={common.heading}>Usunąć „{deleting?.name}”?</Text>
-            <Text style={common.subtitle}>
-              Rutyna zniknie z planu. Jej wcześniejsza historia pozostanie
-              zapisana.
-            </Text>
-            <Button
-              label="Usuń rutynę"
-              tone="danger"
-              disabled={saving}
-              onPress={() => {
-                if (deleting)
-                  void remove(deleting.id).then((ok) => {
-                    if (ok) setDeleting(null);
-                  });
+              routine={routine}
+              logs={logs}
+              today={today}
+              onCalendar={(date) => setCalendar({ routine, date })}
+              onInsights={() => setInsights(routine)}
+              onOptions={() => {
+                setConfirm(false);
+                setOptions(routine);
               }}
             />
-            <Button label="Anuluj" onPress={() => setDeleting(null)} />
-          </View>
-        </View>
-      </Modal>
-    </View>
+          ))
+        ) : (
+          <EmptyState
+            title="Brak rutyn"
+            description="Zmień filtry lub dodaj nową rutynę przyciskiem +."
+          />
+        )}
+      </HabitScreen>
+      <Sheet
+        visible={Boolean(options)}
+        title={confirm ? 'Usunąć rutynę?' : (options?.name ?? 'Opcje rutyny')}
+        onClose={() => setOptions(null)}
+      >
+        {options &&
+          (confirm ? (
+            <>
+              <Text style={common.subtitle}>
+                Rutyna zniknie z planu. Wcześniejsza historia pozostanie
+                zapisana.
+              </Text>
+              <Button
+                label="Usuń rutynę"
+                tone="danger"
+                disabled={saving}
+                onPress={() =>
+                  void remove(options.id).then((ok) => {
+                    if (ok) setOptions(null);
+                  })
+                }
+              />
+              <Button
+                label="Anuluj usunięcie"
+                onPress={() => setConfirm(false)}
+              />
+            </>
+          ) : (
+            <>
+              <Button
+                label="Edytuj"
+                icon="edit"
+                onPress={() => {
+                  setOptions(null);
+                  router.push({
+                    pathname: '/routine-editor',
+                    params: { id: options.id },
+                  });
+                }}
+              />
+              <Button
+                label={options.active ? 'Wyłącz' : 'Włącz'}
+                disabled={saving}
+                onPress={() =>
+                  void toggle(options.id).then((ok) => {
+                    if (ok) setOptions(null);
+                  })
+                }
+              />
+              <Button
+                label="Usuń"
+                tone="danger"
+                onPress={() => setConfirm(true)}
+              />
+              {!!options.note && (
+                <Text style={common.subtitle}>{options.note}</Text>
+              )}
+            </>
+          ))}
+      </Sheet>
+      {calendar && (
+        <CalendarSheet
+          visible
+          routine={calendar.routine}
+          selected={calendar.date}
+          onClose={() => setCalendar(null)}
+        />
+      )}
+      {insights && (
+        <RoutineInsights
+          routine={insights}
+          logs={logs}
+          onClose={() => setInsights(null)}
+        />
+      )}
+    </>
   );
 }
-const styles = StyleSheet.create({
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  hintIcon: { color: colors.accentLight, fontSize: 30 },
-  emoji: { fontSize: 30 },
-  state: { fontSize: 11, fontWeight: '600' },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 22,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 5,
-    boxShadow: '0 6px 24px #00000050',
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#000000bb',
-  },
-});
