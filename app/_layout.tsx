@@ -2,6 +2,7 @@ import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text } from 'react-native';
+import { RoutineActionsProvider } from '../src/components/RoutineActionsProvider';
 import { AppGate } from '../src/components/AppGate';
 import { Button } from '../src/components/Button';
 import { colors, common } from '../src/theme';
@@ -30,19 +31,21 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <AppGate>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        >
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="notion" />
-          <Stack.Screen
-            name="routine-editor"
-            options={{ presentation: 'modal' }}
-          />
-        </Stack>
+        <RoutineActionsProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="notion" />
+            <Stack.Screen
+              name="routine-editor"
+              options={{ presentation: 'modal' }}
+            />
+          </Stack>
+        </RoutineActionsProvider>
       </AppGate>
     </SafeAreaProvider>
   );

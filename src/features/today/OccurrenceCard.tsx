@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import { useRoutineActions } from '../../components/RoutineActionsProvider';
+import { nextActionLabel, statusLabels } from '../../domain/status';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -19,7 +21,8 @@ export function OccurrenceCard({
 }) {
   const { routine, status, overdue, date, windowProgress } = occurrence;
   const [expanded, setExpanded] = useState(false);
-  const setStatus = useRoutines((state) => state.setStatus);
+  const { requestStatus: setStatus, cycleStatus } = useRoutineActions();
+  const explicitStatus = occurrence.log?.status ?? 'pending';
   const saving = useRoutines((state) => state.saving);
   const checked = status === 'done';
   const tint = categoryColors[routine.category];
@@ -51,33 +54,29 @@ export function OccurrenceCard({
               >
                 {status === 'skipped'
                   ? 'Pominięte'
-                  : checked
-                    ? 'Wykonane'
-                    : 'Rutyna'}
+                  : explicitStatus === 'missed'
+                    ? 'Niewykonane'
+                    : checked
+                      ? 'Wykonane'
+                      : 'Rutyna'}
               </Text>
             </View>
           </View>
         </Pressable>
         <Pressable
           accessibilityRole="checkbox"
-          accessibilityLabel={
-            checked
-              ? `Cofnij wykonanie: ${routine.name}`
-              : `Wykonane: ${routine.name}`
-          }
+          accessibilityLabel={`Status: ${routine.name}. ${statusLabels[explicitStatus]}. ${nextActionLabel(explicitStatus)}`}
           accessibilityState={{ checked, disabled: future || saving }}
           aria-checked={checked}
           disabled={future || saving}
-          onPress={() =>
-            void setStatus(routine.id, date, checked ? 'pending' : 'done')
-          }
+          onPress={() => cycleStatus(routine.id, date)}
           style={styles.touch}
         >
           <View
             style={[
               styles.circle,
               checked && { backgroundColor: tint },
-              status === 'skipped' && {
+              explicitStatus === 'skipped' && {
                 borderColor: colors.warning,
                 borderWidth: 1,
               },
@@ -85,10 +84,10 @@ export function OccurrenceCard({
             ]}
           >
             {checked && <Icon name="check" color={colors.text} size={22} />}
-            {status === 'skipped' && (
+            {explicitStatus === 'skipped' && (
               <Icon name="skip" color={colors.warning} size={17} />
             )}
-            {status === 'missed' && (
+            {explicitStatus === 'missed' && (
               <Icon name="close" color={colors.danger} size={17} />
             )}
           </View>
@@ -108,6 +107,11 @@ export function OccurrenceCard({
               ? ` · ${windowProgress.done}/${windowProgress.target} w okresie`
               : ''}
           </Text>
+          {!!routine.checklist?.length && (
+            <Text style={common.small}>
+              {routine.checklist.length} kroków do potwierdzenia
+            </Text>
+          )}
           {!!routine.note && (
             <Text style={common.subtitle}>{routine.note}</Text>
           )}
@@ -121,7 +125,7 @@ export function OccurrenceCard({
                 onPress={() => void setStatus(routine.id, date, 'skipped')}
               />
             )}
-            {(status === 'done' || status === 'skipped') && (
+            {occurrence.log && (
               <Button
                 label="Cofnij status"
                 compact

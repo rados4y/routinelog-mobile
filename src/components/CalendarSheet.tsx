@@ -12,6 +12,9 @@ import { occurrencesForDate, routineForEntry } from '../domain/schedule';
 import type { Routine } from '../domain/models';
 import { useRoutines } from '../store/useRoutines';
 import { categoryColors } from './HabitIcon';
+import { useRoutineActions } from './RoutineActionsProvider';
+import { nextActionLabel, statusLabels } from '../domain/status';
+import { Icon } from './Icon';
 import { Sheet } from './Sheet';
 import { ToolButton } from './HabitScreen';
 import { Button } from './Button';
@@ -33,7 +36,7 @@ export function CalendarSheet({
   const [month, setMonth] = useState(monthStart(selected));
   const [date, setDate] = useState(selected);
   const logs = useRoutines((state) => state.logs);
-  const setStatus = useRoutines((state) => state.setStatus);
+  const { requestStatus: setStatus, cycleStatus } = useRoutineActions();
   const saving = useRoutines((state) => state.saving);
   const { width } = useWindowDimensions();
   const cellWidth = (Math.min(width, 660) - 46) / 7;
@@ -48,7 +51,7 @@ export function CalendarSheet({
       )
     : undefined;
   const canMark =
-    routine && date <= today && Boolean(routineForEntry(routine, date));
+    routine && date <= today && Boolean(log || routineForEntry(routine, date));
   const tint = routine ? categoryColors[routine.category] : colors.accentLight;
   return (
     <Sheet
@@ -87,6 +90,10 @@ export function CalendarSheet({
                   item.routineId === routine.id && item.scheduledFor === value,
               )?.status
             : undefined;
+          const canCycle =
+            !routine ||
+            (value <= today &&
+              Boolean(status || routineForEntry(routine, value)));
           const planned = routine
             ? occurrencesForDate([routine], logs, value).length > 0
             : false;
@@ -94,11 +101,20 @@ export function CalendarSheet({
             <Pressable
               key={value}
               accessibilityRole="button"
-              accessibilityLabel={dateLabel(value)}
-              accessibilityState={{ selected: date === value }}
+              accessibilityLabel={
+                routine
+                  ? `Status: ${routine.name}, ${dateLabel(value)}. ${statusLabels[status ?? 'pending']}. ${nextActionLabel(status)}`
+                  : dateLabel(value)
+              }
+              accessibilityState={{
+                selected: date === value,
+                disabled: !canCycle || (Boolean(routine) && saving),
+              }}
+              disabled={!canCycle || (Boolean(routine) && saving)}
               onPress={() => {
                 setDate(value);
-                if (!routine) {
+                if (routine) cycleStatus(routine.id, value);
+                else {
                   onSelect?.(value);
                   onClose();
                 }
@@ -112,9 +128,36 @@ export function CalendarSheet({
                   backgroundColor: `${tint}24`,
                 },
                 status === 'done' && { backgroundColor: `${tint}55` },
+                status === 'missed' && { borderColor: colors.danger },
+                status === 'skipped' && {
+                  borderColor: colors.warning,
+                  backgroundColor: `${colors.warning}20`,
+                },
+                !canCycle && { opacity: 0.4 },
               ]}
             >
               <Text style={common.text}>{Number(value.slice(-2))}</Text>
+              {status && (
+                <View style={{ position: 'absolute', right: 1, bottom: 1 }}>
+                  <Icon
+                    name={
+                      status === 'done'
+                        ? 'check'
+                        : status === 'missed'
+                          ? 'close'
+                          : 'skip'
+                    }
+                    size={12}
+                    color={
+                      status === 'done'
+                        ? colors.success
+                        : status === 'missed'
+                          ? colors.danger
+                          : colors.warning
+                    }
+                  />
+                </View>
+              )}
             </Pressable>
           );
         })}
@@ -133,6 +176,12 @@ export function CalendarSheet({
               disabled={!canMark || saving}
               tone="success"
               onPress={() => void setStatus(routine.id, date, 'done')}
+            />
+            <Button
+              label="Niewykonane"
+              disabled={!canMark || saving}
+              tone="danger"
+              onPress={() => setStatus(routine.id, date, 'missed')}
             />
             <Button
               label="Pomiń"
