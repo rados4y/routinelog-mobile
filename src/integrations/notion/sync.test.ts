@@ -151,7 +151,7 @@ class FakeNotion implements NotionGateway {
 async function setup() {
   const storage = new MemoryStorage();
   const repos = repositories(storage);
-  await storage.setItem('@routinelog/seed-version', '1');
+  await storage.setItem('@routinelog/seed-version', '2');
   await repos.routines.save(routine());
   let now = new Date(`${monday}T12:00:00`);
   const store = createRoutineStore(
@@ -309,6 +309,54 @@ describe('monthly, bidirectional Notion synchronization', () => {
       reminderTime: '09:30',
     });
     expect(remote.table.columns[2]!.description).toContain('Godzina: 09:30');
+  });
+  it('imports remote-only history before retiring a locally deleted routine column', async () => {
+    const { store, remote, sync } = await setup();
+    await sync().run();
+    remote.day.cells.column1 = 'done';
+    await store.getState().deleteRoutine('test-routine');
+    await sync().run();
+    expect(remote.table.columns.some((column) => column.id === 'column1')).toBe(
+      false,
+    );
+    expect(store.getState().logs[0]).toMatchObject({
+      routineId: 'test-routine',
+      status: 'done',
+      source: 'notion',
+    });
+  });
+  it('can replace an old routine with an identically named new routine without inheriting its completions', async () => {
+    const { store, remote, sync } = await setup();
+    await sync().run();
+    remote.day.cells.column1 = 'done';
+    await store.getState().deleteRoutine('test-routine');
+    await store.getState().saveRoutine(routine());
+    await sync().run();
+    expect(
+      remote.table.columns.filter((column) => column.type === 'select'),
+    ).toHaveLength(1);
+    expect(
+      remote.table.columns.find((column) => column.type === 'select')
+        ?.description,
+    ).toContain('id=local-new');
+    expect(store.getState().logs).toHaveLength(1);
+    expect(store.getState().logs[0]?.routineId).toBe('test-routine');
+  });
+  it('keeps imported history if deleting its old column fails and recovers on retry', async () => {
+    const { store, remote, sync } = await setup();
+    await sync().run();
+    remote.day.cells.column1 = 'done';
+    await store.getState().deleteRoutine('test-routine');
+    vi.spyOn(remote, 'updateColumns').mockRejectedValueOnce(
+      new Error('offline'),
+    );
+    await expect(sync().run()).rejects.toThrow('offline');
+    expect(store.getState().logs[0]?.status).toBe('done');
+    await sync().run();
+    expect(store.getState().logs).toHaveLength(1);
+    expect(remote.table.columns.some((column) => column.id === 'column1')).toBe(
+      false,
+    );
   });
   it('does not overwrite a real conflict until a version is selected', async () => {
     const { store, remote, sync } = await setup();

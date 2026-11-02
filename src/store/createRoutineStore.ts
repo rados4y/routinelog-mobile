@@ -5,7 +5,7 @@ import { localDate } from '../domain/dates';
 import { createLog } from '../domain/log';
 import type { Routine, RoutineInput, RoutineLog } from '../domain/models';
 import { createRoutine, updateRoutine } from '../domain/routine';
-import { occurrencesForDate } from '../domain/schedule';
+import { occurrencesForDate, routineForEntry } from '../domain/schedule';
 import type { SyncLocal } from '../data/sync';
 
 export interface RoutineState {
@@ -54,10 +54,11 @@ export function createRoutineStore(
     const save = async (routine: Routine) => {
       await repos.routines.save(routine);
       set({
-        routines: [
-          ...get().routines.filter((item) => item.id !== routine.id),
-          routine,
-        ],
+        routines: get().routines.some((item) => item.id === routine.id)
+          ? get().routines.map((item) =>
+              item.id === routine.id ? routine : item,
+            )
+          : [...get().routines, routine],
       });
     };
     const find = (id: string) => {
@@ -159,8 +160,10 @@ export function createRoutineStore(
             date,
             clock(),
           ).find((item) => item.routine.id === id);
-          if (!occurrence) throw new Error('Rutyna nie jest zaplanowana.');
-          const log = createLog(occurrence.routine, date, status, clock());
+          const routine =
+            occurrence?.routine ?? routineForEntry(find(id), date);
+          if (!routine) throw new Error('Rutyna nie jest zaplanowana.');
+          const log = createLog(routine, date, status, clock());
           if (existing) log.createdAt = existing.createdAt;
           await repos.logs.save(log);
           set({

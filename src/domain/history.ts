@@ -1,7 +1,13 @@
-import { addDays, localDate, weekStart } from './dates';
+import { addDays, localDate } from './dates';
 import type { Routine, RoutineLog } from './models';
 import { routineOn } from './routine';
-import { occurrencesForDate, weeklyDone } from './schedule';
+import { occurrencesForDate } from './schedule';
+import {
+  isFlexible,
+  scheduleWindow,
+  windowDone,
+  windowResolved,
+} from './schedule/windows';
 
 export interface HistoryEntry extends RoutineLog {
   inferred: boolean;
@@ -25,15 +31,25 @@ export function historyForRange(
       if (occurrence.status === 'missed' && !occurrence.log)
         result.push(missed(occurrence.routine, date, 1));
     }
-    if (addDays(weekStart(date), 6) !== date) continue;
     for (const original of routines) {
       const routine = routineOn(original, date);
-      if (!routine?.active || routine.schedule.kind !== 'weeklyTarget')
+      if (!routine?.active) continue;
+      const window = scheduleWindow(routine.schedule, date);
+      if (
+        window &&
+        isFlexible(routine.schedule) &&
+        window.start < (original.revisions[0]?.from ?? original.effectiveFrom)
+      )
         continue;
-      // If a target changed mid-week, use the target effective at window close.
+      if (
+        !window ||
+        window.end !== date ||
+        windowResolved(routine.id, routine.schedule, window, logs)
+      )
+        continue;
       const deficit = Math.max(
         0,
-        routine.schedule.count - weeklyDone(routine.id, date, logs),
+        window.target - windowDone(routine.id, window, logs),
       );
       if (deficit) result.push(missed(routine, date, deficit));
     }
@@ -52,7 +68,7 @@ function missed(routine: Routine, date: string, count: number): HistoryEntry {
     status: 'missed',
     completedAt: null,
     value: null,
-    note: count > 1 ? `Brakuje ${count} wykonań do celu tygodniowego` : '',
+    note: count > 1 ? `Brakuje ${count} wykonań do celu w okresie` : '',
     source: 'automation',
     createdAt: `${date}T23:59:59.000Z`,
     updatedAt: `${date}T23:59:59.000Z`,

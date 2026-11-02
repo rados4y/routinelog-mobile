@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
-import { StatusBadge, getStatusInfo } from '../../components/StatusBadge';
+import { StatusBadge } from '../../components/StatusBadge';
+import { HabitIcon, categoryColors } from '../../components/HabitIcon';
 import { scheduleLabel } from '../../domain/schedule';
 import type { Occurrence } from '../../domain/models';
 import { useRoutines } from '../../store/useRoutines';
@@ -15,65 +17,44 @@ export function OccurrenceCard({
   occurrence: Occurrence;
   future: boolean;
 }) {
-  const { routine, status, overdue, weeklyProgress, date } = occurrence;
+  const { routine, status, overdue, date, windowProgress } = occurrence;
   const [expanded, setExpanded] = useState(false);
-  const setStatus = useRoutines((s) => s.setStatus);
-  const saving = useRoutines((s) => s.saving);
-  const info = getStatusInfo(status, overdue);
-  const schedule = scheduleLabel(routine.schedule);
-  const description = weeklyProgress
-    ? `${weeklyProgress.done}/${weeklyProgress.target} w tygodniu`
-    : schedule;
+  const setStatus = useRoutines((state) => state.setStatus);
+  const saving = useRoutines((state) => state.saving);
   const checked = status === 'done';
-
+  const tint = categoryColors[routine.category];
   return (
-    <View
-      testID={`occurrence-${routine.id}`}
-      style={[styles.card, checked && styles.done]}
-    >
+    <View testID={`occurrence-${routine.id}`} style={styles.card}>
       <View style={styles.row}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Szczegóły rutyny: ${routine.name}`}
-          accessibilityHint={`${routine.reminderTime}, ${routine.category}, ${schedule}, ${info.text}. Rozwiń notatkę i opcje rutyny.`}
           accessibilityState={{ expanded }}
           aria-expanded={expanded}
-          onPress={() => setExpanded((value) => !value)}
-          style={({ pressed }) => [
-            styles.body,
-            { opacity: pressed ? 0.75 : 1 },
-          ]}
+          onPress={() => setExpanded(!expanded)}
+          style={styles.body}
         >
-          <View style={styles.emoji}>
-            <Text style={styles.emojiText}>{routine.icon}</Text>
-          </View>
+          <HabitIcon routine={routine} small />
           <View style={common.grow}>
             <Text
               numberOfLines={2}
-              style={[styles.name, checked && styles.doneName]}
+              style={[styles.name, checked && styles.done]}
             >
               {routine.name}
             </Text>
-            <Text numberOfLines={1} style={styles.meta}>
-              {routine.reminderTime} · {routine.category}
-            </Text>
-            <View style={styles.scheduleRow}>
+            <View style={styles.badgeRow}>
               <Text
-                numberOfLines={1}
-                style={[styles.schedule, weeklyProgress && styles.weekly]}
+                style={[
+                  styles.badge,
+                  { color: tint, backgroundColor: `${tint}24` },
+                ]}
               >
-                {description}
-                {(status !== 'pending' || overdue) && (
-                  <Text style={{ color: info.color }}> · {info.text}</Text>
-                )}
+                {status === 'skipped'
+                  ? 'Pominięte'
+                  : checked
+                    ? 'Wykonane'
+                    : 'Rutyna'}
               </Text>
-              <View
-                style={{
-                  transform: [{ rotate: expanded ? '180deg' : '0deg' }],
-                }}
-              >
-                <Icon name="chevronDown" size={12} />
-              </View>
             </View>
           </View>
         </Pressable>
@@ -84,136 +65,123 @@ export function OccurrenceCard({
               ? `Cofnij wykonanie: ${routine.name}`
               : `Wykonane: ${routine.name}`
           }
-          accessibilityHint={
-            checked
-              ? 'Przywróć rutynę do zrobienia.'
-              : 'Zaznacz wykonanie dla wybranej daty.'
-          }
           accessibilityState={{ checked, disabled: future || saving }}
           aria-checked={checked}
           disabled={future || saving}
           onPress={() =>
             void setStatus(routine.id, date, checked ? 'pending' : 'done')
           }
-          style={({ pressed }) => [
-            styles.complete,
-            { opacity: future || saving ? 0.35 : pressed ? 0.65 : 1 },
-          ]}
+          style={styles.touch}
         >
           <View
             style={[
-              styles.checkbox,
-              checked && styles.checked,
-              status === 'skipped' && styles.skipped,
-              status === 'missed' && styles.missed,
+              styles.circle,
+              checked && { backgroundColor: tint },
+              status === 'skipped' && {
+                borderColor: colors.warning,
+                borderWidth: 1,
+              },
+              future && { opacity: 0.4 },
             ]}
           >
-            {checked && <Icon name="check" size={20} color={colors.success} />}
+            {checked && <Icon name="check" color={colors.text} size={22} />}
             {status === 'skipped' && (
-              <Icon name="skip" size={15} color={colors.warning} />
+              <Icon name="skip" color={colors.warning} size={17} />
             )}
             {status === 'missed' && (
-              <Icon name="close" size={17} color={colors.danger} />
+              <Icon name="close" color={colors.danger} size={17} />
             )}
           </View>
         </Pressable>
       </View>
       {expanded && (
         <View style={styles.details}>
-          <View style={[common.spread, { flexWrap: 'wrap' }]}>
-            <Text style={common.small}>{schedule}</Text>
+          <View style={common.spread}>
+            <Text style={[common.small, common.grow]}>
+              {scheduleLabel(routine.schedule)}
+            </Text>
             <StatusBadge status={status} overdue={overdue} />
           </View>
-          {!!routine.note && <Text style={styles.note}>{routine.note}</Text>}
+          <Text style={common.small}>
+            {routine.reminderTime} · {routine.category}
+            {windowProgress
+              ? ` · ${windowProgress.done}/${windowProgress.target} w okresie`
+              : ''}
+          </Text>
+          {!!routine.note && (
+            <Text style={common.subtitle}>{routine.note}</Text>
+          )}
           <View style={common.wrap}>
             {status !== 'done' && status !== 'skipped' && (
               <Button
                 label="Pomiń"
-                icon="skip"
+                compact
                 tone="warning"
                 disabled={future || saving}
                 onPress={() => void setStatus(routine.id, date, 'skipped')}
-                compact
               />
             )}
             {(status === 'done' || status === 'skipped') && (
               <Button
                 label="Cofnij status"
-                icon="undo"
+                compact
                 disabled={saving}
                 onPress={() => void setStatus(routine.id, date, 'pending')}
-                compact
               />
             )}
+            <Button
+              label="Edytuj rutynę"
+              compact
+              onPress={() =>
+                router.push({
+                  pathname: '/routine-editor',
+                  params: { id: routine.id },
+                })
+              }
+            />
           </View>
         </View>
       )}
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.panel,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
+  card: { borderBottomWidth: 1, borderColor: '#1c1c1c', paddingVertical: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   body: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    minHeight: 52,
+    gap: 14,
+    minHeight: 44,
   },
-  emoji: {
-    width: 32,
-    height: 36,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.panelSecondary,
+  name: {
+    fontSize: 14.5,
+    lineHeight: 20,
+    color: colors.text,
+    fontWeight: '500',
   },
-  emojiText: { fontSize: 20 },
-  name: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '700' },
-  meta: { color: colors.muted, fontSize: 11, lineHeight: 16 },
-  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  schedule: {
-    color: colors.muted,
-    fontSize: 11,
-    lineHeight: 16,
-    flexShrink: 1,
+  done: { color: colors.muted, textDecorationLine: 'line-through' },
+  badgeRow: { flexDirection: 'row', marginTop: 4 },
+  badge: {
+    fontSize: 10,
+    lineHeight: 14,
+    paddingHorizontal: 3,
+    borderRadius: 3,
   },
-  weekly: { color: colors.accentLight },
-  done: { borderColor: '#254633' },
-  doneName: { textDecorationLine: 'line-through', color: colors.muted },
-  complete: {
+  touch: {
     width: 44,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkbox: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.muted,
+  circle: {
+    width: 31,
+    height: 31,
+    borderRadius: 18,
+    backgroundColor: '#252525',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checked: { borderColor: colors.success, backgroundColor: '#35c46a18' },
-  skipped: { borderColor: colors.warning, backgroundColor: '#f2a93b12' },
-  missed: { borderColor: colors.danger, backgroundColor: '#ef5b5b12' },
-  details: {
-    gap: 10,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  note: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  details: { paddingTop: 14, paddingBottom: 4, gap: 10 },
 });

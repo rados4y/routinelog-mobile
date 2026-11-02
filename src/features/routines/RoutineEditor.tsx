@@ -10,7 +10,6 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button } from '../../components/Button';
 import { Screen, EmptyState } from '../../components/Screen';
-import { localDate } from '../../domain/dates';
 import {
   categories,
   routineInputSchema,
@@ -19,9 +18,12 @@ import {
 } from '../../domain/models';
 import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
-import { Chip, initialFrequency, ScheduleEditor } from './ScheduleEditor';
+import { Chip, ScheduleEditor } from './ScheduleEditor';
 
 const emojis = [
+  '🎓',
+  '💬',
+  '🥾',
   '💊',
   '💧',
   '🏃',
@@ -50,21 +52,8 @@ export function RoutineEditor() {
   const [active, setActive] = useState(existing?.active ?? true);
   const [time, setTime] = useState(existing?.reminderTime ?? '08:00');
   const [note, setNote] = useState(existing?.note ?? '');
-  const [frequency, setFrequency] = useState(() =>
-    initialFrequency(existing?.schedule),
-  );
-  const [days, setDays] = useState(
-    existing?.schedule.kind === 'weekdays' ? existing.schedule.days : [1, 3, 5],
-  );
-  const [interval, setInterval] = useState(
-    existing?.schedule.kind === 'interval'
-      ? String(existing.schedule.every)
-      : '7',
-  );
-  const [anchor, setAnchor] = useState(
-    existing?.schedule.kind === 'interval'
-      ? existing.schedule.anchor
-      : localDate(),
+  const [schedule, setSchedule] = useState<Schedule>(
+    existing?.schedule ?? { kind: 'daily' },
   );
   const [error, setError] = useState('');
   const close = () => {
@@ -73,16 +62,6 @@ export function RoutineEditor() {
   };
   const submit = async () => {
     setError('');
-    const schedule: Schedule =
-      frequency === 'daily'
-        ? { kind: 'daily' }
-        : frequency === 'business'
-          ? { kind: 'weekdays', days: [1, 2, 3, 4, 5] }
-          : frequency === 'days'
-            ? { kind: 'weekdays', days }
-            : frequency === 'interval'
-              ? { kind: 'interval', every: Number(interval), anchor }
-              : { kind: 'weeklyTarget', count: frequency === 'three' ? 3 : 1 };
     const parsed = routineInputSchema.safeParse({
       name,
       icon,
@@ -170,16 +149,7 @@ export function RoutineEditor() {
           </View>
         </View>
         <View style={common.card}>
-          <ScheduleEditor
-            frequency={frequency}
-            setFrequency={setFrequency}
-            days={days}
-            setDays={setDays}
-            interval={interval}
-            setInterval={setInterval}
-            anchor={anchor}
-            setAnchor={setAnchor}
-          />
+          <ScheduleEditor schedule={schedule} onChange={setSchedule} />
           <View>
             <Text style={common.label}>Godzina (HH:MM)</Text>
             <TextInput

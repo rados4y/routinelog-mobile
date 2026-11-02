@@ -20,14 +20,74 @@ export function planText(schedule: Schedule): string {
     case 'daily':
       return 'codziennie';
     case 'weekdays':
-      return `dni ${schedule.days.join(',')}`;
+      return `dni ${schedule.days.join(',')}${schedule.flexible ? ' elastycznie' : ''}`;
     case 'interval':
       return `co ${schedule.every} dni od ${schedule.anchor}`;
     case 'weeklyTarget':
       return `${schedule.count}x/tydzień`;
+    case 'monthlyTarget':
+      return `${schedule.count}x/miesiąc`;
+    case 'monthlyDays':
+      return `miesiąc ${[...schedule.days]
+        .sort((a, b) => a - b)
+        .map(String)
+        .concat(schedule.lastDay ? ['ostatni'] : [])
+        .join(',')}${schedule.flexible ? ' elastycznie' : ''}`;
+    case 'monthlyWeekdays':
+      return `tygodnie ${schedule.weeks
+        .map(String)
+        .concat(schedule.lastWeek ? ['ostatni'] : [])
+        .join(
+          ',',
+        )} dni ${schedule.days.join(',')}${schedule.flexible ? ' elastycznie' : ''}`;
+    case 'yearlyDates':
+      return `rok ${schedule.dates.map((item) => `${item.day}.${item.month}`).join(',')}${schedule.flexible ? ' elastycznie' : ''}`;
   }
 }
 function parsePlan(value: string): Schedule {
+  const flexible = value.endsWith(' elastycznie');
+  const plain = flexible ? value.slice(0, -' elastycznie'.length) : value;
+  if (flexible && /^dni [1-7](,[1-7])*$/.test(plain))
+    return {
+      kind: 'weekdays',
+      days: plain.slice(4).split(',').map(Number),
+      flexible: true,
+    };
+  const monthlyTarget = /^(\d+)[x×]\/miesiąc$/.exec(value);
+  if (monthlyTarget)
+    return { kind: 'monthlyTarget', count: Number(monthlyTarget[1]) };
+  const monthly = /^miesiąc ([\d,]+|(?:\d+,)*ostatni)$/.exec(plain);
+  if (monthly) {
+    const values = monthly[1]!.split(',');
+    return {
+      kind: 'monthlyDays',
+      days: values.filter((day) => day !== 'ostatni').map(Number),
+      lastDay: values.includes('ostatni'),
+      flexible,
+    };
+  }
+  const ordinal =
+    /^tygodnie ([\d,]+|(?:\d+,)*ostatni) dni ([1-7](?:,[1-7])*)$/.exec(plain);
+  if (ordinal) {
+    const values = ordinal[1]!.split(',');
+    return {
+      kind: 'monthlyWeekdays',
+      weeks: values.filter((week) => week !== 'ostatni').map(Number),
+      lastWeek: values.includes('ostatni'),
+      days: ordinal[2]!.split(',').map(Number),
+      flexible,
+    };
+  }
+  const yearly = /^rok (\d+\.\d+(?:,\d+\.\d+)*)$/.exec(plain);
+  if (yearly)
+    return {
+      kind: 'yearlyDates',
+      dates: yearly[1]!.split(',').map((item) => {
+        const [day, month] = item.split('.').map(Number);
+        return { day: day!, month: month! };
+      }),
+      flexible,
+    };
   if (value === 'codziennie') return { kind: 'daily' };
   if (value === 'poniedziałek–piątek')
     return { kind: 'weekdays', days: [1, 2, 3, 4, 5] };

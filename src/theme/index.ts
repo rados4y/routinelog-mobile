@@ -1,14 +1,14 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  background: '#0c0e10',
-  panel: '#14171a',
-  panelSecondary: '#1a1e22',
-  border: '#2a3036',
-  text: '#f4f7f8',
-  muted: '#919aa3',
-  accent: '#7c5cff',
-  accentLight: '#b3a2ff',
+  background: '#111111',
+  panel: '#1e1e1e',
+  panelSecondary: '#262626',
+  border: '#292929',
+  text: '#f5f5f5',
+  muted: '#a4a4a4',
+  accent: '#c7355c',
+  accentLight: '#e15478',
   success: '#35c46a',
   warning: '#f2a93b',
   danger: '#ef5b5b',

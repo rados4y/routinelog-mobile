@@ -7,20 +7,32 @@ import type {
   Schedule,
 } from '../models';
 import { routineOn } from '../routine';
+import {
+  isFlexible,
+  matchesCalendar,
+  scheduleWindow,
+  windowDone,
+  windowResolved,
+} from './windows';
 
 export function matchesSchedule(schedule: Schedule, date: LocalDate): boolean {
   switch (schedule.kind) {
     case 'daily':
       return true;
     case 'weekdays':
-      return schedule.days.includes(weekday(date));
+      return isFlexible(schedule) || schedule.days.includes(weekday(date));
     case 'interval':
       return (
         date >= schedule.anchor &&
         daysBetween(schedule.anchor, date) % schedule.every === 0
       );
     case 'weeklyTarget':
+    case 'monthlyTarget':
       return true;
+    case 'monthlyDays':
+    case 'monthlyWeekdays':
+    case 'yearlyDates':
+      return isFlexible(schedule) || matchesCalendar(schedule, date);
   }
 }
 export function scheduleLabel(schedule: Schedule): string {
@@ -29,6 +41,14 @@ export function scheduleLabel(schedule: Schedule): string {
       return 'Codziennie';
     case 'weeklyTarget':
       return `${schedule.count}× w tygodniu · elastycznie`;
+    case 'monthlyTarget':
+      return `${schedule.count}× w miesiącu · elastycznie`;
+    case 'monthlyDays':
+      return `Dni miesiąca: ${[...schedule.days].sort((a, b) => a - b).join(', ')}${schedule.lastDay ? `${schedule.days.length ? ', ' : ''}ostatni` : ''}${schedule.flexible ? ' · elastycznie' : ''}`;
+    case 'monthlyWeekdays':
+      return `${schedule.weeks.join(', ')}${schedule.lastWeek ? `${schedule.weeks.length ? ', ' : ''}ostatni` : ''} tydzień · ${scheduleLabel({ kind: 'weekdays', days: schedule.days })}${schedule.flexible ? ' · elastycznie' : ''}`;
+    case 'yearlyDates':
+      return `${schedule.dates.map((value) => `${value.day}.${String(value.month).padStart(2, '0')}`).join(', ')}${schedule.flexible ? ' · elastycznie' : ''}`;
     case 'interval':
       return schedule.every === 1 ? 'Codziennie' : `Co ${schedule.every} dni`;
     case 'weekdays': {
@@ -38,10 +58,12 @@ export function scheduleLabel(schedule: Schedule): string {
       )
         return 'Poniedziałek–piątek';
       const labels = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
-      return [...schedule.days]
-        .sort((a, b) => a - b)
-        .map((day) => labels[day - 1])
-        .join(', ');
+      return (
+        [...schedule.days]
+          .sort((a, b) => a - b)
+          .map((day) => labels[day - 1])
+          .join(', ') + (schedule.flexible ? ' · elastycznie' : '')
+      );
     }
   }
 }
@@ -63,6 +85,22 @@ export function weeklyDone(
       )
       .map((log) => log.scheduledFor),
   ).size;
+}
+export function routineForEntry(
+  original: Routine,
+  date: LocalDate,
+): Routine | undefined {
+  const routine = routineOn(original, date);
+  if (!routine?.active || !matchesSchedule(routine.schedule, date))
+    return undefined;
+  const window = scheduleWindow(routine.schedule, date);
+  if (
+    isFlexible(routine.schedule) &&
+    (!window ||
+      window.start < (original.revisions[0]?.from ?? original.effectiveFrom))
+  )
+    return undefined;
+  return routine;
 }
 export function occurrencesForDate(
   routines: Routine[],
@@ -90,16 +128,28 @@ export function occurrencesForDate(
               target: routine.schedule.count,
             }
           : undefined;
+      const window = scheduleWindow(routine.schedule, date);
+      const firstDate = original.revisions[0]?.from ?? original.effectiveFrom;
+      if (
+        !log &&
+        isFlexible(routine.schedule) &&
+        window &&
+        window.start < firstDate
+      )
+        return [];
+      const windowProgress = window
+        ? { ...window, done: windowDone(routine.id, window, logs) }
+        : undefined;
       // Flexible targets have no daily failure. Closed-window deficits live in history/statistics.
       if (
-        weeklyProgress &&
+        window &&
         !log &&
-        (addDays(weekStart(date), 6) < today ||
-          weeklyProgress.done >= weeklyProgress.target)
+        (window.end < today ||
+          windowResolved(routine.id, routine.schedule, window, logs))
       )
         return [];
       const status =
-        log?.status ?? (!weeklyProgress && date < today ? 'missed' : 'pending');
+        log?.status ?? (!window && date < today ? 'missed' : 'pending');
       return [
         {
           routine,
@@ -107,17 +157,21 @@ export function occurrencesForDate(
           status,
           log,
           weeklyProgress,
+          windowProgress,
           overdue:
             status === 'pending' &&
-            !weeklyProgress &&
+            !window &&
             date === today &&
             routine.reminderTime <
               `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
         },
       ];
     })
-    .sort((a, b) =>
-      a.routine.reminderTime.localeCompare(b.routine.reminderTime),
+    .sort(
+      (a, b) =>
+        a.routine.reminderTime.localeCompare(b.routine.reminderTime) ||
+        (a.routine.sortOrder ?? 0) - (b.routine.sortOrder ?? 0) ||
+        a.routine.createdAt.localeCompare(b.routine.createdAt),
     );
 }
 export function completion(occurrences: Occurrence[]): {

@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { openApp } from './helpers';
 
 test('Notion setup is reachable without leaving the compact daily workflow', async ({
   page,
 }) => {
-  await page.goto('/');
+  await openApp(page);
   await page
     .getByRole('button', { name: 'Synchronizacja z Notion', exact: true })
     .click();
@@ -23,9 +24,11 @@ test('Notion setup is reachable without leaving the compact daily workflow', asy
     page.getByLabel('Osobisty token Notion', { exact: true }),
   ).toHaveCount(0);
   await page.getByRole('button', { name: 'Wróć', exact: true }).click();
-  await expect(page.getByText('Twój plan dnia')).toBeVisible();
-  await page.getByTestId('occurrence-seed-1').getByRole('checkbox').click();
   await expect(
-    page.getByTestId('occurrence-seed-1').getByRole('checkbox'),
+    page.getByRole('heading', { name: 'Dzisiaj', exact: true }),
+  ).toBeVisible();
+  await page.getByTestId('occurrence-preset-dog').getByRole('checkbox').click();
+  await expect(
+    page.getByTestId('occurrence-preset-dog').getByRole('checkbox'),
   ).toBeChecked();
 });

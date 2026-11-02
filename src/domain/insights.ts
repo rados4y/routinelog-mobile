@@ -18,7 +18,7 @@ export function getStats(
     .filter((log) => log.status === 'missed')
     .reduce((sum, log) => sum + log.missingCount, 0);
   const pending = occurrencesForDate(routines, logs, end, now).filter(
-    (item) => item.status === 'pending' && !item.weeklyProgress,
+    (item) => item.status === 'pending' && !item.windowProgress,
   ).length;
   const denominator = done + skipped + missed + pending;
   return {

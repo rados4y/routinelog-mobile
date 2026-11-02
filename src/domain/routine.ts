@@ -13,6 +13,7 @@ export function createRoutine(
     updatedAt: now.toISOString(),
     effectiveFrom: localDate(now),
     deletedAt: null,
+    sortOrder: now.getTime(),
     revisions: [],
   };
 }
