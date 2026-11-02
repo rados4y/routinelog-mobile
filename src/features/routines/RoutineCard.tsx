@@ -3,11 +3,18 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { addDays, dateLabel } from '../../domain/dates';
 import { getStats } from '../../domain/insights';
 import { historyForRange } from '../../domain/history';
-import { occurrencesForDate, scheduleLabel } from '../../domain/schedule';
+import {
+  occurrencesForDate,
+  routineForEntry,
+  scheduleLabel,
+} from '../../domain/schedule';
 import type { Routine, RoutineLog } from '../../domain/models';
 import { HabitIcon, categoryColors } from '../../components/HabitIcon';
 import { Icon } from '../../components/Icon';
 import { ToolButton } from '../../components/HabitScreen';
+import { useRoutineActions } from '../../components/RoutineActionsProvider';
+import { useRoutines } from '../../store/useRoutines';
+import { nextActionLabel, statusLabels } from '../../domain/status';
 import { colors, common } from '../../theme';
 
 export function RoutineCard({
@@ -25,6 +32,8 @@ export function RoutineCard({
   onInsights(): void;
   onOptions(): void;
 }) {
+  const { cycleStatus } = useRoutineActions();
+  const saving = useRoutines((state) => state.saving);
   const tint = categoryColors[routine.category];
   const metrics = useMemo(() => {
     const now = new Date(`${today}T12:00:00`);
@@ -71,6 +80,8 @@ export function RoutineCard({
               (item) =>
                 item.routineId === routine.id && item.scheduledFor === date,
             );
+            const canMark =
+              date <= today && Boolean(log || routineForEntry(routine, date));
             const occurrence = occurrencesForDate(
               [routine],
               logs,
@@ -86,8 +97,10 @@ export function RoutineCard({
               <Pressable
                 key={date}
                 accessibilityRole="button"
-                accessibilityLabel={`Kalendarz: ${routine.name}, ${dateLabel(date)}`}
-                onPress={() => onCalendar(date)}
+                accessibilityLabel={`Status: ${routine.name}, ${dateLabel(date)}. ${statusLabels[log?.status ?? 'pending']}. ${nextActionLabel(log?.status)}`}
+                accessibilityState={{ disabled: !canMark || saving }}
+                disabled={!canMark || saving}
+                onPress={() => cycleStatus(routine.id, date)}
                 style={styles.weekDay}
               >
                 <Text style={styles.weekLabel}>
@@ -102,6 +115,11 @@ export function RoutineCard({
                       borderColor: tint,
                     },
                     date === today && styles.current,
+                    log?.status === 'missed' && { borderColor: colors.danger },
+                    log?.status === 'skipped' && {
+                      borderColor: colors.warning,
+                      backgroundColor: `${colors.warning}20`,
+                    },
                   ]}
                 >
                   <Text
@@ -112,6 +130,35 @@ export function RoutineCard({
                   >
                     {Number(date.slice(-2))}
                   </Text>
+                  {log && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        right: -3,
+                        bottom: -4,
+                        backgroundColor: colors.panel,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Icon
+                        name={
+                          log.status === 'done'
+                            ? 'check'
+                            : log.status === 'missed'
+                              ? 'close'
+                              : 'skip'
+                        }
+                        size={13}
+                        color={
+                          log.status === 'done'
+                            ? colors.success
+                            : log.status === 'missed'
+                              ? colors.danger
+                              : colors.warning
+                        }
+                      />
+                    </View>
+                  )}
                 </View>
               </Pressable>
             );

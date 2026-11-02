@@ -3,6 +3,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme';
 
 const paths = {
+  circle: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20',
   brand: 'M3 6h9M3 12h6M3 18h9M16 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12',
   search: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14m5 12 6 6',
   filter: 'M3 5h18M6 11h12M10 17h4',

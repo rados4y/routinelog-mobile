@@ -48,5 +48,7 @@ export function routineOn(routine: Routine, date: string): Routine | undefined {
   const revision = routine.revisions.find(
     (item) => date >= item.from && date < item.until,
   );
-  return revision ? { ...routine, ...revision.data } : undefined;
+  return revision
+    ? { ...routine, ...revision.data, checklist: revision.data.checklist }
+    : undefined;
 }

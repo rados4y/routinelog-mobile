@@ -28,7 +28,7 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
 ## Funkcje
 
 - Dzisiaj: ciemny, zwarty plan z różowym akcentem, siedmioma datami, wyszukiwaniem,
-  filtrem kategorii i kalendarzem. Wykonanie/cofnięcie jest dostępne od razu w wierszu;
+  filtrem kategorii i kalendarzem. Przycisk statusu cyklicznie zmienia: bez oznaczenia → wykonane → niewykonane → pominięte → bez oznaczenia;
   dotknięcie nazwy rozwija harmonogram, notatkę, pominięcie i edycję.
 - Rutyny: karty z tygodniowym paskiem dni, kolorową ikoną kategorii, kalendarzem,
   rzeczywistą regularnością i serią ostatnich 30 dni. Menu pozwala edytować, wyłączyć
@@ -36,6 +36,14 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
 - Pełnoekranowy wybór częstotliwości: codziennie, dni tygodnia, dni miesiąca 1–31
   i „Ostatni”, ordinalne dni tygodnia w miesiącu, daty roczne, cele N×/tydzień
   lub N×/miesiąc, co N dni. Anulowanie nie zmienia zapisanego harmonogramu.
+- Dotknięcie daty w karcie rutyny lub jej kalendarzu używa tego samego cyklu.
+  Główny kalendarz ekranu Dzisiaj nadal służy do wyboru dnia. Przyszłych terminów
+  oraz niezaplanowanych dat nie można oznaczać. Puste oznaczenie wcześniejszego dnia
+  nadal może być wyliczane jako niewykonanie w historii.
+- Opcjonalna lista kroków w edytorze (do 30 pozycji): wykonanie otwiera panel,
+  w którym należy zaznaczyć wszystkie kroki. Anulowanie nie zmienia wyniku,
+  a niezapisane zaznaczenia nie są zachowywane. Każde kolejne wykonanie wymaga
+  nowego potwierdzenia. Historia zachowuje kopię potwierdzonych tekstów kroków.
 - Historia: zapisane wyniki oraz wyliczone niewykonania, źródło, data i czas wykonania.
 - Statystyki: ostatnie siedem dni, wykonania/pominięcia/niewykonania, regularność, wykres.
 - Pięć rutyn z referencji: niedzielna książka, rozmowy z Pawłem (ostatni dzień),
@@ -89,7 +97,7 @@ Wybrana data i formularz pozostają stanem UI, niezależnym od danych domenowych
 ### Model danych
 
 `Routine`: `id`, `name`, `icon`, `category`, `active`, `schedule`, `target`, `unit`,
-`reminderTime`, `note`, `createdAt`, `updatedAt`. Dodatkowo `effectiveFrom`,
+`reminderTime`, `note`, opcjonalne `checklist: {id, text}[]`, `createdAt`, `updatedAt`. Dodatkowo `effectiveFrom`,
 `revisions` i `deletedAt` zachowują harmonogram i aktywność wcześniejszych dni.
 Zmiana działa od lokalnego dnia edycji; zmiany w tym samym dniu zastępują jego plan.
 Usuwanie jest miękkie, aby zachować historię.
@@ -100,6 +108,10 @@ AsyncStorage. To lokalna kolejność prezentacji, nie część edytowalnych pól
 `note`, `source`, `createdAt`, `updatedAt`; kopia nazwy i ikony zachowuje czytelność historii.
 `scheduledFor` to lokalna data kalendarzowa `YYYY-MM-DD`; znaczniki czasu są ISO UTC.
 Źródła: `app`, `chatgpt`, `automation`, `notion`. Jedna rutyna ma jeden jawny wynik na dzień.
+Opcjonalne `RoutineLog.checklist: {id, text, checked}[]` przechowuje potwierdzone
+kroki z chwili wykonania. Edycja listy nie zmienia wcześniejszych potwierdzeń.
+Store i domena odrzucają wykonania z niepełną, powieloną lub nieaktualną listą.
+Starsze wykonania bez listy pozostają poprawne.
 Pola `value`, `unit` i `target` są przygotowane do późniejszych celów ilościowych.
 
 ### Harmonogramy i niewykonania
@@ -114,7 +126,7 @@ rozszerzać tutaj, wraz z walidacją i testami, zamiast dodawać warunki do ekra
 - `overdue`: osobna flaga dla dzisiejszej rutyny ze stałym terminem po jej godzinie.
 - `missed`: zakończony wcześniejszy dzień, w którym rutyna była aktywna i zaplanowana,
   bez `done/skipped`.
-- Cel tygodniowy nie ma dziennego `missed` ani `overdue`. Tydzień trwa Pn–Nd.
+- Cel tygodniowy nie ma automatycznego dziennego `missed` ani `overdue`. Tydzień trwa Pn–Nd.
   Po jego zakończeniu historia wylicza jeden wpis na niedzielę z liczbą brakujących wykonań.
   Edycja celu w trakcie tygodnia stosuje cel obowiązujący na koniec okna.
 - Cel miesięczny rozliczamy na koniec miesiąca. Terminy elastyczne (dni tygodnia,
@@ -125,8 +137,10 @@ rozszerzać tutaj, wraz z walidacją i testami, zamiast dodawać warunki do ekra
   wcześniejsze wykonania także po zamknięciu okna.
 - Dzień 31 nie jest automatycznie przesuwany na 30. lub 28.; temu służy osobna
   opcja „Ostatni”. Data 29 lutego jest obsługiwana również w planie rocznym.
-- Niewykonania wyliczamy, nie utrwalamy: późniejsze oznaczenie zakończonego dnia
-  automatycznie poprawia historię i statystyki.
+- Automatyczne niewykonania są wyliczane; późniejsze oznaczenie zakończonego dnia
+  poprawia historię i statystyki. Ręczne `missed` z cyklu statusów jest trwałym
+  wpisem, także dla dzisiaj. Braki zamkniętego celu uwzględniają już zapisane
+  niewykonania, aby nie liczyć ich podwójnie.
 - Rutyny nie istnieją przed datą utworzenia; pauza i edycja nie przepisują wcześniejszych dni.
 - Kalendarz używa arytmetyki dat odpornej na zmianę czasu; bez dzielenia lokalnych timestampów przez 24h.
 
@@ -206,6 +220,10 @@ użytkownikom należy zastąpić osobisty PAT publiczną integracją OAuth z bac
 - Synchronizacja działa po otwarciu, po lokalnym zapisie i co minutę na pierwszym
   planie. Po zamknięciu procesu nie działa. Ręczny przycisk ponawia ją po błędzie.
   Nie jest to mechanizm powiadomień ani działanie w tle Androida.
+- Listy kroków i ich potwierdzenia pozostają lokalne (opis kolumny ma limit 280 znaków).
+  Zmiana nazwy lub harmonogramu w Notion ich nie usuwa. Nowe wykonanie z Notion
+  rutyny z listą czeka na potwierdzenie wszystkich kroków w aplikacji; pozostałe
+  komórki synchronizują się dalej. Po potwierdzeniu ponów synchronizację.
 - Tabele odtwarzają aktualne ustawienia rutyn i statusy, ale nie zastępują pełnej
   kopii danych: dokładny czas wykonania, wartości i notatki logów oraz historyczne
   rewizje rutyn pozostają lokalne. Czas wykonania importu to ostatnia edycja wiersza

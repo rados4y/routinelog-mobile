@@ -576,3 +576,94 @@ describe('Notion column encoding', () => {
     expect(newColumn(routine())).toHaveProperty('select');
   });
 });
+
+describe('Notion checklist protection', () => {
+  const items = [{ id: 'one', text: 'Wymagany krok' }];
+  it('preserves local checklist definitions when importing a remote rename', async () => {
+    const { store, remote, sync } = await setup();
+    await sync().run();
+    await store
+      .getState()
+      .saveRoutine({ ...routine(), checklist: items }, 'test-routine');
+    remote.table.columns.find((column) => column.id === 'column1')!.name =
+      'Nowa nazwa';
+    await sync().run();
+    expect(store.getState().routines[0]).toMatchObject({
+      name: 'Nowa nazwa',
+      checklist: items,
+    });
+  });
+  it('leaves remote done awaiting checklist confirmation while syncing other cells', async () => {
+    const { store, remote, sync } = await setup();
+    await store
+      .getState()
+      .saveRoutine({ ...routine(), checklist: items }, 'test-routine');
+    await sync().run();
+    remote.day.cells.column1 = 'done';
+    await store.getState().saveRoutine({ ...routine(), name: 'Druga rutyna' });
+    await expect(sync().run()).rejects.toThrow('Potwierdź listę kroków');
+    const second = remote.table.columns.find((column) =>
+      column.name.includes('Druga rutyna'),
+    )!;
+    remote.day.cells[second.id] = 'done';
+    await expect(sync().run()).rejects.toThrow('Potwierdź listę kroków');
+    expect(store.getState().logs).toHaveLength(1);
+    expect(store.getState().logs[0]).toMatchObject({
+      routineId: 'local-new',
+      status: 'done',
+    });
+    expect(remote.day.cells.column1).toBe('done');
+    expect(
+      remote.table.columns.some((column) =>
+        column.name.includes('Druga rutyna'),
+      ),
+    ).toBe(true);
+    await store.getState().setStatus(
+      'test-routine',
+      monday,
+      'done',
+      items.map((item) => ({ ...item, checked: true })),
+    );
+    await sync().run();
+    expect(
+      store.getState().logs.find((log) => log.routineId === 'test-routine')
+        ?.checklist,
+    ).toEqual([{ ...items[0], checked: true }]);
+  });
+  it('keeps legacy completions valid after adding checklist steps', async () => {
+    const { store, sync } = await setup();
+    await store.getState().setStatus('test-routine', monday, 'done');
+    await store
+      .getState()
+      .saveRoutine({ ...routine(), checklist: items }, 'test-routine');
+    await expect(sync().run()).resolves.toBeUndefined();
+    expect(store.getState().logs[0]?.status).toBe('done');
+  });
+});
+
+it('preserves a retired Notion column until its unconfirmed checklist result is resolved', async () => {
+  const { store, remote, sync } = await setup();
+  await store
+    .getState()
+    .saveRoutine(
+      { ...routine(), checklist: [{ id: 'one', text: 'Krok' }] },
+      'test-routine',
+    );
+  await sync().run();
+  remote.day.cells.column1 = 'done';
+  await store.getState().deleteRoutine('test-routine');
+  await expect(sync().run()).rejects.toThrow('kolumna pozostaje zachowana');
+  expect(remote.table.columns.some((column) => column.id === 'column1')).toBe(
+    true,
+  );
+  expect(remote.day.cells.column1).toBe('done');
+  remote.day.cells.column1 = 'skipped';
+  await sync().run();
+  expect(remote.table.columns.some((column) => column.id === 'column1')).toBe(
+    false,
+  );
+  expect(store.getState().logs[0]).toMatchObject({
+    routineId: 'test-routine',
+    status: 'skipped',
+  });
+});

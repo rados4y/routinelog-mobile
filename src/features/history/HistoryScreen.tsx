@@ -76,6 +76,16 @@ export function HistoryScreen() {
             {entry.value !== null && (
               <Text style={common.text}>Wartość: {entry.value}</Text>
             )}
+            {!!entry.checklist?.length && (
+              <View style={{ gap: 6 }}>
+                <Text style={common.small}>Potwierdzone kroki</Text>
+                {entry.checklist.map((item) => (
+                  <Text key={item.id} style={common.text}>
+                    ✓ {item.text}
+                  </Text>
+                ))}
+              </View>
+            )}
             {!!entry.note && <Text style={common.subtitle}>{entry.note}</Text>}
             {entry.inferred && entry.missingCount > 1 && (
               <Text style={common.small}>

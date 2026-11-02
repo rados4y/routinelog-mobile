@@ -14,11 +14,14 @@ import {
   categories,
   routineInputSchema,
   type RoutineInput,
+  type ChecklistItem,
   type Schedule,
 } from '../../domain/models';
 import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
 import { Chip, ScheduleEditor } from './ScheduleEditor';
+
+import { ChecklistEditor } from './ChecklistEditor';
 
 const emojis = [
   '🎓',
@@ -55,6 +58,9 @@ export function RoutineEditor() {
   const [schedule, setSchedule] = useState<Schedule>(
     existing?.schedule ?? { kind: 'daily' },
   );
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(
+    existing?.checklist ?? [],
+  );
   const [error, setError] = useState('');
   const close = () => {
     if (router.canGoBack()) router.back();
@@ -72,10 +78,13 @@ export function RoutineEditor() {
       unit: existing?.unit ?? null,
       reminderTime: time.trim(),
       note: note.trim(),
+      checklist,
     });
     if (!parsed.success) {
       setError(
-        'Sprawdź nazwę, ikonę, godzinę (HH:MM) i harmonogram. Wybierz co najmniej jeden dzień; odstęp musi być liczbą całkowitą od 1 do 3650, a pierwszy termin datą RRRR-MM-DD.',
+        parsed.error.issues.some((issue) => issue.path[0] === 'checklist')
+          ? 'Wypełnij lub usuń puste kroki. Każdy krok może mieć do 200 znaków.'
+          : 'Sprawdź nazwę, ikonę, godzinę (HH:MM) i harmonogram. Wybierz co najmniej jeden dzień; odstęp musi być liczbą całkowitą od 1 do 3650, a pierwszy termin datą RRRR-MM-DD.',
       );
       return;
     }
@@ -200,6 +209,7 @@ export function RoutineEditor() {
             />
           </View>
         </View>
+        <ChecklistEditor items={checklist} onChange={setChecklist} />
         {!!error && (
           <Text
             accessibilityRole="alert"
