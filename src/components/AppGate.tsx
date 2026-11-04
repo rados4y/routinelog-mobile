@@ -3,6 +3,7 @@ import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { useRoutines } from '../store/useRoutines';
 import { colors, common } from '../theme';
 import { Button } from './Button';
+import { WidgetAutoRefresh } from '../widgets/WidgetAutoRefresh';
 import { AutoSync } from '../integrations/notion/AutoSync';
 
 export function AppGate({ children }: { children: ReactNode }) {
@@ -35,6 +36,7 @@ export function AppGate({ children }: { children: ReactNode }) {
   return (
     <View style={styles.root}>
       <AutoSync />
+      <WidgetAutoRefresh />
       {children}
       {error && (
         <View style={styles.error}>

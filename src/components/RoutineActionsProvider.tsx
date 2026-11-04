@@ -97,16 +97,18 @@ function CompletionSheet({
   const [checked, setChecked] = useState<string[]>([]);
   const [error, setError] = useState('');
   const saving = useRoutines((state) => state.saving);
-  const complete = async () => {
+  const record = async (status: 'done' | 'missed' | 'skipped') => {
     setError('');
     const ok = await routineStore.getState().setStatus(
       prompt.id,
       prompt.date,
-      'done',
-      prompt.items.map((item) => ({
-        ...item,
-        checked: checked.includes(item.id),
-      })),
+      status,
+      status === 'done'
+        ? prompt.items.map((item) => ({
+            ...item,
+            checked: checked.includes(item.id),
+          }))
+        : undefined,
       prompt.mode,
     );
     if (ok) onClose();
@@ -124,8 +126,26 @@ function CompletionSheet({
             label="Confirm completion"
             tone="success"
             disabled={saving || checked.length !== prompt.items.length}
-            onPress={() => void complete()}
+            onPress={() => void record('done')}
           />
+          <View style={common.row}>
+            <View style={common.grow}>
+              <Button
+                label="Not done"
+                tone="danger"
+                disabled={saving}
+                onPress={() => void record('missed')}
+              />
+            </View>
+            <View style={common.grow}>
+              <Button
+                label="Skip"
+                tone="warning"
+                disabled={saving}
+                onPress={() => void record('skipped')}
+              />
+            </View>
+          </View>
           <Button label="Cancel" disabled={saving} onPress={onClose} />
         </View>
       }

@@ -10,7 +10,9 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Po pushu odczytaj Actions. Napraw czerwone checks i poczekaj na wynik.
 - Nie publikuj OTA ani buildu po nieudanych testach, lint lub typecheck.
 - Sprawdzaj dokumentację Expo przed zmianą SDK, native konfiguracji lub EAS workflow.
-- Obecnie SDK 57 dla Expo Go na fizycznym Androidzie; README wyjaśnia okres przejściowy.
+- Obecnie SDK 57. Ekrany działają w Expo Go; widget Android wymaga APK 1.2.0 (versionCode 3) lub nowszego.
+- Zachowuj rejestrację widgetu przed Expo Router w index.ts oraz osłony importów native dla Expo Go/web. Widget używa tego samego store/repozytoriów; nigdy nie omijaj walidacji checklisty.
+- Kliknięcia widgetu muszą sprawdzać dzisiejszą datę i wyświetlony status; stare kliknięcia tylko odświeżają widok.
 - EAS Update wyłącznie do zgodnego fingerprint runtime. Skrypt check-runtime to bramka.
 - Native build tylko dla pierwszej instalacji lub zmiany runtime, przez workflow dispatch.
 - Brak EXPO_TOKEN nie może psuć zwykłego CI. Po dodaniu tokenu uruchom Link Expo project.

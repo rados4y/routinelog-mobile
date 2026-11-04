@@ -2,14 +2,8 @@ import { Text, View, StyleSheet } from 'react-native';
 import type { RoutineInput } from '../domain/models';
 import { Icon, type IconName } from './Icon';
 
-export const categoryColors: Record<RoutineInput['category'], string> = {
-  Zdrowie: '#da6180',
-  Sport: '#d97134',
-  Dom: '#5b99d1',
-  Rozwój: '#9c61e7',
-  Rodzina: '#34ad8b',
-  Inne: '#c28c4c',
-};
+import { categoryColors } from '../theme/colors';
+export { categoryColors } from '../theme/colors';
 export function HabitIcon({
   routine,
   small = false,

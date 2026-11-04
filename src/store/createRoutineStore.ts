@@ -127,7 +127,9 @@ export function createRoutineStore(
         });
       },
       load: async () => {
-        if (get().loading) return;
+        // Headless widget tasks can initialize this store before the app mounts.
+        // Do not reload a stale repository snapshot over their latest saved state.
+        if (get().loading || get().ready) return;
         set({ loading: true, error: null });
         try {
           await seedOnce(repos, clock());
