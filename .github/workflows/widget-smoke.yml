@@ -1,9 +1,6 @@
 name: Android widget smoke test
 on:
   workflow_dispatch:
-  push:
-    branches: ['fix/blank-android-widget']
-    paths: ['.github/workflows/widget-smoke.yml', 'scripts/widget-smoke.py']
 permissions:
   contents: read
 jobs:
