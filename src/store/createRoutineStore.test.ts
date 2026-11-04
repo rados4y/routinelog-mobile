@@ -279,7 +279,7 @@ describe('manual calendar persistence', () => {
           'calendar',
         ),
     ).toBe(false);
-    expect(store.getState().error).toContain('Przyszły termin');
+    expect(store.getState().error).toContain('Future date');
     expect(store.getState().logs).toHaveLength(1);
   });
   it('keeps a calendar entry visible on the daily view without inserting automatic occurrences', async () => {

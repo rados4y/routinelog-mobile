@@ -28,13 +28,13 @@ export function entryBlockReason(
   hasLog = false,
   today = localDate(),
 ): string | undefined {
-  if (!dateSchema.safeParse(date).success) return 'Nieprawidłowa data.';
+  if (!dateSchema.safeParse(date).success) return 'Invalid date.';
   if (date > today)
-    return 'Przyszły termin — status możesz zapisać najwcześniej tego dnia.';
+    return 'Future date — you can record a status on that day or later.';
   if (!routineForStatusEntry(original, date, mode, hasLog))
     return mode === 'calendar'
-      ? 'Rutyna jest wyłączona. Włącz ją, aby dodać nowy wpis.'
-      : 'Rutyna nie jest zaplanowana na ten dzień.';
+      ? 'This routine is paused. Enable it to add an entry.'
+      : 'This routine is not scheduled for this day.';
   return undefined;
 }
 export class EntryUnavailableError extends Error {

@@ -21,13 +21,13 @@ export function RoutineInsights({
   const tint = categoryColors[routine.category];
   return (
     <Sheet visible title={routine.name} onClose={onClose}>
-      <Text style={common.heading}>Ostatnie 30 dni</Text>
+      <Text style={common.heading}>Last 30 days</Text>
       <View style={common.wrap}>
         {[
-          ['Wykonane', stats.done],
-          ['Pominięte', stats.skipped],
-          ['Niewykonane', stats.missed],
-          ['Regularność', `${stats.regularity}%`],
+          ['Done', stats.done],
+          ['Skipped', stats.skipped],
+          ['Not done', stats.missed],
+          ['Consistency', `${stats.regularity}%`],
         ].map(([label, value]) => (
           <View
             key={label}
@@ -38,7 +38,7 @@ export function RoutineInsights({
           </View>
         ))}
       </View>
-      <Text style={common.subtitle}>Aktywność · ostatnie 7 dni</Text>
+      <Text style={common.subtitle}>Activity · last 7 days</Text>
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
         {week.activity.map((day) => (
           <View
@@ -61,9 +61,9 @@ export function RoutineInsights({
         ))}
       </View>
       <Text style={common.small}>
-        Seria na karcie to kolejne wykonania w ostatnich 30 dniach. Regularność
-        uwzględnia zapisane decyzje i zakończone terminy; otwarte cele
-        elastyczne nie są dziennym niewykonaniem.
+        The streak counts consecutive completions in the last 30 days.
+        Consistency includes recorded results and closed deadlines. Open
+        flexible targets do not create daily failures.
       </Text>
     </Sheet>
   );

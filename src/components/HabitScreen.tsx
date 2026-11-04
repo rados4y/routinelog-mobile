@@ -10,19 +10,22 @@ export function ToolButton({
   label,
   onPress,
   selected = false,
+  disabled = false,
 }: {
   icon: IconName;
   label: string;
   onPress(): void;
   selected?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={styles.tool}
+      style={[styles.tool, disabled && { opacity: 0.4 }]}
     >
       <Icon
         name={icon}
@@ -37,11 +40,13 @@ export function HabitScreen({
   tools,
   fixed,
   children,
+  addRoutine = true,
 }: {
   title: string;
   tools?: ReactNode;
   fixed?: ReactNode;
   children: ReactNode;
+  addRoutine?: boolean;
 }) {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
@@ -61,14 +66,16 @@ export function HabitScreen({
       >
         {children}
       </ScrollView>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Dodaj rutynę"
-        onPress={() => router.push('/routine-editor')}
-        style={styles.fab}
-      >
-        <Icon name="plus" size={30} color={colors.text} />
-      </Pressable>
+      {addRoutine && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add routine"
+          onPress={() => router.push('/routine-editor')}
+          style={styles.fab}
+        >
+          <Icon name="plus" size={30} color={colors.text} />
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 }

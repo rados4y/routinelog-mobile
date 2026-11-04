@@ -1,19 +1,23 @@
 import { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '../../components/Button';
-import { Screen, EmptyState } from '../../components/Screen';
+import { EmptyState } from '../../components/Screen';
+import { HabitScreen, ToolButton } from '../../components/HabitScreen';
+import { HabitIcon } from '../../components/HabitIcon';
 import { StatusBadge } from '../../components/StatusBadge';
+import { Sheet } from '../../components/Sheet';
 import { addDays, dateLabel, localDate } from '../../domain/dates';
-import { historyForRange } from '../../domain/history';
+import { historyForRange, type HistoryEntry } from '../../domain/history';
 import { useRoutines } from '../../store/useRoutines';
-import { common } from '../../theme';
+import { colors, common } from '../../theme';
 import { useNow } from '../../utils/useNow';
+import { locale } from '../../i18n/en';
 
 const sources = {
-  app: 'Aplikacja',
+  app: 'App',
   chatgpt: 'ChatGPT',
-  automation: 'Automatycznie',
+  automation: 'Automatic',
   notion: 'Notion',
 };
 export function HistoryScreen() {
@@ -23,6 +27,7 @@ export function HistoryScreen() {
   const saving = useRoutines((s) => s.saving);
   const now = useNow();
   const [days, setDays] = useState(30);
+  const [selected, setSelected] = useState<HistoryEntry | null>(null);
   const entries = historyForRange(
     routines,
     logs,
@@ -30,93 +35,197 @@ export function HistoryScreen() {
     localDate(now),
     now,
   );
+  const groups = new Map<string, HistoryEntry[]>();
+  for (const entry of entries)
+    groups.set(entry.scheduledFor, [
+      ...(groups.get(entry.scheduledFor) ?? []),
+      entry,
+    ]);
   return (
-    <Screen
-      title="Historia"
-      subtitle={`Twoje małe zwycięstwa · ostatnie ${days} dni`}
-    >
-      <View style={common.section}>
+    <>
+      <HabitScreen
+        title="History"
+        addRoutine={false}
+        fixed={
+          <Text style={styles.period}>
+            Last {days} days · {entries.length}{' '}
+            {entries.length === 1 ? 'entry' : 'entries'}
+          </Text>
+        }
+      >
         {!entries.length && (
           <EmptyState
             icon="◷"
-            title="Tutaj zapisze się Twój rytm"
-            description="Oznacz pierwszą rutynę jako wykonaną lub pominiętą. Zakończone dni uzupełnimy o niewykonania."
+            title="Your progress starts here"
+            description="Complete or skip a routine to start your history."
           />
         )}
-        {entries.map((entry) => (
-          <View
-            key={entry.id}
-            testID={`history-entry-${entry.id}`}
-            style={common.card}
-          >
-            <View style={common.row}>
-              <Text style={{ fontSize: 27 }}>{entry.routineIcon}</Text>
-              <View style={common.grow}>
-                <Text style={[common.text, { fontWeight: '700' }]}>
-                  {entry.routineName}
-                </Text>
-                <Text style={common.small}>
-                  {dateLabel(entry.scheduledFor, {
+        {[...groups].map(([date, items]) => (
+          <View key={date} style={{ gap: 8 }}>
+            <Text style={styles.date}>
+              {date === localDate(now)
+                ? 'Today'
+                : dateLabel(date, {
+                    weekday: 'short',
                     day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
+                    month: 'short',
                   })}
-                </Text>
-              </View>
-              <StatusBadge status={entry.status} />
-            </View>
-            <Text style={common.small}>
-              {entry.completedAt
-                ? `Wykonano o ${new Date(entry.completedAt).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`
-                : entry.status === 'skipped'
-                  ? 'Świadoma przerwa'
-                  : 'Zakończony termin'}{' '}
-              · {sources[entry.source]}
             </Text>
-            {entry.value !== null && (
-              <Text style={common.text}>Wartość: {entry.value}</Text>
-            )}
-            {!!entry.checklist?.length && (
-              <View style={{ gap: 6 }}>
-                <Text style={common.small}>Potwierdzone kroki</Text>
-                {entry.checklist.map((item) => (
-                  <Text key={item.id} style={common.text}>
-                    ✓ {item.text}
-                  </Text>
-                ))}
-              </View>
-            )}
-            {!!entry.note && <Text style={common.subtitle}>{entry.note}</Text>}
-            {entry.inferred && entry.missingCount > 1 && (
-              <Text style={common.small}>
-                Niewykonane: {entry.missingCount}
-              </Text>
-            )}
-            {!entry.inferred && (
-              <Button
-                label="Cofnij status"
-                icon="undo"
-                disabled={saving}
-                onPress={() =>
-                  void setStatus(entry.routineId, entry.scheduledFor, 'pending')
-                }
-                compact
-              />
-            )}
-            {entry.inferred && (
-              <Button
-                label="Przejdź do planu"
-                onPress={() => router.push('/')}
-                compact
-              />
-            )}
+            <View style={styles.group}>
+              {items.map((entry, index) => {
+                const routine = routines.find(
+                  (item) => item.id === entry.routineId,
+                );
+                return (
+                  <View
+                    key={entry.id}
+                    testID={`history-entry-${entry.id}`}
+                    style={[styles.row, index > 0 && styles.divider]}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`History details: ${entry.routineName}, ${dateLabel(date)}`}
+                      onPress={() => setSelected(entry)}
+                      style={styles.body}
+                    >
+                      <HabitIcon
+                        routine={{
+                          icon: entry.routineIcon,
+                          category: routine?.category ?? 'Inne',
+                        }}
+                        small
+                      />
+                      <View style={common.grow}>
+                        <Text numberOfLines={2} style={styles.name}>
+                          {entry.routineName}
+                        </Text>
+                        <Text style={common.small}>
+                          {entry.completedAt
+                            ? new Date(entry.completedAt).toLocaleTimeString(
+                                locale,
+                                { hour: '2-digit', minute: '2-digit' },
+                              )
+                            : entry.inferred
+                              ? 'Scheduled'
+                              : 'Recorded'}{' '}
+                          · {sources[entry.source]}
+                        </Text>
+                      </View>
+                      <StatusBadge status={entry.status} />
+                    </Pressable>
+                    {!entry.inferred && (
+                      <ToolButton
+                        icon="undo"
+                        label={`Undo status: ${entry.routineName}`}
+                        disabled={saving}
+                        onPress={() =>
+                          void setStatus(
+                            entry.routineId,
+                            entry.scheduledFor,
+                            'pending',
+                          )
+                        }
+                      />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           </View>
         ))}
-      </View>
-      <Button
-        label="Pokaż wcześniejsze 30 dni"
-        onPress={() => setDays((count) => count + 30)}
-      />
-    </Screen>
+        <Button
+          label="Load earlier 30 days"
+          onPress={() => setDays((count) => count + 30)}
+        />
+      </HabitScreen>
+      {selected && (
+        <Sheet
+          visible
+          title={selected.routineName}
+          onClose={() => setSelected(null)}
+        >
+          <Text style={common.subtitle}>
+            {dateLabel(selected.scheduledFor, {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}{' '}
+            · {sources[selected.source]}
+          </Text>
+          <StatusBadge status={selected.status} />
+          {selected.value !== null && (
+            <Text style={common.text}>Value: {selected.value}</Text>
+          )}
+          {!!selected.note && (
+            <Text style={common.subtitle}>{selected.note}</Text>
+          )}
+          {!!selected.checklist?.length && (
+            <View style={{ gap: 8 }}>
+              <Text style={common.label}>Confirmed steps</Text>
+              {selected.checklist.map((item) => (
+                <Text key={item.id} style={common.text}>
+                  ✓ {item.text}
+                </Text>
+              ))}
+            </View>
+          )}
+          {selected.inferred && selected.missingCount > 1 && (
+            <Text style={common.small}>Missed: {selected.missingCount}</Text>
+          )}
+          {selected.inferred && (
+            <Button
+              label="Open daily plan"
+              onPress={() => {
+                setSelected(null);
+                router.push('/');
+              }}
+            />
+          )}
+        </Sheet>
+      )}
+    </>
   );
 }
+const styles = StyleSheet.create({
+  period: {
+    color: colors.muted,
+    fontSize: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+  },
+  date: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 4,
+    paddingTop: 6,
+  },
+  group: {
+    backgroundColor: colors.panel,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 12,
+    paddingRight: 2,
+    paddingVertical: 10,
+    minHeight: 76,
+  },
+  divider: { borderTopWidth: 1, borderTopColor: colors.border },
+  body: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 48,
+  },
+  name: {
+    fontSize: 14,
+    lineHeight: 19,
+    color: colors.text,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+});

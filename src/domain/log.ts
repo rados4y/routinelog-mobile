@@ -9,8 +9,7 @@ export function createLog(
   now = new Date(),
   checklist: ChecklistResult[] = [],
 ): RoutineLog {
-  if (date > localDate(now))
-    throw new Error('Nie można oznaczyć przyszłego dnia.');
+  if (date > localDate(now)) throw new Error('Cannot record a future day.');
   const completedChecklist =
     status === 'done'
       ? requireCompleteChecklist(routine.checklist, checklist)

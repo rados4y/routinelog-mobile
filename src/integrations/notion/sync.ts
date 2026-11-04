@@ -41,19 +41,19 @@ const ledgerKey = (root: string, month: string) =>
   `@routinelog/notion/v1/${root}/${month}`;
 const changedDuringSync = () =>
   new Error(
-    'W trakcie synchronizacji zapisano nowsze zmiany w aplikacji. Zachowaliśmy je. Synchronizuj ponownie.',
+    'Newer local changes were saved during sync. They have been kept. Sync again.',
   );
 const fieldLabels = {
-  name: 'Nazwa',
-  icon: 'Ikona',
-  category: 'Kategoria',
-  active: 'Aktywność',
-  schedule: 'Harmonogram',
-  target: 'Cel',
-  unit: 'Jednostka',
-  reminderTime: 'Godzina',
-  note: 'Opis',
-  checklist: 'Lista kroków',
+  name: 'Name',
+  icon: 'Icon',
+  category: 'Category',
+  active: 'Active',
+  schedule: 'Schedule',
+  target: 'Target',
+  unit: 'Unit',
+  reminderTime: 'Time',
+  note: 'Note',
+  checklist: 'Checklist',
 };
 
 export class NotionSync {
@@ -108,7 +108,7 @@ export class NotionSync {
     }
     if (this.pendingChecklists.size)
       throw new Error(
-        `Potwierdź listę kroków w aplikacji dla: ${[...this.pendingChecklists].slice(0, 3).join(', ')}${this.pendingChecklists.size > 3 ? '…' : ''}. Te wykonania z Notion czekają na potwierdzenie. Pozostałe zmiany zostały zsynchronizowane.${this.blockedRetirement ? ' Dla usuniętej rutyny wycofaj wykonanie w Notion; do tego czasu kolumna pozostaje zachowana.' : ''}`,
+        `Confirm the checklist in the app for: ${[...this.pendingChecklists].slice(0, 3).join(', ')}${this.pendingChecklists.size > 3 ? '…' : ''}. These Notion completions are awaiting confirmation. Other changes have synced.${this.blockedRetirement ? ' For a deleted routine, clear its completion in Notion; its column is kept until then.' : ''}`,
       );
   }
   private async month(
@@ -124,7 +124,7 @@ export class NotionSync {
       : { version: 1, databaseId: ref.databaseId, bindings: [], cells: {} };
     if (ledger.databaseId !== ref.databaseId)
       throw new Error(
-        `Tabela ${ref.month} została zastąpiona inną bazą. Przywróć oryginalną tabelę przed synchronizacją.`,
+        `The ${ref.month} table was replaced. Restore the original table before syncing.`,
       );
     const persist = () => this.storage.setItem(key, JSON.stringify(ledger));
     let table = await this.remote.readMonth(ref);
@@ -153,7 +153,7 @@ export class NotionSync {
       );
       if (binding && !supportedColumn(column))
         throw new Error(
-          `Kolumna „${column.name}” zmieniła typ. Przywróć typ select, checkbox lub tekst. Dane pozostały zapisane.`,
+          `Column “${column.name}” changed type. Restore select, checkbox or text. Your data remains saved.`,
         );
       if (!supportedColumn(column)) continue;
       const data = this.local.read();
@@ -226,7 +226,7 @@ export class NotionSync {
             )
           )
             throw new Error(
-              `Dwie rutyny mają nazwę „${name}”. Nadaj im różne nazwy przed synchronizacją.`,
+              `Two routines share the name “${name}”. Give them different names before syncing.`,
             );
           table = await this.remote.updateColumns(table, {
             [column.id]: { name, description: descriptionFor(routine) },
@@ -299,7 +299,7 @@ export class NotionSync {
         Object.hasOwn(patches, name)
       )
         throw new Error(
-          `Dwie rutyny mają nazwę „${name}”. Nadaj im różne nazwy przed synchronizacją.`,
+          `Two routines share the name “${name}”. Give them different names before syncing.`,
         );
       patches[name] = newColumn(routine);
     }
@@ -312,9 +312,7 @@ export class NotionSync {
           .read()
           .routines.find((item) => item.id === linkedRoutineId(column));
         if (!routine)
-          throw new Error(
-            'Nie można powiązać nowej kolumny Notion. Spróbuj ponownie.',
-          );
+          throw new Error('Could not link the new Notion column. Try again.');
         ledger.bindings.push({
           propertyId: column.id,
           routineId: routine.id,
@@ -365,7 +363,7 @@ export class NotionSync {
         const localStatus = observableStatus(column, logStatus(existing));
         const remoteStatus = row.cells[column.id];
         if (remoteStatus === undefined)
-          throw new Error('Niepełne dane Notion. Spróbuj ponownie.');
+          throw new Error('Incomplete Notion data. Try again.');
         const merged = mergeValue(
           ledger.cells[id],
           localStatus,

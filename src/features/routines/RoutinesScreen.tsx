@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
-import { Button } from '../../components/Button';
 import { HabitScreen, ToolButton } from '../../components/HabitScreen';
 import { EmptyState } from '../../components/Screen';
-import { Sheet } from '../../components/Sheet';
 import { CalendarSheet } from '../../components/CalendarSheet';
 import type { Routine } from '../../domain/models';
 import { localDate } from '../../domain/dates';
@@ -33,11 +31,6 @@ export function RoutinesScreen() {
         a.createdAt.localeCompare(b.createdAt),
     );
   const logs = useRoutines((state) => state.logs);
-  const saving = useRoutines((state) => state.saving);
-  const toggle = useRoutines((state) => state.toggleRoutine);
-  const remove = useRoutines((state) => state.deleteRoutine);
-  const [options, setOptions] = useState<Routine | null>(null);
-  const [confirm, setConfirm] = useState(false);
   const [calendar, setCalendar] = useState<{
     routine: Routine;
     date: string;
@@ -46,24 +39,24 @@ export function RoutinesScreen() {
   return (
     <>
       <HabitScreen
-        title="Rutyny"
+        title="Routines"
         tools={
           <>
             <ToolButton
               icon="search"
-              label="Szukaj rutyn"
+              label="Search routines"
               selected={filter.search}
               onPress={filter.toggleSearch}
             />
             <ToolButton
               icon="filter"
-              label="Filtruj rutyny"
+              label="Filter routines"
               selected={filter.filters || filter.activeFilter}
               onPress={filter.toggleFilters}
             />
             <ToolButton
               icon="archive"
-              label="Pokaż wyłączone rutyny"
+              label="Show paused routines"
               selected={inactiveOnly}
               onPress={() => setInactiveOnly(!inactiveOnly)}
             />
@@ -72,7 +65,7 @@ export function RoutinesScreen() {
         }
         fixed={filter.panel}
       >
-        {inactiveOnly && <Text style={common.subtitle}>Wyłączone rutyny</Text>}
+        {inactiveOnly && <Text style={common.subtitle}>Paused routines</Text>}
         {routines.length ? (
           routines.map((routine) => (
             <RoutineCard
@@ -82,79 +75,21 @@ export function RoutinesScreen() {
               today={today}
               onCalendar={(date) => setCalendar({ routine, date })}
               onInsights={() => setInsights(routine)}
-              onOptions={() => {
-                setConfirm(false);
-                setOptions(routine);
-              }}
+              onEdit={() =>
+                router.push({
+                  pathname: '/routine-editor',
+                  params: { id: routine.id },
+                })
+              }
             />
           ))
         ) : (
           <EmptyState
-            title="Brak rutyn"
-            description="Zmień filtry lub dodaj nową rutynę przyciskiem +."
+            title="No routines"
+            description="Change filters or tap + to add a routine."
           />
         )}
       </HabitScreen>
-      <Sheet
-        visible={Boolean(options)}
-        title={confirm ? 'Usunąć rutynę?' : (options?.name ?? 'Opcje rutyny')}
-        onClose={() => setOptions(null)}
-      >
-        {options &&
-          (confirm ? (
-            <>
-              <Text style={common.subtitle}>
-                Rutyna zniknie z planu. Wcześniejsza historia pozostanie
-                zapisana.
-              </Text>
-              <Button
-                label="Usuń rutynę"
-                tone="danger"
-                disabled={saving}
-                onPress={() =>
-                  void remove(options.id).then((ok) => {
-                    if (ok) setOptions(null);
-                  })
-                }
-              />
-              <Button
-                label="Anuluj usunięcie"
-                onPress={() => setConfirm(false)}
-              />
-            </>
-          ) : (
-            <>
-              <Button
-                label="Edytuj"
-                icon="edit"
-                onPress={() => {
-                  setOptions(null);
-                  router.push({
-                    pathname: '/routine-editor',
-                    params: { id: options.id },
-                  });
-                }}
-              />
-              <Button
-                label={options.active ? 'Wyłącz' : 'Włącz'}
-                disabled={saving}
-                onPress={() =>
-                  void toggle(options.id).then((ok) => {
-                    if (ok) setOptions(null);
-                  })
-                }
-              />
-              <Button
-                label="Usuń"
-                tone="danger"
-                onPress={() => setConfirm(true)}
-              />
-              {!!options.note && (
-                <Text style={common.subtitle}>{options.note}</Text>
-              )}
-            </>
-          ))}
-      </Sheet>
       {calendar && (
         <CalendarSheet
           visible

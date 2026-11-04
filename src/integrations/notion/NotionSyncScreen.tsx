@@ -25,46 +25,46 @@ export function NotionSyncScreen() {
   return (
     <Screen
       title="Notion"
-      subtitle="Twoje rutyny w telefonie i miesięcznej tabeli"
-      action={<Button label="Wróć" compact onPress={() => router.back()} />}
+      subtitle="Your routines, on your phone and in monthly tables"
+      action={<Button label="Back" compact onPress={() => router.back()} />}
     >
       <View style={common.card}>
-        <Text style={common.heading}>Jeden miesiąc, jedna tabela</Text>
+        <Text style={common.heading}>One month, one table</Text>
         <Text style={common.subtitle}>
-          Dni są w wierszach, rutyny w kolumnach. Dodaj, zmień nazwę lub usuń
-          kolumnę w bieżącym miesiącu, a zmiana pojawi się w aplikacji. Zmiany w
-          telefonie trafiają do Notion.
+          Days are rows and routines are columns. Add, rename or remove a column
+          in the current month to update the app. Changes on your phone sync
+          back to Notion.
         </Text>
         <Button
-          label="Otwórz RoutineLog w Notion"
+          label="Open RoutineLog in Notion"
           onPress={() => void Linking.openURL(notionPageUrl)}
         />
       </View>
       <View style={common.card}>
         <Text style={common.heading}>
-          {state.connected ? 'Połączono z Notion' : 'Połącz swoje konto'}
+          {state.connected ? 'Connected to Notion' : 'Connect your account'}
         </Text>
         {!supportsNotionConnection && (
           <Text style={common.subtitle}>
-            Połączenie jest dostępne w aplikacji na Androidzie i Expo Go.
-            Podgląd w przeglądarce nie przechowuje tokenów.
+            Connect using the Android app or Expo Go. The browser preview does
+            not store tokens.
           </Text>
         )}
         {state.connected ? (
           <>
             <Text style={common.subtitle}>
               {state.lastSuccess
-                ? `Ostatnia synchronizacja: ${new Date(state.lastSuccess).toLocaleString('pl-PL')}`
-                : 'Pierwsza synchronizacja jeszcze nie została ukończona.'}
+                ? `Last synced: ${new Date(state.lastSuccess).toLocaleString('en-GB')}`
+                : 'The first sync has not completed yet.'}
             </Text>
             <Button
-              label="Synchronizuj teraz"
+              label="Sync now"
               tone="primary"
               disabled={state.busy}
               onPress={() => void state.sync()}
             />
             <Button
-              label="Rozłącz Notion"
+              label="Disconnect Notion"
               disabled={state.busy}
               onPress={() => void state.disconnect()}
             />
@@ -72,32 +72,32 @@ export function NotionSyncScreen() {
         ) : (
           <>
             <Text style={common.subtitle}>
-              Utwórz osobisty token z uprawnieniem Notion API dla konta, na
-              którym jest strona RoutineLog. Wklej go wyłącznie tutaj. Token
-              zostanie zapisany w bezpiecznym magazynie telefonu.
+              Create a personal token with Notion API access for the account
+              that owns RoutineLog. Paste it only here. It is saved in your
+              phone’s secure storage.
             </Text>
             <Button
-              label="Utwórz token w Notion"
+              label="Create a Notion token"
               onPress={() =>
                 void Linking.openURL('https://www.notion.so/developers/tokens')
               }
             />
             {supportsNotionConnection && (
               <>
-                <Text style={common.label}>Osobisty token Notion</Text>
+                <Text style={common.label}>Personal Notion token</Text>
                 <TextInput
-                  accessibilityLabel="Osobisty token Notion"
+                  accessibilityLabel="Personal Notion token"
                   style={common.field}
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
                   value={token}
                   onChangeText={setToken}
-                  placeholder="Wklej token"
+                  placeholder="Paste token"
                   placeholderTextColor={colors.muted}
                 />
                 <Button
-                  label="Połącz i synchronizuj"
+                  label="Connect and sync"
                   tone="primary"
                   disabled={state.busy || token.trim().length < 10}
                   onPress={() => void connect()}
@@ -108,13 +108,13 @@ export function NotionSyncScreen() {
         )}
         {state.busy && (
           <View style={common.row}>
-            <ActivityIndicator color={colors.accentLight} />
-            <Text style={common.subtitle}>
-              Synchronizowanie… Możesz wrócić do rutyn.
+            <ActivityIndicator color={colors.accent} />
+            <Text style={common.small}>
+              Syncing… You can return to your routines.
             </Text>
           </View>
         )}
-        {state.error && (
+        {!!state.error && (
           <Text
             accessibilityRole="alert"
             style={[common.text, { color: colors.warning }]}
@@ -125,16 +125,16 @@ export function NotionSyncScreen() {
         {state.conflict && (
           <>
             <Text style={common.subtitle}>
-              Wybór dotyczy rozbieżnych zmian w tej synchronizacji. Pozostałe
-              zmiany zostaną połączone.
+              Choose which conflicting changes to keep. Other changes will be
+              merged.
             </Text>
             <Button
-              label="Zachowaj wersję z aplikacji"
+              label="Keep app version"
               disabled={state.busy}
               onPress={() => void state.sync('app')}
             />
             <Button
-              label="Zachowaj wersję z Notion"
+              label="Keep Notion version"
               disabled={state.busy}
               onPress={() => void state.sync('notion')}
             />
@@ -142,32 +142,33 @@ export function NotionSyncScreen() {
         )}
       </View>
       <View style={common.card}>
-        <Text style={common.heading}>Jak działa synchronizacja</Text>
+        <Text style={common.heading}>How sync works</Text>
         <Text style={common.subtitle}>
-          Działa po otwarciu aplikacji, po zapisaniu zmian oraz co minutę, gdy
-          aplikacja jest otwarta. Bez internetu wszystko zapisuje się lokalnie.
-          W tle systemu synchronizacja nie jest uruchamiana.
+          Sync runs when you open the app, after saved changes, and every minute
+          while the app is open. Offline changes stay on your device. Sync does
+          not run in the system background.
         </Text>
         <Text style={common.subtitle}>
-          Opis rutyny znajdziesz w opisie kolumny. Możesz tam zmieniać notatkę
-          oraz pola Kategoria, Godzina, Plan i Aktywna. Nowa kolumna domyślnie
-          tworzy codzienną rutynę.
+          Routine settings are in the column description. Existing Notion fields
+          and status names stay compatible: Kategoria, Godzina, Plan, Aktywna;
+          Wykonane (done), Pominięte (skipped), Niewykonane (not done). A new
+          column defaults to a daily routine.
         </Text>
         <Text style={common.subtitle}>
-          Kolumna typu select obsługuje Wykonane, Pominięte i Niewykonane; puste
-          pole cofa oznaczenie. Checkbox obsługuje wykonanie i cofnięcie.
-          Pominięcia pozostają w aplikacji, jeśli kolumna jest checkboxem.
+          Select columns support all statuses; clearing a cell undoes its
+          status. Checkbox columns support done and unchecked. Other statuses
+          remain in the app.
         </Text>
         <Text style={common.subtitle}>
-          Poprzednie miesiące zachowują swoje kolumny. Zmiana statusu w archiwum
-          nadal synchronizuje historię. Usunięcie kolumny bieżącego miesiąca
-          usuwa rutynę z planu, zachowując wcześniejsze logi w telefonie.
+          Previous months keep their columns. Archived status changes still
+          sync. Removing a column in the current month removes the routine from
+          your plan while keeping its history.
         </Text>
         <Text style={common.small}>
-          Nowy telefon może odtworzyć ustawienia rutyn i statusy z tabel.
-          Dokładna godzina wykonania, wartości, dodatkowe notatki logów i
-          wcześniejsze wersje harmonogramu pozostają danymi lokalnymi. Godzina
-          wpisu zaimportowanego z Notion oznacza czas ostatniej edycji wiersza.
+          Notion can restore routine settings and statuses on a new phone. Exact
+          completion times, checklist confirmations, log notes, values and
+          historical schedule versions remain local. Imported completion times
+          refer to the last edit of the Notion row.
         </Text>
       </View>
     </Screen>

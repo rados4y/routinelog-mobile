@@ -28,24 +28,24 @@ export function TodayScreen() {
   return (
     <>
       <HabitScreen
-        title="Dzisiaj"
+        title="Today"
         tools={
           <>
             <ToolButton
               icon="search"
-              label="Szukaj rutyn"
+              label="Search routines"
               selected={filter.search}
               onPress={filter.toggleSearch}
             />
             <ToolButton
               icon="filter"
-              label="Filtruj rutyny"
+              label="Filter routines"
               selected={filter.filters || filter.activeFilter}
               onPress={filter.toggleFilters}
             />
             <ToolButton
               icon="calendar"
-              label="Wybierz datę"
+              label="Choose date"
               onPress={() => setCalendar(true)}
             />
             <NotionButton />
@@ -67,7 +67,7 @@ export function TodayScreen() {
         }
       >
         {selected > today && (
-          <Text style={common.small}>Podgląd przyszłego planu</Text>
+          <Text style={common.small}>Future plan preview</Text>
         )}
         {occurrences.length ? (
           <View>
@@ -82,8 +82,8 @@ export function TodayScreen() {
         ) : (
           <EmptyState
             icon="✓"
-            title="Plan na ten dzień jest pusty"
-            description="Dodaj rutynę przyciskiem + lub zmień datę i filtry."
+            title="No routines for this day"
+            description="Tap + to add a routine, or change the date and filters."
           />
         )}
       </HabitScreen>

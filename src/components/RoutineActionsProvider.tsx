@@ -34,7 +34,7 @@ type Actions = {
 const Context = createContext<Actions | null>(null);
 export function useRoutineActions() {
   const value = useContext(Context);
-  if (!value) throw new Error('Brak obsługi akcji rutyny.');
+  if (!value) throw new Error('Routine action provider unavailable.');
   return value;
 }
 export function RoutineActionsProvider({ children }: { children: ReactNode }) {
@@ -111,34 +111,31 @@ function CompletionSheet({
     );
     if (ok) onClose();
     else
-      setError(
-        routineStore.getState().error ??
-          'Nie udało się zapisać. Spróbuj ponownie.',
-      );
+      setError(routineStore.getState().error ?? 'Could not save. Try again.');
   };
   return (
     <Sheet
       visible
-      title="Lista kroków"
+      title="Checklist"
       onClose={onClose}
       footer={
         <View style={{ gap: 8 }}>
           <Button
-            label="Potwierdź wykonanie"
+            label="Confirm completion"
             tone="success"
             disabled={saving || checked.length !== prompt.items.length}
             onPress={() => void complete()}
           />
-          <Button label="Anuluj" disabled={saving} onPress={onClose} />
+          <Button label="Cancel" disabled={saving} onPress={onClose} />
         </View>
       }
     >
       <Text style={common.heading}>{prompt.name}</Text>
       <Text style={common.subtitle}>
-        Zaznacz wszystkie kroki, aby ukończyć rutynę.
+        Check every step to complete this routine.
       </Text>
       <Text style={common.small}>
-        {checked.length}/{prompt.items.length} kroków
+        {checked.length}/{prompt.items.length} steps
       </Text>
       {prompt.items.map((item) => (
         <Pressable

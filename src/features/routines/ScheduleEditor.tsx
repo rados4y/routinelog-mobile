@@ -17,14 +17,14 @@ import { Icon } from '../../components/Icon';
 type Frequency =
   'daily' | 'weekdays' | 'monthly' | 'yearly' | 'target' | 'interval';
 const options: { key: Frequency; label: string }[] = [
-  { key: 'daily', label: 'Codziennie' },
-  { key: 'weekdays', label: 'Wybrane dni tygodnia' },
-  { key: 'monthly', label: 'Wybrane dni miesiąca' },
-  { key: 'yearly', label: 'Wybrane dni roku' },
-  { key: 'target', label: 'Kilka razy w okresie' },
-  { key: 'interval', label: 'Co określoną liczbę dni' },
+  { key: 'daily', label: 'Every day' },
+  { key: 'weekdays', label: 'Specific days of the week' },
+  { key: 'monthly', label: 'Specific days of the month' },
+  { key: 'yearly', label: 'Specific days of the year' },
+  { key: 'target', label: 'Some days per period' },
+  { key: 'interval', label: 'Every N days' },
 ];
-const weekdays = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const toggle = (values: number[], value: number) =>
   values.includes(value)
     ? values.filter((item) => item !== value)
@@ -154,12 +154,12 @@ export function ScheduleEditor({
   const flexibleSwitch = (value: boolean, change: (value: boolean) => void) => (
     <View style={styles.setting}>
       <View style={common.grow}>
-        <Text style={common.text}>Elastycznie</Text>
+        <Text style={common.text}>Flexible</Text>
         <Text style={common.small}>
-          Pokazuj każdego dnia do wykonania lub pominięcia.
+          Show each day until completed or skipped.
         </Text>
       </View>
-      {choiceSwitch('Elastycznie', value, change, true)}
+      {choiceSwitch('Flexible', value, change, true)}
     </View>
   );
   const dayButtons = (
@@ -173,7 +173,7 @@ export function ScheduleEditor({
         <Pressable
           key={day}
           accessibilityRole="button"
-          accessibilityLabel={`Dzień ${day}`}
+          accessibilityLabel={`Day ${day}`}
           accessibilityState={{ selected: selected(day) }}
           onPress={() => press(day)}
           style={[
@@ -188,7 +188,7 @@ export function ScheduleEditor({
       {last && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Ostatni dzień miesiąca"
+          accessibilityLabel="Last day of the month"
           accessibilityState={{ selected: last.selected }}
           onPress={last.press}
           style={[
@@ -197,7 +197,7 @@ export function ScheduleEditor({
             last.selected && styles.selected,
           ]}
         >
-          <Text style={styles.chipText}>Ostatni</Text>
+          <Text style={styles.chipText}>Last</Text>
         </Pressable>
       )}
     </View>
@@ -205,10 +205,10 @@ export function ScheduleEditor({
   return (
     <>
       <View>
-        <Text style={common.label}>Częstotliwość</Text>
+        <Text style={common.label}>Frequency</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Ustaw częstotliwość"
+          accessibilityLabel="Set frequency"
           onPress={() => {
             setDraft(schedule);
             setVisible(true);
@@ -224,23 +224,23 @@ export function ScheduleEditor({
       <Sheet
         fullScreen
         visible={visible}
-        title="Jak często chcesz to robić?"
+        title="How often do you want to do it?"
         onClose={() => setVisible(false)}
         footer={
           <View style={{ flexDirection: 'row' }}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Anuluj częstotliwość"
+              accessibilityLabel="Cancel frequency"
               onPress={() => setVisible(false)}
               style={styles.footerAction}
             >
               <Text style={[common.text, { fontSize: 13, fontWeight: '700' }]}>
-                ZAMKNIJ
+                CLOSE
               </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Potwierdź częstotliwość"
+              accessibilityLabel="Confirm frequency"
               disabled={!valid.success}
               accessibilityState={{ disabled: !valid.success }}
               onPress={() => {
@@ -258,7 +258,7 @@ export function ScheduleEditor({
                   fontWeight: '700',
                 }}
               >
-                POTWIERDŹ
+                CONFIRM
               </Text>
             </Pressable>
           </View>
@@ -321,9 +321,7 @@ export function ScheduleEditor({
                           setDraft({ ...draft, lastDay: !draft.lastDay }),
                       },
                     )}
-                    <Text style={styles.hint}>
-                      Wybierz co najmniej jeden dzień
-                    </Text>
+                    <Text style={styles.hint}>Select at least one day</Text>
                     {flexibleSwitch(draft.flexible, (value) =>
                       setDraft({ ...draft, flexible: value }),
                     )}
@@ -335,7 +333,7 @@ export function ScheduleEditor({
                       {[1, 2, 3, 4, 5].map((week) => (
                         <Chip
                           key={week}
-                          label={`${week}. tydzień`}
+                          label={`Week ${week}`}
                           selected={draft.weeks.includes(week)}
                           onPress={() =>
                             setDraft({
@@ -346,7 +344,7 @@ export function ScheduleEditor({
                         />
                       ))}
                       <Chip
-                        label="Ostatni tydzień"
+                        label="Last week"
                         selected={draft.lastWeek}
                         onPress={() =>
                           setDraft({ ...draft, lastWeek: !draft.lastWeek })
@@ -377,10 +375,10 @@ export function ScheduleEditor({
                   draft.kind === 'monthlyWeekdays') && (
                   <View style={styles.setting}>
                     <Text style={[common.text, common.grow]}>
-                      Użyj dni tygodnia w miesiącu
+                      Use weekdays within the month
                     </Text>
                     {choiceSwitch(
-                      'Użyj dni tygodnia w miesiącu',
+                      'Use weekdays within the month',
                       draft.kind === 'monthlyWeekdays',
                       (value) =>
                         setDraft(
@@ -413,7 +411,7 @@ export function ScheduleEditor({
                               2000,
                               month - 1,
                               1,
-                            ).toLocaleDateString('pl-PL', { month: 'short' })}
+                            ).toLocaleDateString('en-GB', { month: 'short' })}
                             selected={yearMonth === month}
                             onPress={() => setYearMonth(month)}
                           />
@@ -444,7 +442,7 @@ export function ScheduleEditor({
                     <Text style={common.small}>
                       {draft.dates.length
                         ? scheduleLabel(draft)
-                        : 'Wybierz daty w jednym lub kilku miesiącach.'}
+                        : 'Choose dates in one or more months.'}
                     </Text>
                     {flexibleSwitch(draft.flexible, (value) =>
                       setDraft({ ...draft, flexible: value }),
@@ -456,7 +454,7 @@ export function ScheduleEditor({
                   <>
                     <View style={common.wrap}>
                       <Chip
-                        label="W tygodniu"
+                        label="Per week"
                         selected={draft.kind === 'weeklyTarget'}
                         onPress={() =>
                           setDraft({
@@ -466,7 +464,7 @@ export function ScheduleEditor({
                         }
                       />
                       <Chip
-                        label="W miesiącu"
+                        label="Per month"
                         selected={draft.kind === 'monthlyTarget'}
                         onPress={() =>
                           setDraft({
@@ -476,9 +474,9 @@ export function ScheduleEditor({
                         }
                       />
                     </View>
-                    <Text style={common.label}>Liczba wykonań</Text>
+                    <Text style={common.label}>Number of completions</Text>
                     <TextInput
-                      accessibilityLabel="Liczba wykonań"
+                      accessibilityLabel="Number of completions"
                       keyboardType="number-pad"
                       value={draft.count ? String(draft.count) : ''}
                       onChangeText={(value) =>
@@ -487,16 +485,16 @@ export function ScheduleEditor({
                       style={common.field}
                     />
                     <Text style={common.small}>
-                      Wybierasz dowolne dni w okresie. Niewykonanie oceniamy po
-                      jego zakończeniu.
+                      Choose any days within the period. Missed targets are
+                      evaluated after the period ends.
                     </Text>
                   </>
                 )}
                 {draft.kind === 'interval' && (
                   <>
-                    <Text style={common.label}>Odstęp w dniach</Text>
+                    <Text style={common.label}>Interval in days</Text>
                     <TextInput
-                      accessibilityLabel="Odstęp w dniach"
+                      accessibilityLabel="Interval in days"
                       keyboardType="number-pad"
                       style={common.field}
                       value={draft.every ? String(draft.every) : ''}
@@ -514,11 +512,9 @@ export function ScheduleEditor({
                         />
                       ))}
                     </View>
-                    <Text style={common.label}>
-                      Pierwszy termin (RRRR-MM-DD)
-                    </Text>
+                    <Text style={common.label}>First date (YYYY-MM-DD)</Text>
                     <TextInput
-                      accessibilityLabel="Pierwszy termin"
+                      accessibilityLabel="First date"
                       style={common.field}
                       value={draft.anchor}
                       onChangeText={(anchor) => setDraft({ ...draft, anchor })}
@@ -531,7 +527,7 @@ export function ScheduleEditor({
         ))}
         {!valid.success && (
           <Text accessibilityRole="alert" style={{ color: colors.warning }}>
-            Wybierz poprawne dni lub liczbę wykonań, aby potwierdzić.
+            Choose valid days or a completion target to confirm.
           </Text>
         )}
       </Sheet>

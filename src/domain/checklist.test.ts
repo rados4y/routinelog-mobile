@@ -33,9 +33,7 @@ describe('status cycle and completion checklists', () => {
       [{ ...proof[0]!, text: 'Old label' }, proof[1]!],
     ]) {
       expect(checklistIsComplete(items, invalid)).toBe(false);
-      expect(() => requireCompleteChecklist(items, invalid)).toThrow(
-        'Potwierdź',
-      );
+      expect(() => requireCompleteChecklist(items, invalid)).toThrow('Confirm');
     }
     expect(requireCompleteChecklist()).toEqual([]);
     expect(checklistSchema.safeParse([items[0], items[0]]).success).toBe(false);
@@ -45,7 +43,7 @@ describe('status cycle and completion checklists', () => {
   });
   it('requires proof for done, allows missed/skipped and snapshots confirmed steps', () => {
     const r = { ...routine(), checklist: items };
-    expect(() => createLog(r, monday, 'done')).toThrow('Potwierdź');
+    expect(() => createLog(r, monday, 'done')).toThrow('Confirm');
     expect(createLog(r, monday, 'done', undefined, proof).checklist).toEqual(
       proof,
     );

@@ -3,10 +3,10 @@ import type { OccurrenceStatus } from '../domain/models';
 import { colors } from '../theme';
 
 const statusInfo = {
-  pending: { text: 'Do zrobienia', color: colors.muted },
-  done: { text: 'Wykonane', color: colors.success },
-  skipped: { text: 'Pominięte', color: colors.warning },
-  missed: { text: 'Niewykonane', color: colors.danger },
+  pending: { text: 'Pending', color: colors.muted },
+  done: { text: 'Done', color: colors.success },
+  skipped: { text: 'Skipped', color: colors.warning },
+  missed: { text: 'Not done', color: colors.danger },
 };
 export function StatusBadge({
   status,
@@ -29,7 +29,7 @@ export function StatusBadge({
 }
 export function getStatusInfo(status: OccurrenceStatus, overdue = false) {
   return overdue
-    ? { text: 'Po czasie', color: colors.warning }
+    ? { text: 'Overdue', color: colors.warning }
     : statusInfo[status];
 }
 const styles = StyleSheet.create({

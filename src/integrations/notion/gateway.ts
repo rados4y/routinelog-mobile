@@ -81,7 +81,7 @@ export class HttpNotionGateway implements NotionGateway {
       );
       if (databases.length > 1 || months.some((item) => item.month === month))
         throw new Error(
-          `W Notion są dwie tabele ${month}. Pozostaw jedną, aby uniknąć niejednoznacznej synchronizacji.`,
+          `Notion has two tables for ${month}. Keep one table to avoid ambiguous sync.`,
         );
       if (databases[0])
         months.push({ month, pageId: block.id, databaseId: databases[0].id });
@@ -129,14 +129,14 @@ export class HttpNotionGateway implements NotionGateway {
       await this.client.call(`databases/${ref.databaseId}`),
     );
     if (database.data_sources.length !== 1)
-      throw new Error(`Tabela ${ref.month} musi mieć jedno źródło danych.`);
+      throw new Error(`The ${ref.month} table must have one data source.`);
     const dataSourceId = database.data_sources[0]!.id;
     const source = sourceSchema.parse(
       await this.client.call(`data_sources/${dataSourceId}`),
     );
     if (source.in_trash)
       throw new Error(
-        `Tabela ${ref.month} jest w koszu. Przywróć ją przed synchronizacją.`,
+        `The ${ref.month} table is in the trash. Restore it before syncing.`,
       );
     const columns = Object.values(source.properties).map((property) => ({
       ...property,
@@ -147,7 +147,7 @@ export class HttpNotionGateway implements NotionGateway {
     );
     if (!dateColumn)
       throw new Error(
-        `Tabela ${ref.month} nie ma kolumny daty „Data”. Przywróć ją przed synchronizacją.`,
+        `The ${ref.month} table is missing its “Data” date column. Restore it before syncing.`,
       );
     const rows: MonthTable['rows'] = [];
     for (const raw of await this.client.all(
@@ -168,17 +168,16 @@ export class HttpNotionGateway implements NotionGateway {
         !date.startsWith(`${ref.month}-`)
       )
         throw new Error(
-          `Popraw datę w jednym z wierszy tabeli ${ref.month}. Każdy dzień potrzebuje własnej daty.`,
+          `Fix an invalid row date in ${ref.month}. Every day needs its own date.`,
         );
       if (rows.some((existing) => existing.date === date))
         throw new Error(
-          `W tabeli ${ref.month} dzień ${date} występuje dwa razy. Usuń zbędny wiersz.`,
+          `The ${ref.month} table contains duplicate rows for ${date}. Remove the extra row.`,
         );
       const cells: Record<string, CellStatus> = {};
       for (const column of columns.filter(supportedColumn)) {
         const value = properties.find((property) => property.id === column.id);
-        if (!value)
-          throw new Error('Niepełne dane komórki Notion. Spróbuj ponownie.');
+        if (!value) throw new Error('Incomplete Notion cell data. Try again.');
         cells[column.id] =
           value.type === 'checkbox'
             ? value.checkbox
@@ -213,7 +212,7 @@ export class HttpNotionGateway implements NotionGateway {
         [...fields.description].length > 280
       ) {
         throw new Error(
-          `Opis „${column?.name ?? key}” w Notion może mieć maksymalnie 280 znaków łącznie z ustawieniami rutyny. Skróć notatkę tej rutyny w aplikacji. Pełna notatka pozostaje zapisana na telefonie.`,
+          `The description for “${column?.name ?? key}” exceeds the Notion limit of 280 characters including settings. Shorten its note in the app. The full note remains on your phone.`,
         );
       }
       // Description updates require the existing type's settings. Empty settings
@@ -236,7 +235,7 @@ export class HttpNotionGateway implements NotionGateway {
       (column) => column.type === 'date' && column.name === 'Data',
     );
     if (!title || !dateColumn)
-      throw new Error('Brakuje kolumn Dzień lub Data.');
+      throw new Error('The Dzień or Data column is missing.');
     await this.client.call('pages', 'POST', {
       parent: { type: 'data_source_id', data_source_id: table.dataSourceId },
       properties: {

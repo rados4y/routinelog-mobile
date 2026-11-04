@@ -20,14 +20,14 @@ export function AppGate({ children }: { children: ReactNode }) {
         {loading ? (
           <>
             <ActivityIndicator color={colors.accentLight} size="large" />
-            <Text style={common.subtitle}>Przygotowujemy Twoje rutyny…</Text>
+            <Text style={common.subtitle}>Loading your routines…</Text>
           </>
         ) : (
           <>
             <Text accessibilityRole="alert" style={common.text}>
-              {error ?? 'Wczytywanie…'}
+              {error ?? 'Loading…'}
             </Text>
-            <Button label="Spróbuj ponownie" onPress={() => void load()} />
+            <Button label="Try again" onPress={() => void load()} />
           </>
         )}
       </View>
@@ -44,7 +44,7 @@ export function AppGate({ children }: { children: ReactNode }) {
           >
             {error}
           </Text>
-          <Button label="Zamknij komunikat" onPress={clearError} compact />
+          <Button label="Dismiss message" onPress={clearError} compact />
         </View>
       )}
     </View>

@@ -38,31 +38,33 @@ export function matchesSchedule(schedule: Schedule, date: LocalDate): boolean {
 export function scheduleLabel(schedule: Schedule): string {
   switch (schedule.kind) {
     case 'daily':
-      return 'Codziennie';
+      return 'Every day';
     case 'weeklyTarget':
-      return `${schedule.count}× w tygodniu · elastycznie`;
+      return `${schedule.count}× per week · flexible`;
     case 'monthlyTarget':
-      return `${schedule.count}× w miesiącu · elastycznie`;
+      return `${schedule.count}× per month · flexible`;
     case 'monthlyDays':
-      return `Dni miesiąca: ${[...schedule.days].sort((a, b) => a - b).join(', ')}${schedule.lastDay ? `${schedule.days.length ? ', ' : ''}ostatni` : ''}${schedule.flexible ? ' · elastycznie' : ''}`;
+      return `Days of month: ${[...schedule.days].sort((a, b) => a - b).join(', ')}${schedule.lastDay ? `${schedule.days.length ? ', ' : ''}last` : ''}${schedule.flexible ? ' · flexible' : ''}`;
     case 'monthlyWeekdays':
-      return `${schedule.weeks.join(', ')}${schedule.lastWeek ? `${schedule.weeks.length ? ', ' : ''}ostatni` : ''} tydzień · ${scheduleLabel({ kind: 'weekdays', days: schedule.days })}${schedule.flexible ? ' · elastycznie' : ''}`;
+      return `${schedule.weeks.join(', ')}${schedule.lastWeek ? `${schedule.weeks.length ? ', ' : ''}last` : ''} week · ${scheduleLabel({ kind: 'weekdays', days: schedule.days })}${schedule.flexible ? ' · flexible' : ''}`;
     case 'yearlyDates':
-      return `${schedule.dates.map((value) => `${value.day}.${String(value.month).padStart(2, '0')}`).join(', ')}${schedule.flexible ? ' · elastycznie' : ''}`;
+      return `${schedule.dates.map((value) => `${value.day}.${String(value.month).padStart(2, '0')}`).join(', ')}${schedule.flexible ? ' · flexible' : ''}`;
     case 'interval':
-      return schedule.every === 1 ? 'Codziennie' : `Co ${schedule.every} dni`;
+      return schedule.every === 1
+        ? 'Every day'
+        : `Every ${schedule.every} days`;
     case 'weekdays': {
       if (
         [1, 2, 3, 4, 5].every((day) => schedule.days.includes(day)) &&
         schedule.days.length === 5
       )
-        return 'Poniedziałek–piątek';
-      const labels = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+        return 'Monday–Friday';
+      const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       return (
         [...schedule.days]
           .sort((a, b) => a - b)
           .map((day) => labels[day - 1])
-          .join(', ') + (schedule.flexible ? ' · elastycznie' : '')
+          .join(', ') + (schedule.flexible ? ' · flexible' : '')
       );
     }
   }

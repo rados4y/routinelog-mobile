@@ -9,11 +9,7 @@ export function NotionButton() {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={
-        issue
-          ? 'Synchronizacja z Notion: wymaga uwagi'
-          : 'Synchronizacja z Notion'
-      }
+      accessibilityLabel={issue ? 'Notion sync: wymaga uwagi' : 'Notion sync'}
       onPress={() => router.push('/notion')}
       style={styles.button}
     >

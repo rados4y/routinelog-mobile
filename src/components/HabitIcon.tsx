@@ -14,7 +14,7 @@ export function HabitIcon({
   routine,
   small = false,
 }: {
-  routine: RoutineInput;
+  routine: Pick<RoutineInput, 'icon' | 'category'>;
   small?: boolean;
 }) {
   const glyph: IconName | undefined =

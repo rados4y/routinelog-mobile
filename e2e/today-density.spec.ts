@@ -13,7 +13,7 @@ for (const viewport of [
     const rows = page.locator('[data-testid^="occurrence-"]');
     await expect(rows).toHaveCount(3);
     await expect(
-      page.getByRole('heading', { name: 'Dzisiaj', exact: true }),
+      page.getByRole('heading', { name: 'Today', exact: true }),
     ).toBeVisible();
     const navigation = await page.getByRole('tablist').boundingBox();
     for (let index = 0; index < 3; index++) {

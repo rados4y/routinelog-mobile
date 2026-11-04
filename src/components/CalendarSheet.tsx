@@ -38,7 +38,7 @@ export function CalendarSheet({
   const [month, setMonth] = useState(monthStart(selected));
   const [date, setDate] = useState(selected);
   const logs = useRoutines((state) => state.logs);
-  const { requestStatus: setStatus, cycleStatus } = useRoutineActions();
+  const { cycleStatus } = useRoutineActions();
   const saving = useRoutines((state) => state.saving);
   const error = useRoutines((state) => state.error);
   const { width } = useWindowDimensions();
@@ -56,18 +56,17 @@ export function CalendarSheet({
   const reason = routine
     ? entryBlockReason(routine, date, 'calendar', Boolean(log), today)
     : undefined;
-  const canMark = Boolean(routine && !reason);
   const tint = routine ? categoryColors[routine.category] : colors.accentLight;
   return (
     <Sheet
       visible={visible}
       onClose={onClose}
-      title={routine ? routine.name : 'Wybierz datę'}
+      title={routine ? routine.name : 'Choose date'}
     >
       <View style={common.spread}>
         <ToolButton
           icon="arrowLeft"
-          label="Poprzedni miesiąc"
+          label="Previous month"
           onPress={() => setMonth(shiftMonth(month, -1))}
         />
         <Text style={common.heading}>
@@ -75,7 +74,7 @@ export function CalendarSheet({
         </Text>
         <ToolButton
           icon="arrowRight"
-          label="Następny miesiąc"
+          label="Next month"
           onPress={() => setMonth(shiftMonth(month, 1))}
         />
       </View>
@@ -90,7 +89,7 @@ export function CalendarSheet({
         </Text>
       )}
       <View style={styles.grid}>
-        {['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'].map((day) => (
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <Text key={day} style={[styles.label, { width: cellWidth }]}>
             {day}
           </Text>
@@ -199,51 +198,18 @@ export function CalendarSheet({
           <Text style={common.subtitle}>
             {dateLabel(date)}
             {log
-              ? ` · ${log.status === 'done' ? 'Wykonane' : log.status === 'skipped' ? 'Pominięte' : 'Niewykonane'}`
+              ? ` · ${log.status === 'done' ? 'Done' : log.status === 'skipped' ? 'Skipped' : 'Not done'}`
               : ''}
           </Text>
-          <View style={common.wrap}>
-            <Button
-              label="Wykonane"
-              disabled={!canMark || saving}
-              tone="success"
-              onPress={() =>
-                void setStatus(routine.id, date, 'done', 'calendar')
-              }
-            />
-            <Button
-              label="Niewykonane"
-              disabled={!canMark || saving}
-              tone="danger"
-              onPress={() => setStatus(routine.id, date, 'missed', 'calendar')}
-            />
-            <Button
-              label="Pomiń"
-              disabled={!canMark || saving}
-              tone="warning"
-              onPress={() =>
-                void setStatus(routine.id, date, 'skipped', 'calendar')
-              }
-            />
-            {log && (
-              <Button
-                label="Cofnij status"
-                disabled={saving}
-                onPress={() =>
-                  void setStatus(routine.id, date, 'pending', 'calendar')
-                }
-              />
-            )}
-          </View>
           <Text style={common.small}>
-            Dotknij daty: wykonane → niewykonane → pominięte → bez oznaczenia.
-            Wpis poza harmonogramem nie zmienia planu rutyny.
+            Tap a day: done → not done → skipped → unchecked. Manual entries do
+            not change the schedule.
           </Text>
         </>
       )}
       {!routine && (
         <Button
-          label="Przejdź do dzisiaj"
+          label="Go to today"
           onPress={() => {
             onSelect?.(today);
             onClose();
