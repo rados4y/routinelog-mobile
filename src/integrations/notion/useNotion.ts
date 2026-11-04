@@ -41,7 +41,7 @@ export const useNotion = create<NotionState>((set, get) => ({
     } catch {
       set({
         initialized: true,
-        error: 'Nie udało się odczytać połączenia Notion. Połącz ponownie.',
+        error: 'Could not read your Notion connection. Connect again.',
       });
     }
   },
@@ -59,7 +59,7 @@ export const useNotion = create<NotionState>((set, get) => ({
         error:
           error instanceof Error
             ? error.message
-            : 'Nie udało się połączyć z Notion.',
+            : 'Could not connect to Notion.',
       });
       return false;
     } finally {
@@ -72,7 +72,7 @@ export const useNotion = create<NotionState>((set, get) => ({
       await credentials.remove();
       set({ connected: false, error: null, conflict: false });
     } catch {
-      set({ error: 'Nie udało się rozłączyć. Spróbuj ponownie.' });
+      set({ error: 'Could not disconnect. Try again.' });
     }
   },
   sync: async (choice) => {
@@ -112,7 +112,7 @@ export const useNotion = create<NotionState>((set, get) => ({
         error:
           error instanceof Error && !(error.name === 'ZodError')
             ? error.message
-            : 'Nieprawidłowe dane synchronizacji. Lokalne dane pozostały zapisane.',
+            : 'Invalid sync data. Local data is still saved.',
       });
     } finally {
       set({ busy: false });

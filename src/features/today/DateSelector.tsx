@@ -38,7 +38,11 @@ export function DateSelector({
           style={[styles.day, date === selected && styles.selected]}
         >
           <Text style={[styles.weekday, date === selected && styles.light]}>
-            {['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'][weekday(date) - 1]}
+            {
+              ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][
+                weekday(date) - 1
+              ]
+            }
           </Text>
           <Text style={[styles.number, date === selected && styles.light]}>
             {calendarDate(date).getDate()}

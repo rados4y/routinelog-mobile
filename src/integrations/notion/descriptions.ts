@@ -103,7 +103,7 @@ function parsePlan(value: string): Schedule {
   if (/^dni [1-7](,[1-7])*$/.test(value))
     return { kind: 'weekdays', days: value.slice(4).split(',').map(Number) };
   throw new Error(
-    'Nieznany plan w opisie kolumny. Użyj: codziennie, dni 1,3,5, 3x/tydzień lub co 7 dni od RRRR-MM-DD.',
+    'Unknown column schedule. Supported Notion values: codziennie, dni 1,3,5, 3x/tydzień, or co 7 dni od YYYY-MM-DD.',
   );
 }
 export function descriptionFor(routine: Routine): string {
@@ -171,7 +171,7 @@ export function inputFromColumn(
   });
   if (!result.success)
     throw new Error(
-      `Popraw opis kolumny „${column.name}”: kategorię, godzinę lub plan.`,
+      `Fix the description for “${column.name}”: category, time or schedule.`,
     );
   return result.data;
 }
@@ -184,7 +184,7 @@ export function statusFromText(value: string): CellStatus {
     return 'skipped';
   if (['niewykonane', 'missed', '✗'].includes(normalized)) return 'missed';
   throw new Error(
-    `Nieznane oznaczenie w Notion. Użyj Wykonane, Pominięte, Niewykonane lub pustego pola.`,
+    `Unknown Notion status. Use Wykonane (done), Pominięte (skipped), Niewykonane (not done), or an empty cell.`,
   );
 }
 export function cellWrite(

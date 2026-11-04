@@ -16,7 +16,7 @@ export async function seedOnce(
   const version = await repos.storage.getItem(seedKey);
   if (version === seedVersion) return;
   if (version !== null && version !== '1')
-    throw new Error('Nieznana wersja danych startowych.');
+    throw new Error('Unsupported initial data version.');
   const existing = await repos.routines.list();
   const presetIds = new Set(referencePresets.map((item) => item.id));
   for (const routine of existing) {

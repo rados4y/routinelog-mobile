@@ -398,7 +398,7 @@ describe('monthly, bidirectional Notion synchronization', () => {
     await expect(sync().run()).rejects.toThrow('denied');
     expect(store.getState().routines[0]?.deletedAt).toBeNull();
     remote.table.columns[2]!.type = 'formula';
-    await expect(sync().run()).rejects.toThrow('zmieniła typ');
+    await expect(sync().run()).rejects.toThrow('changed type');
     expect(store.getState().routines[0]?.deletedAt).toBeNull();
   });
   it('preserves old columns during rollover, while current month deletion removes the routine', async () => {
@@ -548,7 +548,7 @@ describe('Notion column encoding', () => {
     }
   });
   it('rejects unknown statuses and invalid descriptions instead of erasing them', () => {
-    expect(() => statusFromText('może')).toThrow('Nieznane');
+    expect(() => statusFromText('może')).toThrow('Unknown');
     expect(() =>
       inputFromColumn({
         id: 'p',
@@ -556,7 +556,7 @@ describe('Notion column encoding', () => {
         description: 'Godzina: 99:30',
         type: 'select',
       }),
-    ).toThrow('Popraw opis');
+    ).toThrow('Fix the description');
   });
   it('supports leap years, checkbox undo and clear select values', () => {
     expect(daysInMonth('2028-02')).toHaveLength(29);
@@ -601,12 +601,12 @@ describe('Notion checklist protection', () => {
     await sync().run();
     remote.day.cells.column1 = 'done';
     await store.getState().saveRoutine({ ...routine(), name: 'Druga rutyna' });
-    await expect(sync().run()).rejects.toThrow('Potwierdź listę kroków');
+    await expect(sync().run()).rejects.toThrow('Confirm the checklist');
     const second = remote.table.columns.find((column) =>
       column.name.includes('Druga rutyna'),
     )!;
     remote.day.cells[second.id] = 'done';
-    await expect(sync().run()).rejects.toThrow('Potwierdź listę kroków');
+    await expect(sync().run()).rejects.toThrow('Confirm the checklist');
     expect(store.getState().logs).toHaveLength(1);
     expect(store.getState().logs[0]).toMatchObject({
       routineId: 'local-new',
@@ -652,7 +652,7 @@ it('preserves a retired Notion column until its unconfirmed checklist result is 
   await sync().run();
   remote.day.cells.column1 = 'done';
   await store.getState().deleteRoutine('test-routine');
-  await expect(sync().run()).rejects.toThrow('kolumna pozostaje zachowana');
+  await expect(sync().run()).rejects.toThrow('column is kept');
   expect(remote.table.columns.some((column) => column.id === 'column1')).toBe(
     true,
   );
@@ -678,7 +678,7 @@ it('requires checklist confirmation for a remote completion before the local imp
     );
   remote.table.rows.find((row) => row.date === '2026-10-11')!.cells.column1 =
     'done';
-  await expect(sync().run()).rejects.toThrow('Potwierdź listę kroków');
+  await expect(sync().run()).rejects.toThrow('Confirm the checklist');
   expect(store.getState().logs).toEqual([]);
   expect(
     await store

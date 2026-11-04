@@ -10,10 +10,10 @@ export const nextStatus = (
   status: OccurrenceStatus = 'pending',
 ): OccurrenceStatus => cycle[status];
 export const statusLabels: Record<OccurrenceStatus, string> = {
-  pending: 'Bez oznaczenia',
-  done: 'Wykonane',
-  missed: 'Niewykonane',
-  skipped: 'Pominięte',
+  pending: 'Unchecked',
+  done: 'Done',
+  missed: 'Not done',
+  skipped: 'Skipped',
 };
 export const nextActionLabel = (status: OccurrenceStatus = 'pending') =>
-  `Następny status: ${statusLabels[nextStatus(status)]}`;
+  `Next status: ${statusLabels[nextStatus(status)]}`;

@@ -6,97 +6,80 @@ test('daily checkbox and routine calendars share the four-state cycle', async ({
 }) => {
   await openApp(page);
   const daily = page.getByTestId('occurrence-preset-dog').getByRole('checkbox');
-  for (const status of [
-    'Wykonane',
-    'Niewykonane',
-    'Pominięte',
-    'Bez oznaczenia',
-  ]) {
+  for (const status of ['Done', 'Not done', 'Skipped', 'Unchecked']) {
     await daily.click();
     await expect(daily).toHaveAccessibleName(new RegExp(`\\. ${status}\\.`));
     await page.reload();
     await expect(daily).toHaveAccessibleName(new RegExp(`\\. ${status}\\.`));
   }
-  await page.getByRole('tab', { name: 'Rutyny', exact: true }).click();
+  await page.getByRole('tab', { name: 'Routines', exact: true }).click();
   await expect(
     page
       .getByTestId('routine-preset-book')
-      .getByRole('button', { name: /^Status:.*\b2 listopada/ }),
+      .getByRole('button', { name: /^Status:.*\b2 November/ }),
   ).toBeEnabled();
   const card = page.getByTestId('routine-preset-dog');
-  const date = card.getByRole('button', { name: /^Status:.*\b2 listopada/ });
-  for (const status of [
-    'Wykonane',
-    'Niewykonane',
-    'Pominięte',
-    'Bez oznaczenia',
-  ]) {
+  const date = card.getByRole('button', { name: /^Status:.*\b2 November/ });
+  for (const status of ['Done', 'Not done', 'Skipped', 'Unchecked']) {
     await date.click();
     await expect(date).toHaveAccessibleName(new RegExp(`\\. ${status}\\.`));
   }
   await card
     .getByRole('button', {
-      name: 'Otwórz kalendarz: Wyjście na spacer z psem',
+      name: 'Open calendar: Wyjście na spacer z psem',
       exact: true,
     })
     .click();
   const monthDate = page
-    .getByRole('button', { name: /^Status:.*\b2 listopada/ })
+    .getByRole('button', { name: /^Status:.*\b2 November/ })
     .last();
-  for (const status of [
-    'Wykonane',
-    'Niewykonane',
-    'Pominięte',
-    'Bez oznaczenia',
-  ]) {
+  for (const status of ['Done', 'Not done', 'Skipped', 'Unchecked']) {
     await monthDate.click();
     await expect(monthDate).toHaveAccessibleName(
       new RegExp(`\\. ${status}\\.`),
     );
   }
   await page
-    .getByRole('button', { name: /^Status:.*\b3 listopada/ })
+    .getByRole('button', { name: /^Status:.*\b3 November/ })
     .last()
     .click();
   await expect(
     page.getByText(
-      'Przyszły termin — status możesz zapisać najwcześniej tego dnia.',
+      'Future date — you can record a status on that day or later.',
       { exact: true },
     ),
   ).toBeInViewport({ ratio: 1 });
   await expect(
-    page.getByRole('button', { name: 'Wykonane', exact: true }),
-  ).toBeDisabled();
-  await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+    page.getByRole('button', { name: 'Done', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
 });
 
 test('checklists require every step, cancel safely, persist and protect every completion entry point', async ({
   page,
 }) => {
   await openApp(page, '/routines');
-  await page.getByRole('button', { name: 'Dodaj rutynę', exact: true }).click();
+  await page.getByRole('button', { name: 'Add routine', exact: true }).click();
   await page
-    .getByLabel('Nazwa rutyny', { exact: true })
+    .getByLabel('Routine name', { exact: true })
     .fill('Wieczorne kroki');
-  await page.getByRole('button', { name: 'Dodaj krok', exact: true }).click();
-  await page.getByLabel('Krok 1', { exact: true }).fill('Rozciąganie');
-  await page.getByRole('button', { name: 'Dodaj krok', exact: true }).click();
-  await page.getByLabel('Krok 2', { exact: true }).fill('Oddech');
-  await page
-    .getByRole('button', { name: 'Zapisz rutynę', exact: true })
-    .click();
+  await page.getByRole('button', { name: 'Add step', exact: true }).click();
+  await page.getByLabel('Step 1', { exact: true }).fill('Rozciąganie');
+  await page.getByRole('button', { name: 'Add step', exact: true }).click();
+  await page.getByLabel('Step 2', { exact: true }).fill('Oddech');
+  await page.getByRole('button', { name: 'Save routine', exact: true }).click();
   const card = page
     .locator('[data-testid^="routine-"]')
     .filter({ hasText: 'Wieczorne kroki' });
-  await card.getByRole('button', { name: /^Status:.*\b2 listopada/ }).click();
+  await card.getByRole('button', { name: /^Status:.*\b2 November/ }).click();
   await expect(
-    page.getByRole('button', { name: 'Potwierdź wykonanie', exact: true }),
+    page.getByRole('button', { name: 'Confirm completion', exact: true }),
   ).toBeDisabled();
-  await page.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(
-    card.getByRole('button', { name: /^Status:.*\b2 listopada/ }),
-  ).toHaveAccessibleName(/\. Bez oznaczenia\./);
-  await page.getByRole('tab', { name: 'Dzisiaj', exact: true }).click();
+    card.getByRole('button', { name: /^Status:.*\b2 November/ }),
+  ).toHaveAccessibleName(/\. Unchecked\./);
+  await page.getByRole('tab', { name: 'Today', exact: true }).click();
   const row = page
     .locator('[data-testid^="occurrence-"]')
     .filter({ hasText: 'Wieczorne kroki' });
@@ -105,9 +88,9 @@ test('checklists require every step, cancel safely, persist and protect every co
     .getByRole('checkbox', { name: 'Rozciąganie', exact: true })
     .click();
   await expect(
-    page.getByRole('button', { name: 'Potwierdź wykonanie', exact: true }),
+    page.getByRole('button', { name: 'Confirm completion', exact: true }),
   ).toBeDisabled();
-  await page.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(row.getByRole('checkbox')).not.toBeChecked();
   await row.getByRole('checkbox').click();
   await expect(
@@ -118,38 +101,37 @@ test('checklists require every step, cancel safely, persist and protect every co
     .click();
   await page.getByRole('checkbox', { name: 'Oddech', exact: true }).click();
   await page
-    .getByRole('button', { name: 'Potwierdź wykonanie', exact: true })
+    .getByRole('button', { name: 'Confirm completion', exact: true })
     .click();
   await expect(row.getByRole('checkbox')).toBeChecked();
   await page.reload();
   await expect(row.getByRole('checkbox')).toBeChecked();
-  await page.getByRole('tab', { name: 'Historia', exact: true }).click();
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
   const history = page
     .locator('[data-testid^="history-entry-"]')
     .filter({ hasText: 'Wieczorne kroki' });
-  await expect(history).toContainText('✓ Rozciąganie');
-  await expect(history).toContainText('✓ Oddech');
-  await page.getByRole('tab', { name: 'Rutyny', exact: true }).click();
+  await history.getByRole('button', { name: /^History details:/ }).click();
+  await expect(page.getByText('✓ Rozciąganie', { exact: true })).toBeVisible();
+  await expect(page.getByText('✓ Oddech', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('tab', { name: 'Routines', exact: true }).click();
   await card
     .getByRole('button', {
-      name: 'Otwórz kalendarz: Wieczorne kroki',
+      name: 'Open calendar: Wieczorne kroki',
       exact: true,
     })
     .click();
-  await page
-    .getByRole('button', { name: 'Cofnij status', exact: true })
-    .click();
-  await page
-    .getByRole('button', { name: /^Status: Wieczorne kroki,.*\b2 listopada/ })
-    .last()
-    .click();
+  const calendarDate = page
+    .getByRole('button', { name: /^Status: Wieczorne kroki,.*\b2 November/ })
+    .last();
+  for (let i = 0; i < 4; i++) await calendarDate.click();
   await expect(
-    page.getByRole('button', { name: 'Potwierdź wykonanie', exact: true }),
+    page.getByRole('button', { name: 'Confirm completion', exact: true }),
   ).toBeDisabled();
-  await page.getByRole('button', { name: 'Anuluj', exact: true }).click();
-  await page.getByRole('button', { name: 'Wykonane', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await calendarDate.click();
   await expect(
-    page.getByRole('button', { name: 'Potwierdź wykonanie', exact: true }),
+    page.getByRole('button', { name: 'Confirm completion', exact: true }),
   ).toBeDisabled();
   await expect(
     page.getByRole('checkbox', { name: 'Rozciąganie', exact: true }),
@@ -159,25 +141,25 @@ test('checklists require every step, cancel safely, persist and protect every co
     .click();
   await page.getByRole('checkbox', { name: 'Oddech', exact: true }).click();
   await page
-    .getByRole('button', { name: 'Potwierdź wykonanie', exact: true })
+    .getByRole('button', { name: 'Confirm completion', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
   await card
-    .getByRole('button', { name: 'Opcje rutyny: Wieczorne kroki', exact: true })
+    .getByRole('button', { name: 'Edit routine: Wieczorne kroki', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
-  await expect(page.getByLabel('Krok 1', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('Step 1', { exact: true })).toHaveValue(
     'Rozciąganie',
   );
-  await page.getByLabel('Krok 1', { exact: true }).fill('Nowy krok');
-  await page.getByRole('button', { name: 'Usuń krok 2', exact: true }).click();
+  await page.getByLabel('Step 1', { exact: true }).fill('Nowy krok');
   await page
-    .getByRole('button', { name: 'Zapisz rutynę', exact: true })
+    .getByRole('button', { name: 'Remove step 2', exact: true })
     .click();
-  await page.getByRole('tab', { name: 'Historia', exact: true }).click();
-  await expect(history).toContainText('✓ Rozciąganie');
-  await expect(history).toContainText('✓ Oddech');
-  await expect(history).not.toContainText('Nowy krok');
+  await page.getByRole('button', { name: 'Save routine', exact: true }).click();
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await history.getByRole('button', { name: /^History details:/ }).click();
+  await expect(page.getByText('✓ Rozciąganie', { exact: true })).toBeVisible();
+  await expect(page.getByText('✓ Oddech', { exact: true })).toBeVisible();
+  await expect(page.getByText('✓ Nowy krok', { exact: true })).toHaveCount(0);
 });
 
 test.describe('touchscreen date buttons', () => {
@@ -189,14 +171,9 @@ test.describe('touchscreen date buttons', () => {
     const book = page.getByTestId('routine-preset-book');
     const pawel = page.getByTestId('routine-preset-pawel');
     const day = (card: typeof book) =>
-      card.getByRole('button', { name: /^Status:.*\b1 listopada/ });
+      card.getByRole('button', { name: /^Status:.*\b1 November/ });
     for (const card of [book, pawel]) {
-      for (const status of [
-        'Wykonane',
-        'Niewykonane',
-        'Pominięte',
-        'Bez oznaczenia',
-      ]) {
+      for (const status of ['Done', 'Not done', 'Skipped', 'Unchecked']) {
         await day(card).tap();
         await expect(day(card)).toHaveAccessibleName(
           new RegExp(`\\. ${status}\\.`),
@@ -205,31 +182,26 @@ test.describe('touchscreen date buttons', () => {
     }
     await day(book).tap();
     await expect(
-      pawel.getByRole('button', { name: /^Postępy:.*regularność 0%/ }),
+      pawel.getByRole('button', { name: /^Progress:.*consistency 0%/ }),
     ).toBeVisible();
     await page.reload();
-    await expect(day(book)).toHaveAccessibleName(/\. Wykonane\./);
+    await expect(day(book)).toHaveAccessibleName(/\. Done\./);
     await book
       .getByRole('button', {
-        name: 'Otwórz kalendarz: Book: umysł ponad nastrojem',
+        name: 'Open calendar: Book: umysł ponad nastrojem',
         exact: true,
       })
       .tap();
     const date = page
-      .getByRole('button', { name: /^Status: Book:.*\b1 listopada/ })
+      .getByRole('button', { name: /^Status: Book:.*\b1 November/ })
       .last();
-    for (const status of [
-      'Niewykonane',
-      'Pominięte',
-      'Bez oznaczenia',
-      'Wykonane',
-    ]) {
+    for (const status of ['Not done', 'Skipped', 'Unchecked', 'Done']) {
       await date.tap();
       await expect(date).toHaveAccessibleName(new RegExp(`\\. ${status}\\.`));
     }
-    await page.getByRole('button', { name: 'Zamknij', exact: true }).tap();
-    await page.getByRole('tab', { name: 'Dzisiaj', exact: true }).tap();
-    await page.getByRole('button', { name: /niedziela, 1 listopada/ }).tap();
+    await page.getByRole('button', { name: 'Close', exact: true }).tap();
+    await page.getByRole('tab', { name: 'Today', exact: true }).tap();
+    await page.getByRole('button', { name: /Sunday,? 1 November/ }).tap();
     await expect(
       page.getByTestId('occurrence-preset-book').getByRole('checkbox'),
     ).toBeChecked();

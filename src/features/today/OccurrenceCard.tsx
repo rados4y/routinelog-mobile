@@ -3,7 +3,8 @@ import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useRoutineActions } from '../../components/RoutineActionsProvider';
 import { nextActionLabel, statusLabels } from '../../domain/status';
-import { Button } from '../../components/Button';
+import { ToolButton } from '../../components/HabitScreen';
+import { categoryLabels } from '../../i18n/en';
 import { Icon } from '../../components/Icon';
 import { StatusBadge } from '../../components/StatusBadge';
 import { HabitIcon, categoryColors } from '../../components/HabitIcon';
@@ -21,7 +22,7 @@ export function OccurrenceCard({
 }) {
   const { routine, status, overdue, date, windowProgress } = occurrence;
   const [expanded, setExpanded] = useState(false);
-  const { requestStatus: setStatus, cycleStatus } = useRoutineActions();
+  const { cycleStatus } = useRoutineActions();
   const explicitStatus = occurrence.log?.status ?? 'pending';
   const saving = useRoutines((state) => state.saving);
   const checked = status === 'done';
@@ -31,7 +32,7 @@ export function OccurrenceCard({
       <View style={styles.row}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Szczegóły rutyny: ${routine.name}`}
+          accessibilityLabel={`Routine details: ${routine.name}`}
           accessibilityState={{ expanded }}
           aria-expanded={expanded}
           onPress={() => setExpanded(!expanded)}
@@ -53,12 +54,12 @@ export function OccurrenceCard({
                 ]}
               >
                 {status === 'skipped'
-                  ? 'Pominięte'
+                  ? 'Skipped'
                   : explicitStatus === 'missed'
-                    ? 'Niewykonane'
+                    ? 'Not done'
                     : checked
-                      ? 'Wykonane'
-                      : 'Rutyna'}
+                      ? 'Done'
+                      : 'Routine'}
               </Text>
             </View>
           </View>
@@ -102,40 +103,23 @@ export function OccurrenceCard({
             <StatusBadge status={status} overdue={overdue} />
           </View>
           <Text style={common.small}>
-            {routine.reminderTime} · {routine.category}
+            {routine.reminderTime} · {categoryLabels[routine.category]}
             {windowProgress
-              ? ` · ${windowProgress.done}/${windowProgress.target} w okresie`
+              ? ` · ${windowProgress.done}/${windowProgress.target} this period`
               : ''}
           </Text>
           {!!routine.checklist?.length && (
             <Text style={common.small}>
-              {routine.checklist.length} kroków do potwierdzenia
+              {routine.checklist.length} steps to confirm
             </Text>
           )}
           {!!routine.note && (
             <Text style={common.subtitle}>{routine.note}</Text>
           )}
-          <View style={common.wrap}>
-            {status !== 'done' && status !== 'skipped' && (
-              <Button
-                label="Pomiń"
-                compact
-                tone="warning"
-                disabled={future || saving}
-                onPress={() => void setStatus(routine.id, date, 'skipped')}
-              />
-            )}
-            {occurrence.log && (
-              <Button
-                label="Cofnij status"
-                compact
-                disabled={saving}
-                onPress={() => void setStatus(routine.id, date, 'pending')}
-              />
-            )}
-            <Button
-              label="Edytuj rutynę"
-              compact
+          <View style={{ alignItems: 'flex-end' }}>
+            <ToolButton
+              icon="edit"
+              label={`Edit routine: ${routine.name}`}
               onPress={() =>
                 router.push({
                   pathname: '/routine-editor',

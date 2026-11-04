@@ -26,17 +26,16 @@ const apiErrorSchema = z.object({
 
 export function requestStage(path: string, method: string): string {
   if (/^data_sources\/[^/]+\/query(?:\?|$)/.test(path))
-    return 'pobieranie wpisów z tabeli';
+    return 'reading table entries';
   if (path.startsWith('data_sources/') && method === 'PATCH')
-    return 'zapis ustawień kolumn rutyn';
+    return 'saving routine columns';
   if (path.startsWith('pages/') && method === 'PATCH')
-    return 'zapis wykonania rutyny';
-  if (path.startsWith('blocks/')) return 'odczyt stron miesięcy';
-  if (path === 'pages' && method === 'POST')
-    return 'utworzenie strony lub dnia';
+    return 'saving routine status';
+  if (path.startsWith('blocks/')) return 'reading month pages';
+  if (path === 'pages' && method === 'POST') return 'creating a page or day';
   if (path === 'databases' && method === 'POST')
-    return 'utworzenie tabeli miesiąca';
-  return 'odczyt danych Notion';
+    return 'creating monthly table';
+  return 'reading Notion data';
 }
 
 // Only this fixed HTTPS origin receives the user's token. Errors never echo bodies or credentials.
@@ -67,7 +66,7 @@ export class NotionClient {
         });
       } catch {
         throw new Error(
-          'Nie można połączyć z Notion. Lokalne zmiany są bezpieczne. Spróbuj ponownie po odzyskaniu internetu.',
+          'Could not reach Notion. Local changes are safe. Try again when connected.',
         );
       } finally {
         clearTimeout(timeout);
@@ -85,11 +84,11 @@ export class NotionClient {
       if (response.ok) return response.json();
       if (response.status === 401)
         throw new Error(
-          'Token Notion wygasł lub jest nieprawidłowy. Połącz konto ponownie.',
+          'The Notion token is invalid or expired. Connect your account again.',
         );
       if (response.status === 403 || response.status === 404)
         throw new Error(
-          'Brak dostępu do strony RoutineLog w Notion. Sprawdź konto, uprawnienia tokenu i udostępnienie strony połączeniu.',
+          'Cannot access RoutineLog in Notion. Check the account, token permissions and page access.',
         );
       const details = apiErrorSchema.safeParse(
         await response.json().catch(() => undefined),
@@ -97,10 +96,10 @@ export class NotionClient {
       const code = details.success ? details.data.code : undefined;
       // Never surface Notion's free-form message, which may echo request content.
       throw new Error(
-        `Notion: ${requestStage(path, method)} — błąd ${response.status}${code ? ` (${code})` : ''}. Synchronizacja została przerwana. Dane pozostają zapisane na telefonie.`,
+        `Notion: ${requestStage(path, method)} — error ${response.status}${code ? ` (${code})` : ''}. Sync stopped. Your data remains saved on the phone.`,
       );
     }
-    throw new Error('Notion chwilowo ogranicza zapytania. Spróbuj za chwilę.');
+    throw new Error('Notion is rate limiting requests. Try again shortly.');
   }
   async all(path: string, method = 'GET'): Promise<unknown[]> {
     const result: unknown[] = [];
@@ -121,9 +120,7 @@ export class NotionClient {
       );
       result.push(...page.results);
       if (page.has_more && !page.next_cursor)
-        throw new Error(
-          'Niepełna odpowiedź Notion. Synchronizacja została przerwana.',
-        );
+        throw new Error('Incomplete Notion response. Sync stopped safely.');
       cursor = page.has_more ? page.next_cursor : null;
     } while (cursor);
     return result;

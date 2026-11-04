@@ -5,27 +5,25 @@ test('Notion setup is reachable without leaving the compact daily workflow', asy
   page,
 }) => {
   await openApp(page);
-  await page
-    .getByRole('button', { name: 'Synchronizacja z Notion', exact: true })
-    .click();
+  await page.getByRole('button', { name: 'Notion sync', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Notion', exact: true }),
   ).toBeVisible();
-  await expect(page.getByText('Jeden miesiąc, jedna tabela')).toBeVisible();
+  await expect(page.getByText('One month, one table')).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'Otwórz RoutineLog w Notion' }),
+    page.getByRole('button', { name: 'Open RoutineLog in Notion' }),
   ).toBeVisible();
   await expect(
     page.getByText(
-      'Połączenie jest dostępne w aplikacji na Androidzie i Expo Go. Podgląd w przeglądarce nie przechowuje tokenów.',
+      'Connect using the Android app or Expo Go. The browser preview does not store tokens.',
     ),
   ).toBeVisible();
   await expect(
-    page.getByLabel('Osobisty token Notion', { exact: true }),
+    page.getByLabel('Personal Notion token', { exact: true }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Wróć', exact: true }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Dzisiaj', exact: true }),
+    page.getByRole('heading', { name: 'Today', exact: true }),
   ).toBeVisible();
   await page.getByTestId('occurrence-preset-dog').getByRole('checkbox').click();
   await expect(

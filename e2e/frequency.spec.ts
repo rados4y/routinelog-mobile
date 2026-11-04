@@ -9,91 +9,86 @@ test('reference cards, calendar, statistics and search use real routines', async
   await expect(cards).toHaveCount(5);
   await expect(cards.first()).toContainText('Book: umysł ponad nastrojem');
   await page.screenshot({ path: 'test-results/routines-reference.png' });
-  await page.getByRole('button', { name: 'Szukaj rutyn', exact: true }).click();
   await page
-    .getByRole('textbox', { name: 'Szukaj rutyn', exact: true })
+    .getByRole('button', { name: 'Search routines', exact: true })
+    .click();
+  await page
+    .getByRole('textbox', { name: 'Search routines', exact: true })
     .fill('Piotrkiem');
   await expect(cards).toHaveCount(1);
   await page
-    .getByRole('textbox', { name: 'Szukaj rutyn', exact: true })
+    .getByRole('textbox', { name: 'Search routines', exact: true })
     .fill('');
   await expect(cards).toHaveCount(5);
   await page
     .getByRole('button', {
-      name: 'Otwórz kalendarz: Book: umysł ponad nastrojem',
+      name: 'Open calendar: Book: umysł ponad nastrojem',
       exact: true,
     })
     .click();
   await expect(
-    page.getByRole('button', { name: 'Poprzedni miesiąc', exact: true }),
+    page.getByRole('button', { name: 'Previous month', exact: true }),
   ).toBeVisible();
   await page
-    .getByRole('button', { name: 'Poprzedni miesiąc', exact: true })
+    .getByRole('button', { name: 'Previous month', exact: true })
     .click();
-  await expect(
-    page.getByText('październik 2026', { exact: true }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+  await expect(page.getByText('October 2026', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
   await page
     .getByRole('button', {
-      name: 'Statystyki: Book: umysł ponad nastrojem',
+      name: 'Insights: Book: umysł ponad nastrojem',
       exact: true,
     })
     .click();
-  await expect(
-    page.getByText('Ostatnie 30 dni', { exact: true }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+  await expect(page.getByText('Last 30 days', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
 });
 
 test('monthly day grid, Last, Flexible, confirm and cancel persist the chosen frequency', async ({
   page,
 }) => {
   await openApp(page, '/routines');
-  await page.getByRole('button', { name: 'Dodaj rutynę', exact: true }).click();
+  await page.getByRole('button', { name: 'Add routine', exact: true }).click();
   await page
-    .getByLabel('Nazwa rutyny', { exact: true })
+    .getByLabel('Routine name', { exact: true })
     .fill('Test miesięczny');
   await page
-    .getByRole('button', { name: 'Ustaw częstotliwość', exact: true })
+    .getByRole('button', { name: 'Set frequency', exact: true })
     .click();
   await page
-    .getByRole('radio', { name: 'Wybrane dni miesiąca', exact: true })
+    .getByRole('radio', { name: 'Specific days of the month', exact: true })
     .click();
   await expect(
-    page.getByRole('switch', { name: 'Elastycznie', exact: true }),
+    page.getByRole('switch', { name: 'Flexible', exact: true }),
   ).toBeChecked();
-  await page.getByRole('button', { name: 'Dzień 15', exact: true }).click();
+  await page.getByRole('button', { name: 'Day 15', exact: true }).click();
   await page.screenshot({ path: 'test-results/frequency-reference.png' });
   await page
-    .getByRole('button', { name: 'Potwierdź częstotliwość', exact: true })
+    .getByRole('button', { name: 'Confirm frequency', exact: true })
     .click();
   await expect(
-    page.getByRole('button', { name: 'Ustaw częstotliwość', exact: true }),
-  ).toContainText('15, ostatni');
+    page.getByRole('button', { name: 'Set frequency', exact: true }),
+  ).toContainText('15, last');
   await page
-    .getByRole('button', { name: 'Ustaw częstotliwość', exact: true })
+    .getByRole('button', { name: 'Set frequency', exact: true })
     .click();
-  await page.getByRole('radio', { name: 'Codziennie', exact: true }).click();
+  await page.getByRole('radio', { name: 'Every day', exact: true }).click();
   await page
-    .getByRole('button', { name: 'Anuluj częstotliwość', exact: true })
+    .getByRole('button', { name: 'Cancel frequency', exact: true })
     .click();
   await expect(
-    page.getByRole('button', { name: 'Ustaw częstotliwość', exact: true }),
-  ).toContainText('15, ostatni');
-  await page
-    .getByRole('button', { name: 'Zapisz rutynę', exact: true })
-    .click();
+    page.getByRole('button', { name: 'Set frequency', exact: true }),
+  ).toContainText('15, last');
+  await page.getByRole('button', { name: 'Save routine', exact: true }).click();
   await page.reload();
   const card = page
     .locator('[data-testid^="routine-"]')
     .filter({ hasText: 'Test miesięczny' });
-  await expect(card).toContainText('15, ostatni');
+  await expect(card).toContainText('15, last');
   await page
-    .getByRole('button', { name: 'Opcje rutyny: Test miesięczny', exact: true })
+    .getByRole('button', { name: 'Edit routine: Test miesięczny', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
   await expect(
-    page.getByRole('button', { name: 'Ustaw częstotliwość', exact: true }),
-  ).toContainText('15, ostatni');
+    page.getByRole('button', { name: 'Set frequency', exact: true }),
+  ).toContainText('15, last');
 });

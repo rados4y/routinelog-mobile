@@ -41,7 +41,7 @@ export function Sheet({
         {!fullScreen && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Zamknij"
+            accessibilityLabel="Close"
             onPress={onClose}
             style={styles.close}
           >
@@ -82,7 +82,7 @@ export function Sheet({
         <View style={styles.overlay}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Zamknij panel"
+            accessibilityLabel="Close panel"
             onPress={onClose}
             style={StyleSheet.absoluteFill}
           />

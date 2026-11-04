@@ -12,17 +12,16 @@ export function ChecklistEditor({
 }) {
   return (
     <View style={common.card}>
-      <Text style={common.heading}>Lista kroków (opcjonalnie)</Text>
+      <Text style={common.heading}>Checklist (optional)</Text>
       <Text style={common.small}>
-        Wszystkie kroki trzeba potwierdzić przy każdym wykonaniu. Lista i
-        potwierdzenia są zapisywane na tym urządzeniu; Notion ich nie
-        przechowuje.
+        Confirm every step each time you complete this routine. Checklists and
+        confirmations are saved on this device; they are not stored in Notion.
       </Text>
       {items.map((item, index) => (
         <View key={item.id} style={{ gap: 6 }}>
           <TextInput
-            accessibilityLabel={`Krok ${index + 1}`}
-            placeholder={`Krok ${index + 1}`}
+            accessibilityLabel={`Step ${index + 1}`}
+            placeholder={`Step ${index + 1}`}
             placeholderTextColor={colors.muted}
             value={item.text}
             onChangeText={(text) =>
@@ -37,7 +36,7 @@ export function ChecklistEditor({
           />
           <Button
             compact
-            label={`Usuń krok ${index + 1}`}
+            label={`Remove step ${index + 1}`}
             onPress={() =>
               onChange(items.filter((entry) => entry.id !== item.id))
             }
@@ -45,7 +44,7 @@ export function ChecklistEditor({
         </View>
       ))}
       <Button
-        label="Dodaj krok"
+        label="Add step"
         icon="plus"
         disabled={items.length >= 30}
         onPress={() =>
@@ -58,7 +57,7 @@ export function ChecklistEditor({
           ])
         }
       />
-      <Text style={common.small}>{items.length}/30 kroków</Text>
+      <Text style={common.small}>{items.length}/30 steps</Text>
     </View>
   );
 }

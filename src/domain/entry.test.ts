@@ -59,10 +59,10 @@ describe('manual routine calendar entries', () => {
   it('still rejects future and invalid dates with an explanation', () => {
     expect(
       entryBlockReason(routine(), '2026-10-13', 'calendar', false, monday),
-    ).toContain('Przyszły termin');
+    ).toContain('Future date');
     expect(
       entryBlockReason(routine(), '2026-02-30', 'calendar', false, monday),
-    ).toBe('Nieprawidłowa data.');
+    ).toBe('Invalid date.');
     expect(
       entryBlockReason(
         { ...routine(), active: false },
@@ -71,7 +71,7 @@ describe('manual routine calendar entries', () => {
         false,
         monday,
       ),
-    ).toContain('wyłączona');
+    ).toContain('paused');
     expect(
       entryBlockReason(routine(), '2026-10-01', 'calendar', false, monday),
     ).toBeUndefined();

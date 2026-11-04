@@ -49,7 +49,7 @@ describe('Notion API transport', () => {
     const wait = vi.fn(async (_ms: number) => {});
     await expect(
       new NotionClient('test-token', request, wait).call('pages/root'),
-    ).rejects.toThrow('Token Notion');
+    ).rejects.toThrow('Notion token');
     expect(wait).toHaveBeenCalledWith(2000);
     expect(request).toHaveBeenCalledTimes(2);
   });
@@ -63,7 +63,7 @@ describe('Notion API transport', () => {
         'POST',
         {},
       ),
-    ).rejects.toThrow('Nie można połączyć');
+    ).rejects.toThrow('Could not reach Notion');
     expect(request).toHaveBeenCalledTimes(1);
   });
   it('rejects incomplete pagination rather than reporting empty data', async () => {
@@ -76,7 +76,7 @@ describe('Notion API transport', () => {
       new NotionClient('test-token', request, async () => {}).all(
         'blocks/root/children',
       ),
-    ).rejects.toThrow('Niepełna');
+    ).rejects.toThrow('Incomplete');
   });
   it('identifies a rejected schema write without displaying response content or credentials', async () => {
     const request = vi.fn<NotionFetch>().mockResolvedValue(
@@ -92,7 +92,7 @@ describe('Notion API transport', () => {
       .call('data_sources/ds', 'PATCH', {})
       .catch((error: unknown) => error);
     expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain('zapis ustawień kolumn rutyn');
+    expect((error as Error).message).toContain('saving routine columns');
     expect((error as Error).message).toContain('400 (validation_error)');
     expect((error as Error).message).not.toMatch(
       /sensitive|reflected|test-token/,
@@ -114,7 +114,7 @@ describe('Notion API transport', () => {
       )
         .call('data_sources/ds/query', 'POST', {})
         .catch((error: unknown) => error);
-      expect((error as Error).message).toContain('pobieranie wpisów z tabeli');
+      expect((error as Error).message).toContain('reading table entries');
       expect((error as Error).message).not.toContain('secret-value');
     }
   });
@@ -308,12 +308,12 @@ describe('monthly Notion HTTP adapter', () => {
       gateway.updateColumns(table, {
         'A%3Ab': { description: 'x'.repeat(281) },
       }),
-    ).rejects.toThrow('280 znaków');
+    ).rejects.toThrow('280 characters');
     await expect(
       gateway.updateColumns(table, {
         'Nowa rutyna': { description: 'x'.repeat(281), select: {} },
       }),
-    ).rejects.toThrow('280 znaków');
+    ).rejects.toThrow('280 characters');
     expect(request.mock.calls.some(([, init]) => init.method === 'PATCH')).toBe(
       false,
     );

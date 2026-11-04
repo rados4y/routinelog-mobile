@@ -2,7 +2,7 @@
 
 Mobilny dziennik rutyn na Androida: plan dnia, elastyczne cele tygodniowe,
 zarządzanie rutynami, historia i statystyki. Dane działają lokalnie, z opcjonalną
-dwukierunkową synchronizacją z Notion. Interfejs jest po polsku.
+dwukierunkową synchronizacją z Notion. The application interface is in English. User-authored routine names and notes are preserved.
 
 **Current runtime: Expo Go compatible**
 
@@ -363,3 +363,11 @@ plików ani komend od użytkownika telefonu.
 Dodawanie ustawień, konta, logowania, integracji i powiadomień powinno używać nowych
 tras stacka/feature folders bez przebudowy istniejących zakładek. Przy integracjach
 sekrety serwera należą wyłącznie do GitHub/EAS Secrets lub backendu.
+
+## English interface and compact controls
+
+The UI, dates, categories, schedule labels and error messages use English. Stored category keys and existing Notion column names remain compatible with saved data. Personal routine names, notes and checklist text are not rewritten.
+
+Today uses the status circle for its four-state cycle and a pencil icon for editing. Routine cards open the editor directly through their pencil icon. Pause and delete are available in the editor, with deletion confirmed explicitly. Routine calendar cells cycle statuses directly; there are no duplicate status buttons below the grid.
+
+History uses the same compact header and category icons as Today and Routines. Entries are grouped by date, with a small undo action and a details sheet for notes, values and checklist confirmations.

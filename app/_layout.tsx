@@ -18,11 +18,11 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
         backgroundColor: colors.background,
       }}
     >
-      <Text style={common.heading}>Coś poszło nie tak</Text>
+      <Text style={common.heading}>Something went wrong</Text>
       <Text style={common.subtitle}>
-        Twoje zapisane dane pozostają na urządzeniu.
+        Your saved data remains on this device.
       </Text>
-      <Button label="Spróbuj ponownie" onPress={retry} tone="primary" />
+      <Button label="Try again" onPress={retry} tone="primary" />
     </View>
   );
 }

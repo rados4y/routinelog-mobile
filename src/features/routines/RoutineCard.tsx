@@ -20,14 +20,14 @@ export function RoutineCard({
   today,
   onCalendar,
   onInsights,
-  onOptions,
+  onEdit,
 }: {
   routine: Routine;
   logs: RoutineLog[];
   today: string;
   onCalendar(date: string): void;
   onInsights(): void;
-  onOptions(): void;
+  onEdit(): void;
 }) {
   const { cycleStatus } = useRoutineActions();
   const saving = useRoutines((state) => state.saving);
@@ -66,7 +66,7 @@ export function RoutineCard({
               {scheduleLabel(routine.schedule)}
             </Text>
           </View>
-          {!routine.active && <Text style={common.small}>Wyłączona</Text>}
+          {!routine.active && <Text style={common.small}>Paused</Text>}
         </View>
         <HabitIcon routine={routine} small />
       </View>
@@ -170,7 +170,7 @@ export function RoutineCard({
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Postępy: ${routine.name}, seria 30 dni ${metrics.streak}, regularność ${metrics.stats.regularity}%`}
+          accessibilityLabel={`Progress: ${routine.name}, 30-day streak ${metrics.streak}, consistency ${metrics.stats.regularity}%`}
           onPress={onInsights}
           style={styles.metrics}
         >
@@ -182,18 +182,18 @@ export function RoutineCard({
         <View style={common.row}>
           <ToolButton
             icon="calendar"
-            label={`Otwórz kalendarz: ${routine.name}`}
+            label={`Open calendar: ${routine.name}`}
             onPress={() => onCalendar(today)}
           />
           <ToolButton
             icon="insights"
-            label={`Statystyki: ${routine.name}`}
+            label={`Insights: ${routine.name}`}
             onPress={onInsights}
           />
           <ToolButton
-            icon="more"
-            label={`Opcje rutyny: ${routine.name}`}
-            onPress={onOptions}
+            icon="edit"
+            label={`Edit routine: ${routine.name}`}
+            onPress={onEdit}
           />
         </View>
       </View>

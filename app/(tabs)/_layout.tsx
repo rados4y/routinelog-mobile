@@ -5,10 +5,10 @@ import { Icon, type IconName } from '../../src/components/Icon';
 import { colors } from '../../src/theme';
 
 const tabs: { name: string; title: string; icon: IconName }[] = [
-  { name: 'index', title: 'Dzisiaj', icon: 'today' },
-  { name: 'routines', title: 'Rutyny', icon: 'routines' },
-  { name: 'history', title: 'Historia', icon: 'history' },
-  { name: 'insights', title: 'Statystyki', icon: 'insights' },
+  { name: 'index', title: 'Today', icon: 'today' },
+  { name: 'routines', title: 'Routines', icon: 'routines' },
+  { name: 'history', title: 'History', icon: 'history' },
+  { name: 'insights', title: 'Insights', icon: 'insights' },
 ];
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();

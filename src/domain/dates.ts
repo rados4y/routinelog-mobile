@@ -29,7 +29,7 @@ export function dateLabel(
   options?: Intl.DateTimeFormatOptions,
 ): string {
   return calendarDate(date).toLocaleDateString(
-    'pl-PL',
+    'en-GB',
     options ?? { weekday: 'long', day: 'numeric', month: 'long' },
   );
 }

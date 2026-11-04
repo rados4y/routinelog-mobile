@@ -64,7 +64,7 @@ export function createRoutineStore(
             error instanceof ChecklistIncompleteError ||
             error instanceof EntryUnavailableError
               ? error.message
-              : 'Nie udało się zapisać zmian. Dane na ekranie nie zostały zmienione. Spróbuj ponownie.',
+              : 'Could not save changes. Your previous data is unchanged. Try again.',
         });
         return false;
       } finally {
@@ -83,7 +83,7 @@ export function createRoutineStore(
     };
     const find = (id: string) => {
       const routine = get().routines.find((item) => item.id === id);
-      if (!routine) throw new Error('Rutyna nie istnieje.');
+      if (!routine) throw new Error('Routine does not exist.');
       return routine;
     };
     return {
@@ -139,7 +139,7 @@ export function createRoutineStore(
         } catch {
           set({
             error:
-              'Nie udało się odczytać danych. Spróbuj ponownie. Zapisane dane nie zostały usunięte.',
+              'Could not load data. Your saved data has not been deleted. Try again.',
           });
         } finally {
           set({ loading: false });
@@ -176,7 +176,7 @@ export function createRoutineStore(
         perform(async () => {
           if (date > localDate(clock()))
             throw new EntryUnavailableError(
-              'Przyszły termin — status możesz zapisać najwcześniej tego dnia.',
+              'Future date — you can record a status on that day or later.',
             );
           const existing = get().logs.find(
             (item) => item.routineId === id && item.scheduledFor === date,
@@ -203,7 +203,7 @@ export function createRoutineStore(
             mode,
             Boolean(existing),
           );
-          if (!routine) throw new EntryUnavailableError('Rutyna niedostępna.');
+          if (!routine) throw new EntryUnavailableError('Routine unavailable.');
           const log = createLog(routine, date, status, clock(), checklist);
           if (existing) {
             log.createdAt = existing.createdAt;

@@ -21,6 +21,7 @@ import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
 import { Chip, ScheduleEditor } from './ScheduleEditor';
 
+import { categoryLabels } from '../../i18n/en';
 import { ChecklistEditor } from './ChecklistEditor';
 
 const emojis = [
@@ -47,6 +48,8 @@ export function RoutineEditor() {
   );
   const save = useRoutines((s) => s.saveRoutine);
   const saving = useRoutines((s) => s.saving);
+  const remove = useRoutines((s) => s.deleteRoutine);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [name, setName] = useState(existing?.name ?? '');
   const [icon, setIcon] = useState(existing?.icon ?? '✅');
   const [category, setCategory] = useState<RoutineInput['category']>(
@@ -83,8 +86,8 @@ export function RoutineEditor() {
     if (!parsed.success) {
       setError(
         parsed.error.issues.some((issue) => issue.path[0] === 'checklist')
-          ? 'Wypełnij lub usuń puste kroki. Każdy krok może mieć do 200 znaków.'
-          : 'Sprawdź nazwę, ikonę, godzinę (HH:MM) i harmonogram. Wybierz co najmniej jeden dzień; odstęp musi być liczbą całkowitą od 1 do 3650, a pierwszy termin datą RRRR-MM-DD.',
+          ? 'Fill in or remove empty steps. Each step can contain up to 200 characters.'
+          : 'Check the name, icon, time (HH:MM) and schedule. Select at least one day; intervals must be whole numbers from 1 to 3650 and the first date must use YYYY-MM-DD.',
       );
       return;
     }
@@ -92,12 +95,12 @@ export function RoutineEditor() {
   };
   if (id && !existing)
     return (
-      <Screen title="Rutyna niedostępna">
+      <Screen title="Routine unavailable">
         <EmptyState
-          title="Nie znaleziono rutyny"
-          description="Mogła zostać wcześniej usunięta."
+          title="Routine not found"
+          description="It may have been deleted."
         />
-        <Button label="Wróć do rutyn" onPress={close} />
+        <Button label="Back to routines" onPress={close} />
       </Screen>
     );
   return (
@@ -106,16 +109,16 @@ export function RoutineEditor() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Screen
-        title={id ? 'Edytuj rutynę' : 'Nowa rutyna'}
-        subtitle="Zbuduj nawyk, który pasuje do Ciebie"
-        action={<Button label="Zamknij" icon="close" onPress={close} compact />}
+        title={id ? 'Edit routine' : 'New routine'}
+        subtitle="Build a habit that fits your life"
+        action={<Button label="Close" icon="close" onPress={close} compact />}
       >
         <View style={common.card}>
           <View>
-            <Text style={common.label}>Nazwa rutyny</Text>
+            <Text style={common.label}>Routine name</Text>
             <TextInput
-              accessibilityLabel="Nazwa rutyny"
-              placeholder="np. 15 minut dla siebie"
+              accessibilityLabel="Routine name"
+              placeholder="e.g. 15 minutes for yourself"
               placeholderTextColor={colors.muted}
               value={name}
               onChangeText={setName}
@@ -124,7 +127,7 @@ export function RoutineEditor() {
             />
           </View>
           <View>
-            <Text style={common.label}>Ikona</Text>
+            <Text style={common.label}>Icon</Text>
             <View style={common.wrap}>
               {emojis.map((emoji) => (
                 <Chip
@@ -136,7 +139,7 @@ export function RoutineEditor() {
               ))}
             </View>
             <TextInput
-              accessibilityLabel="Własna ikona emoji"
+              accessibilityLabel="Custom emoji icon"
               value={icon}
               onChangeText={setIcon}
               maxLength={16}
@@ -144,12 +147,12 @@ export function RoutineEditor() {
             />
           </View>
           <View>
-            <Text style={common.label}>Kategoria</Text>
+            <Text style={common.label}>Category</Text>
             <View style={common.wrap}>
               {categories.map((value) => (
                 <Chip
                   key={value}
-                  label={value}
+                  label={categoryLabels[value]}
                   selected={category === value}
                   onPress={() => setCategory(value)}
                 />
@@ -160,9 +163,9 @@ export function RoutineEditor() {
         <View style={common.card}>
           <ScheduleEditor schedule={schedule} onChange={setSchedule} />
           <View>
-            <Text style={common.label}>Godzina (HH:MM)</Text>
+            <Text style={common.label}>Time (HH:MM)</Text>
             <TextInput
-              accessibilityLabel="Godzina"
+              accessibilityLabel="Time"
               placeholder="08:00"
               placeholderTextColor={colors.muted}
               value={time}
@@ -174,20 +177,20 @@ export function RoutineEditor() {
               style={common.field}
             />
             <Text style={[common.small, { marginTop: 8 }]}>
-              Godzina porządkuje plan. Powiadomienia dodamy w kolejnym etapie.
+              The time sorts your daily plan. Reminders are not enabled yet.
             </Text>
           </View>
         </View>
         <View style={common.card}>
           <View>
-            <Text style={common.label}>Notatka (opcjonalnie)</Text>
+            <Text style={common.label}>Note (optional)</Text>
             <TextInput
-              accessibilityLabel="Notatka"
+              accessibilityLabel="Note"
               value={note}
               onChangeText={setNote}
               multiline
               maxLength={1000}
-              placeholder="Co warto zapamiętać?"
+              placeholder="Anything to remember?"
               placeholderTextColor={colors.muted}
               style={[
                 common.field,
@@ -197,11 +200,11 @@ export function RoutineEditor() {
           </View>
           <View style={common.spread}>
             <View style={common.grow}>
-              <Text style={common.text}>Rutyna aktywna</Text>
-              <Text style={common.small}>Pokaż ją w Twoim planie</Text>
+              <Text style={common.text}>Routine active</Text>
+              <Text style={common.small}>Include in your daily plan</Text>
             </View>
             <Switch
-              accessibilityLabel="Rutyna aktywna"
+              accessibilityLabel="Routine active"
               value={active}
               onValueChange={setActive}
               trackColor={{ false: colors.border, true: colors.accent }}
@@ -219,13 +222,47 @@ export function RoutineEditor() {
           </Text>
         )}
         <Button
-          label={saving ? 'Zapisywanie…' : 'Zapisz rutynę'}
+          label={saving ? 'Saving…' : 'Save routine'}
           tone="primary"
           icon="check"
           disabled={saving}
           onPress={() => void submit()}
         />
-        <Button label="Anuluj" disabled={saving} onPress={close} />
+        <Button label="Cancel" disabled={saving} onPress={close} />
+        {existing && (
+          <View style={common.card}>
+            <Text style={common.heading}>Delete routine</Text>
+            <Text style={common.small}>
+              Remove this routine from your plan. Previous history is kept.
+            </Text>
+            {confirmDelete ? (
+              <>
+                <Button
+                  label="Confirm delete"
+                  tone="danger"
+                  disabled={saving}
+                  onPress={() =>
+                    void remove(existing.id).then((ok) => {
+                      if (ok) close();
+                    })
+                  }
+                />
+                <Button
+                  label="Keep routine"
+                  disabled={saving}
+                  onPress={() => setConfirmDelete(false)}
+                />
+              </>
+            ) : (
+              <Button
+                label="Delete routine"
+                tone="danger"
+                disabled={saving}
+                onPress={() => setConfirmDelete(true)}
+              />
+            )}
+          </View>
+        )}
       </Screen>
     </KeyboardAvoidingView>
   );

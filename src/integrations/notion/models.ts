@@ -53,9 +53,7 @@ export const equal = (a: unknown, b: unknown) =>
 
 export class SyncConflictError extends Error {
   constructor(public label: string) {
-    super(
-      `„${label}” zmieniono w obu miejscach. Wybierz wersję do zachowania.`,
-    );
+    super(`“${label}” changed in both places. Choose which version to keep.`);
     this.name = 'SyncConflictError';
   }
 }

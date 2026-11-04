@@ -82,7 +82,7 @@ function missed(routine: Routine, date: string, count: number): HistoryEntry {
     status: 'missed',
     completedAt: null,
     value: null,
-    note: count > 1 ? `Brakuje ${count} wykonań do celu w okresie` : '',
+    note: count > 1 ? `${count} completions short of the period target` : '',
     source: 'automation',
     createdAt: `${date}T23:59:59.000Z`,
     updatedAt: `${date}T23:59:59.000Z`,

@@ -6,11 +6,11 @@ export default function NotFound() {
   return (
     <Screen title="RoutineLog">
       <EmptyState
-        title="Nie ma takiego ekranu"
-        description="Wróć do swoich rutyn."
+        title="Page not found"
+        description="Return to your routines."
       />
       <Link href="/" style={{ color: colors.accentLight, padding: 16 }}>
-        Przejdź do Dzisiaj
+        Go to Today
       </Link>
     </Screen>
   );

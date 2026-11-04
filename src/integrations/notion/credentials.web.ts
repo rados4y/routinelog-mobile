@@ -2,7 +2,7 @@
 export const credentials = {
   get: async (): Promise<string | null> => null,
   set: async (_token: string): Promise<void> => {
-    throw new Error('Połączenie Notion jest dostępne w aplikacji mobilnej.');
+    throw new Error('Notion connection is available in the mobile app.');
   },
   remove: async (): Promise<void> => {},
 };

@@ -3,7 +3,7 @@ import type { ChecklistItem, ChecklistResult } from './models';
 export class ChecklistIncompleteError extends Error {
   constructor() {
     super(
-      'Potwierdź wszystkie pozycje aktualnej listy kroków przed oznaczeniem wykonania.',
+      'Confirm every item in the current checklist before completing the routine.',
     );
     this.name = 'ChecklistIncompleteError';
   }

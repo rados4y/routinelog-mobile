@@ -35,7 +35,7 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
     })
     .refine(
       (value) => value.days.length > 0 || value.lastDay,
-      'Wybierz co najmniej jeden dzień.',
+      'Select at least one day.',
     ),
   z
     .object({
@@ -47,7 +47,7 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
     })
     .refine(
       (value) => value.weeks.length > 0 || value.lastWeek,
-      'Wybierz tydzień miesiąca.',
+      'Select a week of the month.',
     ),
   z.object({
     kind: z.literal('yearlyDates'),
@@ -62,7 +62,7 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
             (value) =>
               value.day <=
               new Date(Date.UTC(2000, value.month, 0)).getUTCDate(),
-            'Nieprawidłowy dzień miesiąca.',
+            'Invalid day of the month.',
           ),
       )
       .min(1)
@@ -77,14 +77,14 @@ export const scheduleSchema = z.discriminatedUnion('kind', [
 export type Schedule = z.infer<typeof scheduleSchema>;
 export const checklistItemSchema = z.object({
   id: z.string().min(1).max(100),
-  text: z.string().trim().min(1, 'Wypełnij lub usuń pusty krok.').max(200),
+  text: z.string().trim().min(1, 'Fill in or remove the empty step.').max(200),
 });
 export const checklistSchema = z
   .array(checklistItemSchema)
   .max(30)
   .refine(
     (items) => new Set(items.map((item) => item.id)).size === items.length,
-    'Kroki muszą mieć odrębne identyfikatory.',
+    'Each step must have a unique ID.',
   );
 export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 export const checklistResultSchema = checklistItemSchema.extend({
@@ -92,7 +92,7 @@ export const checklistResultSchema = checklistItemSchema.extend({
 });
 export type ChecklistResult = z.infer<typeof checklistResultSchema>;
 export const routineInputSchema = z.object({
-  name: z.string().trim().min(1, 'Podaj nazwę rutyny.').max(100),
+  name: z.string().trim().min(1, 'Enter a routine name.').max(100),
   icon: z.string().trim().min(1).max(16),
   category: z.enum(categories),
   active: z.boolean(),
@@ -101,7 +101,7 @@ export const routineInputSchema = z.object({
   unit: z.string().max(30).nullable(),
   reminderTime: z
     .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Podaj godzinę HH:MM.'),
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter the time as HH:MM.'),
   note: z.string().max(1000),
   checklist: checklistSchema.optional(),
 });

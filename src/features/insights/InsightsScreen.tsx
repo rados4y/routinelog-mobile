@@ -13,19 +13,16 @@ export function InsightsScreen() {
   const stats = getStats(routines, logs, useNow());
   const max = Math.max(1, ...stats.activity.map((day) => day.done));
   return (
-    <Screen
-      title="Statystyki"
-      subtitle="Zobacz, jak małe kroki budują regularność"
-    >
+    <Screen title="Insights" subtitle="See your progress, one day at a time">
       <View style={common.spread}>
-        <Text style={common.heading}>Twój ostatni tydzień</Text>
-        <Text style={styles.period}>7 dni</Text>
+        <Text style={common.heading}>Your last week</Text>
+        <Text style={styles.period}>7 days</Text>
       </View>
       <View style={styles.metrics}>
         {[
-          { label: 'Wykonane', value: stats.done, color: colors.success },
-          { label: 'Pominięte', value: stats.skipped, color: colors.warning },
-          { label: 'Niewykonane', value: stats.missed, color: colors.danger },
+          { label: 'Done', value: stats.done, color: colors.success },
+          { label: 'Skipped', value: stats.skipped, color: colors.warning },
+          { label: 'Not done', value: stats.missed, color: colors.danger },
         ].map((metric) => (
           <View key={metric.label} style={styles.metric}>
             <Text style={[styles.number, { color: metric.color }]}>
@@ -36,15 +33,15 @@ export function InsightsScreen() {
         ))}
       </View>
       <View style={common.card}>
-        <Text style={common.heading}>Aktywność</Text>
-        <Text style={common.small}>Wykonane rutyny każdego dnia</Text>
+        <Text style={common.heading}>Activity</Text>
+        <Text style={common.small}>Routines completed each day</Text>
         <View style={styles.chart}>
           {stats.activity.map((day) => (
             <View
               key={day.date}
               style={styles.column}
               accessible
-              accessibilityLabel={`${dateLabel(day.date)}: ${day.done} wykonanych`}
+              accessibilityLabel={`${dateLabel(day.date)}: ${day.done} completed`}
             >
               <Text style={styles.count}>{day.done}</Text>
               <View style={styles.barTrack}>
@@ -65,16 +62,16 @@ export function InsightsScreen() {
       <View style={[common.card, common.row]}>
         <ProgressRing percent={stats.regularity} />
         <View style={common.grow}>
-          <Text style={common.heading}>Regularność</Text>
+          <Text style={common.heading}>Consistency</Text>
           <Text style={[common.subtitle, { marginTop: 8 }]}>
-            Każdy krok ma znaczenie. Liczy się powracanie, nie perfekcja.
+            Every step counts. Keep returning, without chasing perfection.
           </Text>
         </View>
       </View>
       <Text style={common.small}>
-        Regularność = wykonane / (wykonane + pominięte + niewykonane +
-        dzisiejsze zaplanowane). Elastyczne cele tygodniowe rozliczamy po
-        zakończeniu tygodnia. Wykres opiera się na dniach przypisanych do rutyn.
+        Consistency = done / (done + skipped + missed + pending fixed deadlines
+        today). Flexible weekly targets are evaluated after the week ends.
+        Activity uses the date assigned to each entry.
       </Text>
     </Screen>
   );

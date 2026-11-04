@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, TextInput, ScrollView } from 'react-native';
 import { categories, type Routine } from '../../domain/models';
 import { colors, common } from '../../theme';
+import { categoryLabels } from '../../i18n/en';
 import { Chip } from './ScheduleEditor';
 
 export function useRoutineFilter() {
@@ -27,8 +28,8 @@ export function useRoutineFilter() {
       <View style={{ paddingHorizontal: 10, gap: 8 }}>
         {search && (
           <TextInput
-            accessibilityLabel="Szukaj rutyn"
-            placeholder="Szukaj rutyny…"
+            accessibilityLabel="Search routines"
+            placeholder="Search routines…"
             placeholderTextColor={colors.muted}
             value={query}
             onChangeText={setQuery}
@@ -42,14 +43,14 @@ export function useRoutineFilter() {
             contentContainerStyle={{ gap: 6, paddingBottom: 10 }}
           >
             <Chip
-              label="Wszystkie kategorie"
+              label="All categories"
               selected={category === null}
               onPress={() => setCategory(null)}
             />
             {categories.map((value) => (
               <Chip
                 key={value}
-                label={value}
+                label={categoryLabels[value]}
                 selected={value === category}
                 onPress={() => setCategory(value)}
               />
