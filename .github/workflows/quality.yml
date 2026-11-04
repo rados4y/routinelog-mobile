@@ -20,7 +20,9 @@ jobs:
       - run: npm run format:check
       - run: npx expo install --check
       - run: npx expo config --type public
-      - run: npm run export:android
+      - run: npm run export:android -- --source-maps
+      - name: Verify native widget imports in the Android bundle
+        run: node scripts/check-widget-bundle.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: android-js-bundle

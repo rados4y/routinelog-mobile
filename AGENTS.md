@@ -12,6 +12,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Sprawdzaj dokumentację Expo przed zmianą SDK, native konfiguracji lub EAS workflow.
 - Obecnie SDK 57. Ekrany działają w Expo Go; widget Android wymaga APK 1.2.0 (versionCode 3) lub nowszego.
 - Zachowuj rejestrację widgetu przed Expo Router w index.ts oraz osłony importów native dla Expo Go/web. Widget używa tego samego store/repozytoriów; nigdy nie omijaj walidacji checklisty.
+- Pliki bridge.tsx i bridge.android.tsx muszą mieć to samo rozszerzenie. Metro wybiera rozszerzenie przed wariantem platformy; bridge.ts przesłania bridge.android.tsx. CI eksportuje Android z --source-maps i uruchamia node scripts/check-widget-bundle.mjs, aby odrzucić taki błąd. Sprawdź to również przed commitem zmian widgetu.
 - Kliknięcia widgetu muszą sprawdzać dzisiejszą datę i wyświetlony status; stare kliknięcia tylko odświeżają widok.
 - EAS Update wyłącznie do zgodnego fingerprint runtime. Skrypt check-runtime to bramka.
 - Native build tylko dla pierwszej instalacji lub zmiany runtime, przez workflow dispatch.
