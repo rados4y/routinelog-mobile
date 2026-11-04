@@ -1,18 +1,7 @@
 import { StyleSheet } from 'react-native';
 
-export const colors = {
-  background: '#111111',
-  panel: '#1e1e1e',
-  panelSecondary: '#262626',
-  border: '#292929',
-  text: '#f5f5f5',
-  muted: '#a4a4a4',
-  accent: '#c7355c',
-  accentLight: '#e15478',
-  success: '#35c46a',
-  warning: '#f2a93b',
-  danger: '#ef5b5b',
-};
+import { colors } from './colors';
+export { colors } from './colors';
 export const common = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   spread: {

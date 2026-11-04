@@ -4,7 +4,7 @@ Mobilny dziennik rutyn na Androida: plan dnia, elastyczne cele tygodniowe,
 zarządzanie rutynami, historia i statystyki. Dane działają lokalnie, z opcjonalną
 dwukierunkową synchronizacją z Notion. The application interface is in English. User-authored routine names and notes are preserved.
 
-**Current runtime: Expo Go compatible**
+**Current runtime: Android build with home-screen widget; core screens remain Expo Go compatible**
 
 ## Stack i wybór SDK
 
@@ -371,3 +371,19 @@ The UI, dates, categories, schedule labels and error messages use English. Store
 Today uses the status circle for its four-state cycle and a pencil icon for editing. Routine cards open the editor directly through their pencil icon. Pause and delete are available in the editor, with deletion confirmed explicitly. Routine calendar cells cycle statuses directly; there are no duplicate status buttons below the grid.
 
 History uses the same compact header and category icons as Today and Routines. Entries are grouped by date, with a small undo action and a details sheet for notes, values and checklist confirmations.
+
+## Android Today home-screen widget
+
+Version 1.2.0 (Android versionCode 3) adds a native, resizable RoutineLog Today widget using `react-native-android-widget` 0.26.0 on the existing Expo SDK 57. Expo’s SDK 57 `expo-widgets` API is iOS-only, so upgrading the SDK is not needed for this feature. No handwritten Android application code is maintained.
+
+- Install the new preview APK over the current app to preserve local data. In Today, tap **Add home-screen widget** and accept the launcher prompt. Alternatively, long-press the Android home screen → Widgets → RoutineLog Today.
+- The widget shows the same current-day occurrences as Today, with category icons, names, times and statuses. Rows scroll, and the widget can be resized. Tap an icon/row to cycle done → not done → skipped → unchecked.
+- Routine definitions, logs and writes use the existing repository/store. The library’s background task shares the app’s React host; writes respect the store’s save guard. Background widget writes stay local and sync to Notion when the app next opens.
+- Required checklists open a confirmation sheet in the app. The background task cannot complete them without proof. Widget deep links only open this confirmation; they do not mark a routine complete by themselves.
+- Actions validate the displayed date and status against current data. Old-day taps and stale/double taps refresh the widget without applying another status change.
+- Widget views refresh after saved app changes, on app foreground, through the refresh icon and through Android’s periodic updates. Android limits periodic widget updates to at least 30 minutes and may delay them in power-saving mode. No exact-midnight alarm permission is requested. Tapping a stale widget refreshes it without recording yesterday’s routine.
+- Native-only code is guarded and registered before Expo Router through `index.ts`. Core screens still run in Expo Go and web; the home-screen widget needs the built Android runtime.
+
+A new APK is required for this native widget installation. Future JS/UI updates continue through the existing fingerprint-compatible preview OTA workflow. The old APK can receive the separate English UI release but must not receive an incompatible widget OTA. Dispatch the existing **Android native build** workflow with profile `preview` after all quality checks pass.
+
+References: [SDK 57 widget support](https://docs.expo.dev/versions/v57.0.0/sdk/widgets/), [Android widget Expo registration](https://saleksovski.github.io/react-native-android-widget/docs/tutorial/register-widget-expo/), [task handler](https://saleksovski.github.io/react-native-android-widget/docs/api/register-widget-task-handler), [runtime compatibility](https://docs.expo.dev/eas-update/runtime-versions/).

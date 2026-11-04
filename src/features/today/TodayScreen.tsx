@@ -11,6 +11,7 @@ import { useNow } from '../../utils/useNow';
 import { useRoutineFilter } from '../routines/useRoutineFilter';
 import { DateSelector } from './DateSelector';
 import { OccurrenceCard } from './OccurrenceCard';
+import { WidgetButton } from '../../widgets/WidgetButton';
 import { NotionButton } from '../../integrations/notion/NotionButton';
 
 export function TodayScreen() {
@@ -48,6 +49,7 @@ export function TodayScreen() {
               label="Choose date"
               onPress={() => setCalendar(true)}
             />
+            <WidgetButton />
             <NotionButton />
           </>
         }

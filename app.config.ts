@@ -8,7 +8,28 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'RoutineLog',
     slug: 'routinelog-mobile',
-    plugins: [...(config.plugins ?? []), 'expo-secure-store'],
+    plugins: [
+      ...(config.plugins ?? []),
+      'expo-secure-store',
+      [
+        'react-native-android-widget',
+        {
+          widgets: [
+            {
+              name: 'RoutineLogToday',
+              label: 'RoutineLog Today',
+              description: 'Your daily routines with tappable status icons',
+              minWidth: '180dp',
+              minHeight: '110dp',
+              targetCellWidth: 4,
+              targetCellHeight: 3,
+              resizeMode: 'horizontal|vertical',
+              updatePeriodMillis: 1800000,
+            },
+          ],
+        },
+      ],
+    ],
     ...(projectId
       ? {
           extra: { ...config.extra, eas: { projectId } },
