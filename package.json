@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run lint && npm test && npm run format:check",
-    "export:android": "expo export --platform android",
+    "export:android": "expo export --platform android --source-maps && node scripts/check-widget-bundle.mjs",
     "eas:setup": "node scripts/eas-setup.mjs",
     "test:e2e": "playwright test"
   },

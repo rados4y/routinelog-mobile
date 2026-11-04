@@ -1,0 +1,47 @@
+name: Android widget smoke test
+on:
+  workflow_dispatch:
+  push:
+    branches: ['fix/blank-android-widget']
+    paths: ['.github/workflows/widget-smoke.yml', 'scripts/widget-smoke.py']
+permissions:
+  contents: read
+jobs:
+  widget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Download existing preview APK (no new build)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: node scripts/download-preview.mjs
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python scripts/widget-smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-widget-diagnostics
+          path: /tmp/widget-smoke-results
+          retention-days: 7
