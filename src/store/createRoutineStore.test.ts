@@ -306,3 +306,16 @@ describe('manual calendar persistence', () => {
     ).toBe(false);
   });
 });
+
+it('keeps initialized widget state when the app requests its initial load again', async () => {
+  const repos = repositories(new MemoryStorage());
+  const clock = () => new Date(`${monday}T12:00:00`);
+  const store = createRoutineStore(repos, clock);
+  await store.getState().load();
+  await store.getState().setStatus('preset-dog', monday, 'done');
+  const staleRead = vi.spyOn(repos.logs, 'list').mockResolvedValue([]);
+  await store.getState().load();
+  expect(staleRead).not.toHaveBeenCalled();
+  expect(store.getState().logs[0]?.status).toBe('done');
+  expect(store.getState().ready).toBe(true);
+});
