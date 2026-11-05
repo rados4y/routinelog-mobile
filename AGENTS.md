@@ -6,7 +6,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Zaczynaj od sprawdzenia repo, main i bieżącego diffu. Zachowuj cudze zmiany.
 - Używaj branchy feat/, fix/, chore/ i logicznych commitów. Push oraz PR są częścią zadania.
 - Przed commitem/deployem: npm ci (po zmianach lockfile), npm run check,
-  npx expo install --check, npx expo config --type public, npm run export:android.
+  EXPO_OFFLINE=1 npx expo install --check (mapa wersji z zainstalowanego SDK), npx expo config --type public, npm run export:android.
 - Po pushu odczytaj Actions. Napraw czerwone checks i poczekaj na wynik.
 - Nie publikuj OTA ani buildu po nieudanych testach, lint lub typecheck.
 - Sprawdzaj dokumentację Expo przed zmianą SDK, native konfiguracji lub EAS workflow.
@@ -14,6 +14,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Zachowuj rejestrację widgetu przed Expo Router w index.ts oraz osłony importów native dla Expo Go/web. Widget używa tego samego store/repozytoriów; nigdy nie omijaj walidacji checklisty.
 - Pliki bridge.tsx i bridge.android.tsx muszą mieć to samo rozszerzenie. Metro wybiera rozszerzenie przed wariantem platformy; bridge.ts przesłania bridge.android.tsx. CI eksportuje Android z --source-maps i uruchamia node scripts/check-widget-bundle.mjs, aby odrzucić taki błąd. Sprawdź to również przed commitem zmian widgetu.
 - Kliknięcia widgetu muszą sprawdzać dzisiejszą datę i wyświetlony status; stare kliknięcia tylko odświeżają widok.
+- Strzałki jasnego widgetu przeglądają daty osobno dla każdej instancji. Poza dzisiaj widok jest tylko do odczytu; wybór wraca do dzisiaj po lokalnej północy. Nie mieszaj preferencji widgetu z repozytoriami rutyn/logów.
 - EAS Update wyłącznie do zgodnego fingerprint runtime. Skrypt check-runtime to bramka.
 - Native build tylko dla pierwszej instalacji lub zmiany runtime, przez workflow dispatch.
 - Brak EXPO_TOKEN nie może psuć zwykłego CI. Po dodaniu tokenu uruchom Link Expo project.

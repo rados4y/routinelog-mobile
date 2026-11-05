@@ -18,7 +18,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run format:check
-      - run: npx expo install --check
+      - name: Validate dependencies against the locked Expo SDK
+        env:
+          EXPO_OFFLINE: '1'
+        run: npx expo install --check
       - run: npx expo config --type public
       - run: npm run export:android -- --source-maps
       - name: Verify native widget imports in the Android bundle

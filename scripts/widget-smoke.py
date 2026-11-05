@@ -4,6 +4,7 @@ import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET
+from PIL import Image
 
 results = pathlib.Path('/tmp/widget-smoke-results')
 results.mkdir(exist_ok=True)
@@ -26,6 +27,20 @@ def screen(name):
 def tap(node):
     x1, y1, x2, y2 = map(int, re.findall(r'\d+', node.attrib['bounds']))
     adb('shell', 'input', 'tap', str((x1 + x2) // 2), str((y1 + y2) // 2))
+
+
+def find_label(root, label):
+    return next((node for node in root.iter('node') if label in node.attrib.get('content-desc', '')), None)
+
+
+def wait_label(label, name):
+    for _ in range(10):
+        time.sleep(2)
+        root = screen(name)
+        node = find_label(root, label)
+        if node is not None:
+            return root, node
+    raise RuntimeError('Launcher did not display: ' + label)
 
 
 try:
@@ -64,6 +79,41 @@ try:
     if not rendered:
         raise RuntimeError('Widget did not render in the Android launcher.')
     print('Native launcher rendered RoutineLog Today.')
+    widget = find_label(root, 'RoutineLog today')
+    bounds = tuple(map(int, re.findall(r'\d+', widget.attrib['bounds'])))
+    pixels = Image.open(results / 'launcher.png').convert('RGB').crop(bounds)
+    light = sum(1 for r, g, b in pixels.getdata() if min(r, g, b) >= 230 and max(r, g, b) - min(r, g, b) < 8)
+    ratio = light / (pixels.width * pixels.height)
+    if ratio < 0.55:
+        raise RuntimeError('Widget does not have the reference light background.')
+    print(f'Light widget background verified ({ratio:.0%} of widget pixels).')
+    previous = find_label(root, 'Previous day')
+    if previous is None:
+        raise RuntimeError('Previous-day arrow is missing.')
+    tap(previous)
+    root, heading = wait_label('Return to today', 'previous-day')
+    if find_label(root, 'Next status:') is not None:
+        raise RuntimeError('Past-day routines must be read-only.')
+    tap(heading)
+    root, _ = wait_label('RoutineLog today', 'today-again')
+    print('Date arrows and return-to-today verified.')
+    candidate = find_label(root, '. Unchecked. Next status: Done')
+    if candidate is None:
+        raise RuntimeError('No seeded routine is available for status cycling.')
+    name = candidate.attrib['content-desc'].split('. Unchecked.')[0]
+    for status in ['Done', 'Not done', 'Skipped', 'Unchecked']:
+        # Tap the circular status area on the right of the routine row.
+        x1, y1, x2, y2 = map(int, re.findall(r'\d+', candidate.attrib['bounds']))
+        adb('shell', 'input', 'tap', str(x2 - (y2 - y1) // 2), str((y1 + y2) // 2))
+        root, candidate = wait_label(name + '. ' + status + '.', 'status-' + status.lower().replace(' ', '-'))
+        if find_label(root, 'RoutineLog today') is None:
+            raise RuntimeError('Routine click unexpectedly opened the app.')
+    print('Native circular control cycled all four statuses without opening the app.')
+except Exception:
+    root = screen('failure')
+    labels = [node.attrib.get('text') or node.attrib.get('content-desc') for node in root.iter('node')]
+    print('Seeded emulator screen:', [label for label in labels if label][:40])
+    raise
 finally:
     (results / 'logcat.txt').write_text(adb('logcat', '-d', '-v', 'brief'))
     (results / 'widgets.txt').write_text(adb('shell', 'dumpsys', 'appwidget'))

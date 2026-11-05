@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { localDate, dateLabel } from '../domain/dates';
+import { addDays, localDate, dateLabel } from '../domain/dates';
 import type { Routine, RoutineLog, OccurrenceStatus } from '../domain/models';
 import { occurrencesForDate } from '../domain/schedule';
 import { nextStatus } from '../domain/status';
@@ -27,8 +27,10 @@ export function todayWidgetModel(
   routines: Routine[],
   logs: RoutineLog[],
   now = new Date(),
+  date = localDate(now),
 ) {
-  const date = localDate(now);
+  const today = localDate(now);
+  const isToday = date === today;
   const items: WidgetRoutine[] = occurrencesForDate(
     routines,
     logs,
@@ -36,7 +38,9 @@ export function todayWidgetModel(
     now,
   ).map((occurrence) => {
     const routine = occurrence.routine;
-    const status = occurrence.log?.status ?? 'pending';
+    const status =
+      occurrence.log?.status ??
+      (date < today && occurrence.status === 'missed' ? 'missed' : 'pending');
     return {
       id: routine.id,
       name: routine.name,
@@ -45,13 +49,24 @@ export function todayWidgetModel(
       status,
       color: categoryColors[routine.category],
       requiresChecklist:
-        nextStatus(status) === 'done' && Boolean(routine.checklist?.length),
+        isToday &&
+        nextStatus(status) === 'done' &&
+        Boolean(routine.checklist?.length),
       click: { routineId: routine.id, date, expectedStatus: status },
       checklistUrl: `routinelog://widget-action?routineId=${encodeURIComponent(routine.id)}&date=${date}&expectedStatus=${status}`,
     };
   });
   return {
     date,
+    isToday,
+    title: isToday
+      ? 'Today'
+      : date === addDays(today, -1)
+        ? 'Yesterday'
+        : date === addDays(today, 1)
+          ? 'Tomorrow'
+          : dateLabel(date, { day: 'numeric', month: 'short' }),
+    navigation: { date, viewedOn: today },
     label: dateLabel(date, {
       weekday: 'short',
       day: 'numeric',
