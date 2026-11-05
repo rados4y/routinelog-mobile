@@ -4,6 +4,8 @@ import { TodayWidget } from './TodayWidget';
 import { todayWidgetModel, widgetName } from './model';
 import { cycleFromWidget } from './actions';
 import { refreshWidgets } from './bridge';
+import { widgetViews } from './storage';
+import { isWidgetNavigation } from './viewState';
 
 function waitForIdle(): Promise<boolean> {
   if (!routineStore.getState().saving && !routineStore.getState().loading)
@@ -23,13 +25,22 @@ function waitForIdle(): Promise<boolean> {
 export async function widgetTaskHandler(
   props: WidgetTaskHandlerProps,
 ): Promise<void> {
-  if (
-    props.widgetInfo.widgetName !== widgetName ||
-    props.widgetAction === 'WIDGET_DELETED'
-  )
+  if (props.widgetInfo.widgetName !== widgetName) return;
+  if (props.widgetAction === 'WIDGET_DELETED') {
+    await widgetViews.remove(props.widgetInfo.widgetId);
     return;
+  }
   let notice: string | undefined;
   try {
+    if (
+      props.widgetAction === 'WIDGET_CLICK' &&
+      isWidgetNavigation(props.clickAction)
+    )
+      await widgetViews.navigate(
+        props.widgetInfo.widgetId,
+        props.clickAction,
+        props.clickActionData,
+      );
     if (!(await waitForIdle()))
       notice = 'Saving changes. Tap refresh in a moment.';
     else {
@@ -51,10 +62,13 @@ export async function widgetTaskHandler(
       }
     }
     const state = routineStore.getState();
+    const now = new Date();
+    const view = await widgetViews.get(props.widgetInfo.widgetId, now);
     if (!state.ready) notice = 'Open RoutineLog to load your saved routines.';
     props.renderWidget(
       <TodayWidget
-        model={todayWidgetModel(state.routines, state.logs)}
+        model={todayWidgetModel(state.routines, state.logs, now, view.date)}
+        height={props.widgetInfo.height}
         notice={notice}
       />,
     );
@@ -63,6 +77,7 @@ export async function widgetTaskHandler(
     props.renderWidget(
       <TodayWidget
         model={todayWidgetModel([], [])}
+        height={props.widgetInfo.height}
         notice="Could not refresh. Open RoutineLog to try again."
       />,
     );

@@ -2,6 +2,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import { routineStore } from '../store/useRoutines';
 import { todayWidgetModel, widgetName } from './model';
+import { widgetViews } from './storage';
 
 export const isWidgetAvailable = () =>
   Boolean(TurboModuleRegistry.get('AndroidWidget'));
@@ -14,12 +15,25 @@ export async function refreshWidgets(notice?: string): Promise<void> {
   const { TodayWidget } =
     require('./TodayWidget') as typeof import('./TodayWidget');
   const state = routineStore.getState();
-  const model = todayWidgetModel(state.routines, state.logs);
   await nativeWidget().requestWidgetUpdate({
     widgetName,
-    renderWidget: () => (
-      <TodayWidget model={model} notice={notice ?? state.error ?? undefined} />
-    ),
+    renderWidget: async ({ widgetId, height }) => {
+      const now = new Date();
+      const view = await widgetViews.get(widgetId, now);
+      const model = todayWidgetModel(
+        state.routines,
+        state.logs,
+        now,
+        view.date,
+      );
+      return (
+        <TodayWidget
+          model={model}
+          height={height}
+          notice={notice ?? state.error ?? undefined}
+        />
+      );
+    },
   });
 }
 export async function pinTodayWidget(): Promise<boolean> {
