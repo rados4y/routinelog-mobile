@@ -82,6 +82,24 @@ try:
     widget = find_label(root, 'RoutineLog today')
     bounds = tuple(map(int, re.findall(r'\d+', widget.attrib['bounds'])))
     pixels = Image.open(results / 'launcher.png').convert('RGB').crop(bounds)
+    # The drawn panel fits its contents; unused launcher grid space is now
+    # transparent. Validate the visible light panel, allowing thin dividers.
+    first = last = None
+    gap = 0
+    for y in range(pixels.height):
+        light_row = sum(1 for x in range(pixels.width) if min(pixels.getpixel((x, y))) >= 230 and max(pixels.getpixel((x, y))) - min(pixels.getpixel((x, y))) < 8)
+        if light_row / pixels.width >= 0.55:
+            if first is None:
+                first = y
+            last = y + 1
+            gap = 0
+        elif first is not None:
+            gap += 1
+            if gap > 8:
+                break
+    if first is None:
+        raise RuntimeError('The compact light panel is missing.')
+    pixels = pixels.crop((0, first, pixels.width, last))
     light = sum(1 for r, g, b in pixels.getdata() if min(r, g, b) >= 230 and max(r, g, b) - min(r, g, b) < 8)
     ratio = light / (pixels.width * pixels.height)
     if ratio < 0.55:
