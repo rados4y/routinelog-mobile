@@ -16,12 +16,25 @@ def adb(*args):
 
 
 def screen(name):
-    adb('shell', 'uiautomator', 'dump', '/sdcard/widget-screen.xml')
-    xml = adb('shell', 'cat', '/sdcard/widget-screen.xml')
+    # A cold React host can briefly have no accessibility root. Use a fresh
+    # path and bounded retries so an old dump cannot masquerade as the new UI.
+    for attempt in range(5):
+        path = '/sdcard/widget-screen-' + str(time.monotonic_ns()) + '.xml'
+        try:
+            adb('shell', 'uiautomator', 'dump', path)
+            xml = adb('shell', 'cat', path)
+            root = ET.fromstring(xml)
+            if not list(root.iter('node')):
+                raise ValueError('Accessibility window is not ready.')
+            break
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError, ValueError):
+            if attempt == 4:
+                raise
+            time.sleep(1)
     (results / (name + '.xml')).write_text(xml)
     with (results / (name + '.png')).open('wb') as image:
         subprocess.run(['adb', 'exec-out', 'screencap', '-p'], stdout=image, check=True, timeout=30)
-    return ET.fromstring(xml)
+    return root
 
 
 def tap(node):
@@ -54,6 +67,7 @@ def wait_text(text, name):
 
 try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
+    adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
     adb('logcat', '-c')
     adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
     # A released APK may have a compatible OTA newer than its embedded bundle.
