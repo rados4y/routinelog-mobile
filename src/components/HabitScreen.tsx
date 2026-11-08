@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors } from '../theme';
 import { Icon, type IconName } from './Icon';
+import {
+  KeyboardAwareScrollView,
+  useKeyboardTop,
+} from './KeyboardAwareScrollView';
 
 export function ToolButton({
   icon,
@@ -48,6 +52,7 @@ export function HabitScreen({
   children: ReactNode;
   addRoutine?: boolean;
 }) {
+  const keyboardTop = useKeyboardTop();
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
       <View style={styles.toolbar}>
@@ -60,13 +65,10 @@ export function HabitScreen({
         <View style={styles.tools}>{tools}</View>
       </View>
       {fixed}
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-      >
+      <KeyboardAwareScrollView contentContainerStyle={styles.content}>
         {children}
-      </ScrollView>
-      {addRoutine && (
+      </KeyboardAwareScrollView>
+      {addRoutine && keyboardTop === undefined && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add routine"

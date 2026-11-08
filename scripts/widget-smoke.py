@@ -65,6 +65,48 @@ def wait_text(text, name):
     raise RuntimeError('App did not display: ' + text)
 
 
+def verify_note_above_keyboard(name, date, text):
+    time.sleep(2)
+    windows = adb('shell', 'dumpsys', 'window', 'windows')
+    (results / (name + '-windows.txt')).write_text(windows)
+    keyboard_top = None
+    # Insets describe the visible IME even if its transparent host window fills
+    # the screen. Older Android dumps only expose the InputMethod frame.
+    for line in windows.splitlines():
+        if re.search(r'(?:mType|type)=ime\b', line) and re.search(r'(?:mVisible|visible)=true', line):
+            match = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', line)
+            if match and int(match[4]) > int(match[2]):
+                keyboard_top = int(match[2])
+                break
+    if keyboard_top is None:
+        for window in re.split(r'\n\s*Window #', windows):
+            if not re.search(r'Window\{[^\n]*InputMethod[^\n]*\}:', window):
+                continue
+            match = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', window)
+            if match and int(match[4]) > int(match[2]):
+                # Gboard uses a transparent fill-screen host; its reported
+                # visible inset excludes the transparent area above the keys.
+                inset = re.search(r'mGivenVisibleInsets=\[\d+,(\d+)\]', window)
+                keyboard_top = int(match[2]) + (int(inset[1]) if inset else 0)
+                break
+    if keyboard_top is None:
+        raise RuntimeError('Could not measure the real Android software keyboard.')
+    root = screen(name)
+    editor = find_label(root, 'Daily note for ' + date)
+    if editor is None or text not in editor.attrib.get('text', ''):
+        raise RuntimeError('The focused daily note did not retain entered text.')
+    left, top, right, bottom = map(int, re.findall(r'\d+', editor.attrib['bounds']))
+    if top >= keyboard_top or bottom > keyboard_top or bottom - top < 100:
+        raise RuntimeError(f'Note field is obscured: {editor.attrib["bounds"]}, keyboard starts at {keyboard_top}.')
+    # An accessibility rectangle alone can be clipped; also check actual text
+    # pixels above the IME, rather than keyboard keys or surrounding labels.
+    image = Image.open(results / (name + '.png')).convert('RGB').crop((left + 8, top + 8, right - 8, min(bottom, keyboard_top) - 8))
+    ink = sum(1 for red, green, blue in image.getdata() if min(red, green, blue) > 150)
+    if ink < 120:
+        raise RuntimeError('Entered note text is not visibly rendered above the keyboard.')
+    print(f'{name}: entered text visible above keyboard (field bottom {bottom}, IME top {keyboard_top}).')
+
+
 try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
     adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
@@ -86,6 +128,9 @@ try:
         raise RuntimeError('The app did not display the widget action.')
     # Exercise inline daily notes and durable navigation on the real Android UI.
     date = adb('shell', 'date', '+%F').strip()
+    details = find_label(root, 'Routine details: Wyjście na spacer z psem')
+    if details is not None:
+        tap(details)
     editor = None
     for _ in range(4):
         root = screen('daily-notes-editor')
@@ -97,14 +142,33 @@ try:
         raise RuntimeError('Inline daily-note editor is missing below routines.')
     tap(editor)
     adb('shell', 'input', 'text', 'Native%sdaily%snote')
-    time.sleep(2)
+    verify_note_above_keyboard('daily-notes-keyboard', date, 'Native daily note')
+    for line in range(1, 9):
+        adb('shell', 'input', 'keyevent', 'KEYCODE_ENTER')
+        adb('shell', 'input', 'text', 'Visible%sline%s' + str(line))
+    verify_note_above_keyboard('daily-notes-long-keyboard', date, 'Visible line 8')
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
     root = wait_text('Saved on device', 'daily-notes-saved')
     notes_tab = find_label(root, 'Notes')
     if notes_tab is None:
         raise RuntimeError('Notes tab is missing.')
     tap(notes_tab)
-    wait_text('Native daily note', 'daily-notes-list')
+    root = wait_text('Native daily note', 'daily-notes-list')
+    edit = find_label(root, 'Edit note for ' + date)
+    if edit is None:
+        raise RuntimeError('Daily-note edit action is missing.')
+    tap(edit)
+    root, editor = wait_label('Daily note for ' + date, 'daily-notes-sheet')
+    tap(editor)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
+    adb('shell', 'input', 'text', '%sSheet%sedition')
+    verify_note_above_keyboard('daily-notes-sheet-keyboard', date, 'Sheet edition')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root = wait_text('Saved on device', 'daily-notes-sheet-saved')
+    close = find_label(root, 'Close')
+    if close is None:
+        raise RuntimeError('Notes editor could not be closed.')
+    tap(close)
     adb('shell', 'am', 'force-stop', package)
     adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
     root, notes_tab = wait_label('Notes', 'daily-notes-restart')

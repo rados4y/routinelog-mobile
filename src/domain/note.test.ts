@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createDailyNote, dailyNoteSchema, maxNoteLength } from './note';
+import {
+  createDailyNote,
+  dailyNoteSchema,
+  datesWithNotes,
+  maxNoteLength,
+} from './note';
 import { repositories } from '../data/repositories';
 import { MemoryStorage } from '../test/fixtures';
 import { createRoutineStore } from '../store/createRoutineStore';
@@ -8,6 +13,24 @@ import { createNoteDraftStore } from '../store/createNoteDraftStore';
 const date = '2026-11-08';
 const now = () => new Date('2026-11-08T12:00:00Z');
 describe('daily notes and durable editing', () => {
+  it('marks only dates with content, with local drafts overriding saved or synchronized notes', () => {
+    const notes = [
+      { date, content: 'From Notion' },
+      { date: '2026-11-09', content: '' },
+      { date: '2026-11-10', content: ' \n ' },
+    ];
+    expect([...datesWithNotes(notes)]).toEqual([date]);
+    const drafts = {
+      [date]: { content: '  ' },
+      '2026-11-09': { content: 'Unsaved note, including failed saves' },
+      '2026-12-01': { content: 'A future note' },
+    };
+    expect([...datesWithNotes(notes, drafts)]).toEqual([
+      '2026-11-09',
+      '2026-12-01',
+    ]);
+    expect(notes[0]?.content).toBe('From Notion');
+  });
   it('normalizes newlines, preserves whitespace inside a note and validates its identity and size', () => {
     const note = createDailyNote(date, ' A\r\nB 💛 ', undefined, now());
     expect(note.content).toBe(' A\nB 💛 ');

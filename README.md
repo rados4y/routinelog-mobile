@@ -53,6 +53,7 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
   a niezapisane zaznaczenia nie są zachowywane. Każde kolejne wykonanie wymaga
   nowego potwierdzenia. Historia zachowuje kopię potwierdzonych tekstów kroków.
 - Notatki: edycja bezpośrednio pod rutynami wybranego dnia, autosave i lista dat w zakładce Notes. Historia wyników pozostaje zachowana pod dotychczasową trasą `/history`, poza główną nawigacją.
+  Edytor przewija aktywne pole ponad klawiaturę (również w panelu Notes), z przewijaniem długiego tekstu wewnątrz pola. Ikona notatki oznacza dni z treścią w pasku dat Today i kalendarzach; reaguje także na niezapisany tekst i znika po wyczyszczeniu notatki. Znacznik dzisiejszego dnia i statusy rutyn pozostają osobne.
 - Statystyki: ostatnie siedem dni, wykonania/pominięcia/niewykonania, regularność, wykres.
 - Pięć rutyn z referencji: niedzielna książka, rozmowy z Pawłem (ostatni dzień),
   Piotrkiem (15.), rodzicami (15. i ostatni) oraz spacer z psem (1×/tydzień).

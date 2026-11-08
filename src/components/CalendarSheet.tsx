@@ -21,6 +21,8 @@ import { Button } from './Button';
 import { entryBlockReason } from '../domain/entry';
 import { useNow } from '../utils/useNow';
 import { colors, common } from '../theme';
+import { NoteDateMarker } from './NoteDateMarker';
+import { useNoteDates } from '../features/notes/useNoteDates';
 
 export function CalendarSheet({
   visible,
@@ -38,6 +40,7 @@ export function CalendarSheet({
   const [month, setMonth] = useState(monthStart(selected));
   const [date, setDate] = useState(selected);
   const logs = useRoutines((state) => state.logs);
+  const noteDates = useNoteDates();
   const { cycleStatus } = useRoutineActions();
   const saving = useRoutines((state) => state.saving);
   const error = useRoutines((state) => state.error);
@@ -126,15 +129,20 @@ export function CalendarSheet({
                   : dateLabel(value)
               }
               accessibilityHint={
-                routine && !canCycle
-                  ? entryBlockReason(
-                      routine,
-                      value,
-                      'calendar',
-                      Boolean(status),
-                      today,
-                    )
-                  : undefined
+                [
+                  noteDates.has(value) ? 'Has daily note' : '',
+                  routine && !canCycle
+                    ? entryBlockReason(
+                        routine,
+                        value,
+                        'calendar',
+                        Boolean(status),
+                        today,
+                      )
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join('. ') || undefined
               }
               accessibilityState={{
                 selected: date === value,
@@ -168,6 +176,14 @@ export function CalendarSheet({
               ]}
             >
               <Text style={common.text}>{Number(value.slice(-2))}</Text>
+              {noteDates.has(value) && (
+                <View style={{ position: 'absolute', left: 3, bottom: 3 }}>
+                  <NoteDateMarker
+                    testID={`calendar-note-${value}`}
+                    selected={date === value}
+                  />
+                </View>
+              )}
               {status && (
                 <View style={{ position: 'absolute', right: 1, bottom: 1 }}>
                   <Icon
@@ -193,6 +209,12 @@ export function CalendarSheet({
           );
         })}
       </View>
+      {days.some((day) => noteDates.has(day)) && (
+        <View style={[common.row, { gap: 6 }]}>
+          <Icon name="notes" size={14} color={colors.accentLight} />
+          <Text style={common.small}>Daily note</Text>
+        </View>
+      )}
       {routine && (
         <>
           <Text style={common.subtitle}>

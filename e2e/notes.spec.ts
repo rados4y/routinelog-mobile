@@ -1,6 +1,60 @@
 import { expect, test } from '@playwright/test';
 import { openApp } from './helpers';
 
+test('note dates are marked in the daily strip and every calendar, without changing date selection or results', async ({
+  page,
+}) => {
+  await openApp(page);
+  const input = page.getByRole('textbox', {
+    name: 'Daily note for 2026-11-02',
+    exact: true,
+  });
+  await expect(page.getByTestId('strip-note-2026-11-02')).toHaveCount(0);
+  await input.fill('A day to remember');
+  await expect(page.getByTestId('strip-note-2026-11-02')).toBeVisible();
+  await expect(page.getByTestId('daily-note-2026-11-02')).toContainText(
+    'Saved on device',
+  );
+  await page.reload();
+  await expect(page.getByTestId('strip-note-2026-11-02')).toBeVisible();
+  await page.getByRole('button', { name: 'Choose date', exact: true }).click();
+  await expect(page.getByTestId('calendar-note-2026-11-02')).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Monday 2 November', exact: true })
+    .last()
+    .click();
+  await expect(input).toHaveValue('A day to remember');
+  await page.getByRole('tab', { name: 'Routines', exact: true }).click();
+  await page
+    .getByTestId('routine-preset-dog')
+    .getByRole('button', { name: /^Open calendar:/ })
+    .click();
+  const day = page
+    .getByRole('button', { name: /^Status:.*\b2 November/ })
+    .last();
+  await day.click();
+  await expect(day).toHaveAccessibleName(/\. Done\./);
+  await expect(page.getByTestId('calendar-note-2026-11-02')).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Choose note date', exact: true })
+    .click();
+  await expect(page.getByTestId('calendar-note-2026-11-02')).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Monday 2 November', exact: true })
+    .click();
+  await input.fill(' \n ');
+  await expect(page.getByTestId('daily-note-2026-11-02').last()).toContainText(
+    'Saved on device',
+  );
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('tab', { name: 'Today', exact: true }).click();
+  await expect(page.getByTestId('strip-note-2026-11-02')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Choose date', exact: true }).click();
+  await expect(page.getByTestId('calendar-note-2026-11-02')).toHaveCount(0);
+});
+
 test('daily notes edit inline, autosave, remain date-specific and appear in the Notes tab', async ({
   page,
 }) => {

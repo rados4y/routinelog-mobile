@@ -14,6 +14,7 @@ import { OccurrenceCard } from './OccurrenceCard';
 import { WidgetButton } from '../../widgets/WidgetButton';
 import { NotionButton } from '../../integrations/notion/NotionButton';
 import { DailyNoteEditor } from '../notes/DailyNoteEditor';
+import { useNoteDates } from '../notes/useNoteDates';
 
 export function TodayScreen() {
   const now = useNow();
@@ -24,6 +25,7 @@ export function TodayScreen() {
   const filter = useRoutineFilter();
   const routines = useRoutines((state) => state.routines);
   const logs = useRoutines((state) => state.logs);
+  const noteDates = useNoteDates();
   const occurrences = occurrencesForDate(routines, logs, selected, now).filter(
     (item) => filter.matches(item.routine),
   );
@@ -61,6 +63,7 @@ export function TodayScreen() {
               <DateSelector
                 today={today}
                 selected={selected}
+                noteDates={noteDates}
                 onSelect={(value) =>
                   setSelected(value === today ? null : value)
                 }
