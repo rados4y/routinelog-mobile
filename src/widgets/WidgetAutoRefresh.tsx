@@ -16,15 +16,14 @@ export function WidgetAutoRefresh() {
       clearTimeout(timer);
       timer = setTimeout(refresh, 200);
     };
+    let routinesChanged = false;
     const unsubscribe = routineStore.subscribe((state, previous) => {
-      if (
-        state.ready &&
-        !state.saving &&
-        (state.logs !== previous.logs ||
-          state.routines !== previous.routines ||
-          previous.saving)
-      )
+      if (state.logs !== previous.logs || state.routines !== previous.routines)
+        routinesChanged = true;
+      if (state.ready && !state.saving && routinesChanged) {
+        routinesChanged = false;
         schedule();
+      }
     });
     const listener = AppState.addEventListener('change', (state) => {
       if (state === 'active') schedule();

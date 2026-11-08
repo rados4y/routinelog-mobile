@@ -43,6 +43,15 @@ def wait_label(label, name):
     raise RuntimeError('Launcher did not display: ' + label)
 
 
+def wait_text(text, name):
+    for _ in range(10):
+        time.sleep(2)
+        root = screen(name)
+        if any(text in node.attrib.get('text', '') for node in root.iter('node')):
+            return root
+    raise RuntimeError('App did not display: ' + text)
+
+
 try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
     adb('logcat', '-c')
@@ -61,6 +70,42 @@ try:
             break
     if button is None:
         raise RuntimeError('The app did not display the widget action.')
+    # Exercise inline daily notes and durable navigation on the real Android UI.
+    date = adb('shell', 'date', '+%F').strip()
+    editor = None
+    for _ in range(4):
+        root = screen('daily-notes-editor')
+        editor = find_label(root, 'Daily note for ' + date)
+        if editor is not None:
+            break
+        adb('shell', 'input', 'swipe', '200', '650', '200', '300', '300')
+    if editor is None:
+        raise RuntimeError('Inline daily-note editor is missing below routines.')
+    tap(editor)
+    adb('shell', 'input', 'text', 'Native%sdaily%snote')
+    time.sleep(2)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root = wait_text('Saved on device', 'daily-notes-saved')
+    notes_tab = find_label(root, 'Notes')
+    if notes_tab is None:
+        raise RuntimeError('Notes tab is missing.')
+    tap(notes_tab)
+    wait_text('Native daily note', 'daily-notes-list')
+    adb('shell', 'am', 'force-stop', package)
+    adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
+    time.sleep(3)
+    root = screen('daily-notes-restart')
+    notes_tab = find_label(root, 'Notes')
+    if notes_tab is None:
+        raise RuntimeError('Notes tab is missing after restart.')
+    tap(notes_tab)
+    root = wait_text('Native daily note', 'daily-notes-persisted')
+    today_tab = find_label(root, 'Today')
+    if today_tab is None:
+        raise RuntimeError('Today tab is missing.')
+    tap(today_tab)
+    root, button = wait_label('Add home-screen widget', 'app')
+    print('Native daily note saved inline, appeared in Notes and survived process restart.')
     tap(button)
     time.sleep(3)
     root = screen('pin-dialog')
