@@ -17,6 +17,20 @@ export const dailyNoteSchema = z
   );
 export type DailyNote = z.infer<typeof dailyNoteSchema>;
 
+export function datesWithNotes(
+  notes: readonly Pick<DailyNote, 'date' | 'content'>[],
+  drafts: Readonly<Record<string, { readonly content: string }>> = {},
+): Set<string> {
+  const content = new Map(notes.map((note) => [note.date, note.content]));
+  for (const [date, draft] of Object.entries(drafts))
+    content.set(date, draft.content);
+  return new Set(
+    [...content]
+      .filter(([, text]) => text.trim().length > 0)
+      .map(([date]) => date),
+  );
+}
+
 // Empty content is a durable tombstone so clearing a note also clears Notion.
 export function createDailyNote(
   date: string,

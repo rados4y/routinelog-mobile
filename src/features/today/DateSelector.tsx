@@ -7,14 +7,17 @@ import {
   weekday,
 } from '../../domain/dates';
 import { colors } from '../../theme';
+import { NoteDateMarker } from '../../components/NoteDateMarker';
 
 export function DateSelector({
   today,
   selected,
+  noteDates,
   onSelect,
 }: {
   today: string;
   selected: string;
+  noteDates: ReadonlySet<string>;
   onSelect(date: string): void;
 }) {
   return (
@@ -33,6 +36,7 @@ export function DateSelector({
           key={date}
           accessibilityRole="button"
           accessibilityLabel={dateLabel(date)}
+          accessibilityHint={noteDates.has(date) ? 'Has daily note' : undefined}
           accessibilityState={{ selected: date === selected }}
           onPress={() => onSelect(date)}
           style={[styles.day, date === selected && styles.selected]}
@@ -56,6 +60,14 @@ export function DateSelector({
               },
             ]}
           />
+          {noteDates.has(date) && (
+            <View style={styles.note}>
+              <NoteDateMarker
+                testID={`strip-note-${date}`}
+                selected={selected === date}
+              />
+            </View>
+          )}
         </Pressable>
       ))}
     </ScrollView>
@@ -84,4 +96,5 @@ const styles = StyleSheet.create({
   number: { color: colors.text, fontSize: 20, fontWeight: '700' },
   light: { color: colors.text },
   dot: { width: 3, height: 3, borderRadius: 2 },
+  note: { position: 'absolute', right: 3, bottom: 3 },
 });

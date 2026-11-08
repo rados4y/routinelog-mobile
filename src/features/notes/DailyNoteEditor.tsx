@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
+import { useRevealInput } from '../../components/KeyboardAwareScrollView';
 import { Button } from '../../components/Button';
 import { dateLabel } from '../../domain/dates';
 import { maxNoteLength } from '../../domain/note';
@@ -7,6 +9,8 @@ import { useNoteDrafts } from '../../store/useNoteDrafts';
 import { colors, common } from '../../theme';
 
 export function DailyNoteEditor({ date }: { date: string }) {
+  const input = useRef<TextInput>(null);
+  const reveal = useRevealInput();
   const note = useRoutines((state) =>
     state.notes.find((item) => item.date === date),
   );
@@ -34,12 +38,19 @@ export function DailyNoteEditor({ date }: { date: string }) {
       </View>
       <Text style={common.small}>{dateLabel(date)}</Text>
       <TextInput
+        ref={input}
         accessibilityLabel={`Daily note for ${date}`}
         multiline
         maxLength={maxNoteLength}
         value={value}
         onChangeText={(content) => edit(date, content)}
-        onBlur={() => void save(date)}
+        onFocus={() => reveal(input.current)}
+        onSelectionChange={() => reveal(input.current)}
+        onContentSizeChange={() => reveal(input.current)}
+        onBlur={() => {
+          reveal(null);
+          void save(date);
+        }}
         placeholder="Write about your day…"
         placeholderTextColor={colors.muted}
         textAlignVertical="top"
@@ -78,6 +89,7 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 120,
+    maxHeight: 180,
     color: colors.text,
     fontSize: 15,
     lineHeight: 23,

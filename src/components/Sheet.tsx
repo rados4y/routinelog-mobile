@@ -1,15 +1,9 @@
 import type { ReactNode } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 import { Icon } from './Icon';
+import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 
 export function Sheet({
   visible,
@@ -49,15 +43,14 @@ export function Sheet({
           </Pressable>
         )}
       </View>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
           fullScreen && { gap: 0, paddingTop: 8, paddingBottom: 8 },
         ]}
       >
         {children}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       {footer && (
         <View
           style={{ padding: 12, borderTopWidth: 1, borderColor: colors.border }}
