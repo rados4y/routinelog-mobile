@@ -107,11 +107,7 @@ try:
     wait_text('Native daily note', 'daily-notes-list')
     adb('shell', 'am', 'force-stop', package)
     adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
-    time.sleep(3)
-    root = screen('daily-notes-restart')
-    notes_tab = find_label(root, 'Notes')
-    if notes_tab is None:
-        raise RuntimeError('Notes tab is missing after restart.')
+    root, notes_tab = wait_label('Notes', 'daily-notes-restart')
     tap(notes_tab)
     root = wait_text('Native daily note', 'daily-notes-persisted')
     today_tab = find_label(root, 'Today')
