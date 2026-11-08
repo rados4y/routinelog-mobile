@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import {
   useRevealInput,
@@ -20,6 +21,7 @@ export function DailyNoteEditor({
 }) {
   const input = useRef<TextInput>(null);
   const card = useRef<View>(null);
+  const focusedRequest = useRef<number | undefined>(undefined);
   const revealSection = useRevealSection();
   const reveal = useRevealInput();
   const note = useRoutines((state) =>
@@ -31,16 +33,38 @@ export function DailyNoteEditor({
   const edit = useNoteDrafts((state) => state.edit);
   const save = useNoteDrafts((state) => state.save);
   const value = draft?.content ?? note?.content ?? '';
-  useEffect(() => {
-    if (!focusRequest) return;
-    // Android can keep input focus after Back hides the IME. A repeated widget
-    // request should bring the keyboard back as well as reveal the same note.
-    input.current?.blur();
-    const frame = requestAnimationFrame(() =>
-      revealSection(card.current, () => input.current?.focus()),
-    );
-    return () => cancelAnimationFrame(frame);
-  }, [focusRequest, revealSection]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusRequest || focusedRequest.current === focusRequest) return;
+      let cancelled = false;
+      let retry: ReturnType<typeof setTimeout> | undefined;
+      let attempts = 0;
+      const activate = () => {
+        if (cancelled) return;
+        revealSection(card.current, () => {
+          if (cancelled) return;
+          input.current?.focus();
+          retry = setTimeout(() => {
+            if (cancelled) return;
+            if (input.current?.isFocused())
+              focusedRequest.current = focusRequest;
+            else if (++attempts < 6) activate();
+          }, 150);
+        });
+      };
+      const frame = requestAnimationFrame(() => {
+        // Back can hide Android's IME without clearing focus. Reset it once;
+        // retries cover native screen activation, without refocusing while typing.
+        input.current?.blur();
+        activate();
+      });
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frame);
+        clearTimeout(retry);
+      };
+    }, [focusRequest, revealSection]),
+  );
   return (
     <View ref={card} style={styles.card} testID={`daily-note-${date}`}>
       <View style={common.spread}>
