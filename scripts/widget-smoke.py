@@ -84,7 +84,10 @@ def verify_note_above_keyboard(name, date, text):
                 continue
             match = re.search(r'(?:mFrame|\bframe)=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', window)
             if match and int(match[4]) > int(match[2]):
-                keyboard_top = int(match[2])
+                # Gboard uses a transparent fill-screen host; its reported
+                # visible inset excludes the transparent area above the keys.
+                inset = re.search(r'mGivenVisibleInsets=\[\d+,(\d+)\]', window)
+                keyboard_top = int(match[2]) + (int(inset[1]) if inset else 0)
                 break
     if keyboard_top is None:
         raise RuntimeError('Could not measure the real Android software keyboard.')
