@@ -22,10 +22,16 @@ import {
   type EntryMode,
 } from '../domain/entry';
 import type { SyncLocal } from '../data/sync';
+import {
+  createDailyNote,
+  dailyNoteSchema,
+  type DailyNote,
+} from '../domain/note';
 
 export interface RoutineState {
   routines: Routine[];
   logs: RoutineLog[];
+  notes: DailyNote[];
   ready: boolean;
   loading: boolean;
   saving: boolean;
@@ -34,6 +40,8 @@ export interface RoutineState {
   clearError(): void;
   applySyncedRoutine: SyncLocal['applyRoutine'];
   applySyncedLog: SyncLocal['applyLog'];
+  applySyncedNote: SyncLocal['applyNote'];
+  saveNote(date: string, content: string): Promise<boolean>;
   saveRoutine(input: RoutineInput, id?: string): Promise<boolean>;
   toggleRoutine(id: string): Promise<boolean>;
   deleteRoutine(id: string): Promise<boolean>;
@@ -51,7 +59,18 @@ export function createRoutineStore(
   nextId = () =>
     `routine-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
 ) {
-  return createStore<RoutineState>((set, get) => {
+  return createStore<RoutineState>((set, get, api) => {
+    let noteWrites = Promise.resolve();
+    const idle = () =>
+      new Promise<void>((resolve) => {
+        if (!get().saving) return resolve();
+        const unsubscribe = api.subscribe((state) => {
+          if (!state.saving) {
+            unsubscribe();
+            resolve();
+          }
+        });
+      });
     const perform = async (work: () => Promise<void>): Promise<boolean> => {
       if (!get().ready || get().saving) return false;
       set({ saving: true, error: null });
@@ -86,14 +105,46 @@ export function createRoutineStore(
       if (!routine) throw new Error('Routine does not exist.');
       return routine;
     };
+    const saveNote = async (note: DailyNote) => {
+      await repos.notes.save(dailyNoteSchema.parse(note));
+      set({
+        notes: [...get().notes.filter((item) => item.id !== note.id), note],
+      });
+    };
     return {
       routines: [],
       logs: [],
+      notes: [],
       ready: false,
       loading: false,
       saving: false,
       error: null,
       clearError: () => set({ error: null }),
+      applySyncedNote: async (expected, next) => {
+        const current = get().notes.find((note) => note.id === next.id);
+        if (JSON.stringify(current) !== JSON.stringify(expected)) return false;
+        return perform(() => saveNote(next));
+      },
+      saveNote: (date, content) => {
+        const task = noteWrites.then(async () => {
+          await idle();
+          return perform(() =>
+            saveNote(
+              createDailyNote(
+                date,
+                content,
+                get().notes.find((note) => note.id === date),
+                clock(),
+              ),
+            ),
+          );
+        });
+        noteWrites = task.then(
+          () => {},
+          () => {},
+        );
+        return task;
+      },
       applySyncedRoutine: async (expected, next) => {
         if (!get().ready || get().saving) return false;
         const current = get().routines.find((item) => item.id === next.id);
@@ -133,11 +184,12 @@ export function createRoutineStore(
         set({ loading: true, error: null });
         try {
           await seedOnce(repos, clock());
-          const [routines, logs] = await Promise.all([
+          const [routines, logs, notes] = await Promise.all([
             repos.routines.list(),
             repos.logs.list(),
+            repos.notes.list(),
           ]);
-          set({ routines, logs, ready: true });
+          set({ routines, logs, notes, ready: true });
         } catch {
           set({
             error:

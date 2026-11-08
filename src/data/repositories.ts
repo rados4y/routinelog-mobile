@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dailyNoteSchema, type DailyNote } from '../domain/note';
 import {
   logSchema,
   routineSchema,
@@ -19,6 +20,7 @@ export interface Repository<T> {
 }
 export type RoutineRepository = Repository<Routine>;
 export type LogRepository = Repository<RoutineLog>;
+export type DailyNoteRepository = Repository<DailyNote>;
 
 // Versioned records, one key per entity. Corruption is reported, never silently reset.
 export class StorageRepository<
@@ -65,11 +67,17 @@ export function repositories(storage: KeyValueStorage) {
       routineSchema,
     ),
     logs: new StorageRepository(storage, '@routinelog/v1/log/', logSchema),
+    notes: new StorageRepository(
+      storage,
+      '@routinelog/v1/note/',
+      dailyNoteSchema,
+    ),
     storage,
   };
 }
 export interface Repositories {
   routines: RoutineRepository;
   logs: LogRepository;
+  notes: DailyNoteRepository;
   storage: KeyValueStorage;
 }

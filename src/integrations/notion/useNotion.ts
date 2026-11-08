@@ -7,6 +7,7 @@ import { credentials } from './credentials';
 import { HttpNotionGateway } from './gateway';
 import { SyncConflictError, type ConflictChoice } from './models';
 import { NotionSync } from './sync';
+import { noteDraftStore } from '../../store/useNoteDrafts';
 
 const lastSyncKey = '@routinelog/notion/last-success';
 interface NotionState {
@@ -85,6 +86,10 @@ export const useNotion = create<NotionState>((set, get) => ({
       return;
     set({ busy: true, error: null, conflict: false });
     try {
+      if (!(await noteDraftStore.getState().flush()))
+        throw new Error(
+          'Finish saving your daily note before syncing. Your text remains in the app.',
+        );
       const token = await credentials.get();
       if (!token) {
         set({ connected: false });
@@ -95,6 +100,10 @@ export const useNotion = create<NotionState>((set, get) => ({
         new HttpNotionGateway(new NotionClient(token), project.rootPageId),
         {
           read: () => routineStore.getState(),
+          applyNote: (expected, next) =>
+            noteDraftStore.getState().drafts[next.date]
+              ? Promise.resolve(false)
+              : routineStore.getState().applySyncedNote(expected, next),
           applyRoutine: (expected, next) =>
             routineStore.getState().applySyncedRoutine(expected, next),
           applyLog: (expected, next, id) =>

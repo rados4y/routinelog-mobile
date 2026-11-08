@@ -24,6 +24,7 @@ import {
   type NotionGateway,
   type SyncLocal,
 } from './models';
+import { ensureNotesColumn, syncDailyNotes } from './dailyNotes';
 
 export function daysInMonth(month: string): string[] {
   const days: string[] = [];
@@ -83,12 +84,14 @@ export class NotionSync {
       currentRef = await this.remote.createMonth(current);
     if (currentRef.databaseId !== authority?.databaseId)
       await this.month(currentRef, true, choice);
-    const logMonths = new Set(
-      this.local.read().logs.map((log) => log.scheduledFor.slice(0, 7)),
-    );
+    const data = this.local.read();
+    const logMonths = new Set([
+      ...data.logs.map((log) => log.scheduledFor.slice(0, 7)),
+      ...data.notes.map((note) => note.date.slice(0, 7)),
+    ]);
     for (const month of logMonths) {
       if (
-        month >= current ||
+        month === current ||
         refs.some((ref) => ref.month === month && ref.databaseId)
       )
         continue;
@@ -100,11 +103,10 @@ export class NotionSync {
       if (
         !ref.databaseId ||
         ref.databaseId === currentRef.databaseId ||
-        ref.databaseId === authority?.databaseId ||
-        ref.month > current
+        ref.databaseId === authority?.databaseId
       )
         continue;
-      await this.month(ref, false, choice);
+      await this.month(ref, false, choice, ref.month > current);
     }
     if (this.pendingChecklists.size)
       throw new Error(
@@ -115,19 +117,43 @@ export class NotionSync {
     ref: MonthRef,
     manageRoutines: boolean,
     choice?: ConflictChoice,
+    notesOnly = false,
   ): Promise<void> {
     const currentMonth = ref.month === localDate(this.clock()).slice(0, 7);
     const key = ledgerKey(this.root, ref.month);
     const raw = await this.storage.getItem(key);
     const ledger: MonthLedger = raw
       ? monthLedgerSchema.parse(JSON.parse(raw))
-      : { version: 1, databaseId: ref.databaseId, bindings: [], cells: {} };
+      : {
+          version: 1,
+          databaseId: ref.databaseId,
+          bindings: [],
+          cells: {},
+          notes: {},
+        };
     if (ledger.databaseId !== ref.databaseId)
       throw new Error(
         `The ${ref.month} table was replaced. Restore the original table before syncing.`,
       );
     const persist = () => this.storage.setItem(key, JSON.stringify(ledger));
-    let table = await this.remote.readMonth(ref);
+    let table = await this.remote.readMonth({
+      ...ref,
+      notesPropertyId: ledger.notesPropertyId,
+    });
+    table = await ensureNotesColumn(table, ledger, this.remote, persist);
+    if (notesOnly) {
+      table = await this.ensureDays(table, ledger, persist);
+      await syncDailyNotes(
+        table,
+        ledger,
+        this.remote,
+        this.local,
+        persist,
+        this.clock,
+        choice,
+      );
+      return;
+    }
     const knownIds = new Set(table.columns.map((column) => column.id));
     if (manageRoutines) {
       for (const binding of ledger.bindings) {
@@ -321,19 +347,36 @@ export class NotionSync {
       }
       await persist();
     }
+    table = await this.ensureDays(table, ledger, persist);
+    await this.syncCells(table, ledger, persist, choice);
+    await syncDailyNotes(
+      table,
+      ledger,
+      this.remote,
+      this.local,
+      persist,
+      this.clock,
+      choice,
+    );
+  }
+  private async ensureDays(
+    table: MonthTable,
+    ledger: MonthLedger,
+    persist: () => Promise<void>,
+  ): Promise<MonthTable> {
     let createdDays = false;
-    for (const date of daysInMonth(ref.month)) {
+    for (const date of daysInMonth(table.month)) {
       if (table.rows.some((row) => row.date === date)) continue;
       // A recreated day should get the local entries, rather than act as an undo of every cell.
       // Record this intent before the request: its response may be lost after Notion saves the row.
       for (const id of Object.keys(ledger.cells))
         if (id.endsWith(`:${date}`)) delete ledger.cells[id];
+      delete ledger.notes[date];
       await persist();
       await this.remote.createDay(table, date);
       createdDays = true;
     }
-    if (createdDays) table = await this.remote.readMonth(ref);
-    await this.syncCells(table, ledger, persist, choice);
+    return createdDays ? this.remote.readMonth(table) : table;
   }
   private async syncCells(
     table: MonthTable,

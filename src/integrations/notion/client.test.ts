@@ -1,8 +1,91 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NotionClient, type NotionFetch } from './client';
 import { HttpNotionGateway } from './gateway';
+import { notesColumnMarker } from './dailyNotes';
 
 describe('Notion API transport', () => {
+  it('reads free-form notes outside routine status parsing and fetches full paginated rich text', async () => {
+    const request = vi
+      .fn<NotionFetch>()
+      .mockResolvedValueOnce(
+        Response.json({ id: 'db', data_sources: [{ id: 'ds' }] }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          id: 'ds',
+          properties: {
+            Data: { id: 'date', name: 'Data', type: 'date' },
+            Journal: {
+              id: 'n%3Ates',
+              name: 'Journal',
+              type: 'rich_text',
+              description: notesColumnMarker,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          has_more: false,
+          next_cursor: null,
+          results: [
+            {
+              id: 'day',
+              last_edited_time: '2026-11-08T12:00:00Z',
+              properties: {
+                Data: {
+                  id: 'date',
+                  type: 'date',
+                  date: { start: '2026-11-08' },
+                },
+                Journal: {
+                  id: 'n%3Ates',
+                  type: 'rich_text',
+                  rich_text: Array.from({ length: 25 }, () => ({
+                    plain_text: 'truncated',
+                  })),
+                },
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          has_more: true,
+          next_cursor: 'more',
+          results: [
+            { type: 'rich_text', rich_text: { plain_text: 'Complete note\n' } },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          has_more: false,
+          next_cursor: null,
+          results: [
+            { type: 'rich_text', rich_text: { plain_text: 'Final 💛' } },
+          ],
+        }),
+      );
+    const gateway = new HttpNotionGateway(
+      new NotionClient('test-token', request, async () => {}),
+      'root',
+    );
+    const result = await gateway.readMonth({
+      month: '2026-11',
+      pageId: 'month',
+      databaseId: 'db',
+    });
+    expect(result.rows[0]).toMatchObject({
+      note: 'Complete note\nFinal 💛',
+      cells: {},
+    });
+    expect(request.mock.calls[3]?.[0]).toBe(
+      'https://api.notion.com/v1/pages/day/properties/n%3Ates?page_size=100',
+    );
+    expect(request.mock.calls[4]?.[0]).toContain('start_cursor=more');
+  });
   it('follows all cursors on the current data-source API and keeps auth on a fixed origin', async () => {
     const request = vi
       .fn<NotionFetch>()

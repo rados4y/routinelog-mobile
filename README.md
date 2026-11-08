@@ -46,7 +46,7 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
   w którym należy zaznaczyć wszystkie kroki. Anulowanie nie zmienia wyniku,
   a niezapisane zaznaczenia nie są zachowywane. Każde kolejne wykonanie wymaga
   nowego potwierdzenia. Historia zachowuje kopię potwierdzonych tekstów kroków.
-- Historia: zapisane wyniki oraz wyliczone niewykonania, źródło, data i czas wykonania.
+- Notatki: edycja bezpośrednio pod rutynami wybranego dnia, autosave i lista dat w zakładce Notes. Historia wyników pozostaje zachowana pod dotychczasową trasą `/history`, poza główną nawigacją.
 - Statystyki: ostatnie siedem dni, wykonania/pominięcia/niewykonania, regularność, wykres.
 - Pięć rutyn z referencji: niedzielna książka, rozmowy z Pawłem (ostatni dzień),
   Piotrkiem (15.), rodzicami (15. i ostatni) oraz spacer z psem (1×/tydzień).
@@ -67,6 +67,7 @@ app/                        Expo Router, stack i cztery zakładki
 src/components/             wspólne elementy UI
 src/features/today/         plan dnia i akcje
 src/features/routines/      lista i edytor
+src/features/notes/          dzienne notatki, edycja inline i lista dat
 src/features/history/       historia
 src/features/insights/      statystyki
 src/domain/                 modele, daty, harmonogramy, historia, statystyki
@@ -370,7 +371,21 @@ The UI, dates, categories, schedule labels and error messages use English. Store
 
 Today uses the status circle for its four-state cycle and a pencil icon for editing. Routine cards open the editor directly through their pencil icon. Pause and delete are available in the editor, with deletion confirmed explicitly. Routine calendar cells cycle statuses directly; there are no duplicate status buttons below the grid.
 
-History uses the same compact header and category icons as Today and Routines. Entries are grouped by date, with a small undo action and a details sheet for notes, values and checklist confirmations.
+The main tabs are Today, Routines, Notes and Insights. The legacy `/history` route keeps routine results, undo and checklist snapshots available without occupying a main tab.
+
+## Daily notes
+
+Every local calendar date has one editable plain-text note, shown directly below its routines on Today. Dates with no routines and future dates also support notes. Notes autosave after 600ms, on blur and when the app backgrounds; Save now/Retry provides an explicit action. Unsaved drafts live separately from domain records, survive navigation and remain available after a failed write. A date change remounts the editor without moving its text to another date.
+
+The Notes tab lists non-empty daily notes newest date first, supports text/date search, and opens the same editor. The plus action edits today's note; the calendar chooses any other date. Clearing its text removes a note from the list once saved.
+
+`DailyNote`: `id` (the local `YYYY-MM-DD` date), `date`, `content`, `source` (`app`/`notion`), `createdAt`, `updatedAt`. `DailyNoteRepository` stores versioned records under `@routinelog/v1/note/`, independently from routines/logs. Empty records are retained as sync tombstones. No seed reset or destructive migration is performed. The store serializes local note writes and uses compare-and-save for remote imports.
+
+Existing monthly Notion tables receive a dedicated **Notes** Text column automatically through the connected app. A description marker and ledger property ID keep it separate from routine columns, including after renaming. If another property already uses the name, an unused Daily notes name is selected. The notes column never becomes a routine. Clearing a text cell syncs a deletion; deleting the notes column or a whole day row restores the locally saved notes rather than erasing them. A changed property type stops sync safely.
+
+Notes use the same three-way conflict choices as routine sync, with per-date bases in the existing month ledger. Initial empty cells do not erase phone notes. Drafts are flushed before syncing, and imports refuse to replace text being edited or a newer local record. Old and future note months are included without allowing future routine completions. Notes support 20,000 characters, preserving newlines and Unicode. Writes split text into safe chunks below Notion's per-object limit, and long formatted properties are retrieved through pagination before merging. This is plain-text sync; styling is preserved in Notion until the app rewrites that note.
+
+API contracts: [Notion request limits](https://developers.notion.com/reference/request-limits), [retrieve page property items](https://developers.notion.com/reference/retrieve-a-page-property). No new token, native dependency or APK is needed for this feature when the current Notion connection is configured.
 
 ## Android Today home-screen widget
 
@@ -387,7 +402,7 @@ Version 1.2.0 (Android versionCode 3) adds a native, resizable RoutineLog Today 
 - Native-only code is guarded and registered before Expo Router through `index.ts`. Core screens still run in Expo Go and web; the home-screen widget needs the built Android runtime.
 - Keep `bridge.tsx` and `bridge.android.tsx` on the same source extension: Metro resolves extensions before platform variants, so a `bridge.ts` fallback would hide the native bridge. CI exports Android with `--source-maps`, then runs `node scripts/check-widget-bundle.mjs` to fail if the fallback is included or native registration/bridge/rendering is missing. The existing package script is preserved because Expo fingerprints package scripts conservatively; adding a check in CI does not change the installed native runtime.
 - CI runs `EXPO_OFFLINE=1 npx expo install --check` against the version map bundled with the locked Expo SDK. Installed packages are still validated; newly published remote patch recommendations do not change this baseline during an OTA-only UI change. Upgrade native dependencies deliberately, then resolve the fingerprint and build when required. See [Expo CLI environment variables](https://docs.expo.dev/more/expo-cli/#environment-variables).
-- **Android widget smoke test** installs the latest finished preview APK on an Android 15 emulator, allows compatible OTA to load, opens the launcher’s pin prompt and checks that the widget renders. It never starts an EAS Build. Its diagnostic artifacts contain emulator screenshots, the view hierarchy and native logs from seeded test data.
+- **Android widget smoke test** installs the latest finished preview APK on an Android 15 emulator, allows compatible OTA to load, enters a daily note on Today, verifies Notes and persistence after process restart, then checks the widget's rendering, day navigation and status cycle. It never starts an EAS Build. Its diagnostic artifacts contain emulator screenshots, the view hierarchy and native logs from seeded test data.
 
 A new APK is required for this native widget installation. Future JS/UI updates continue through the existing fingerprint-compatible preview OTA workflow. The old APK can receive the separate English UI release but must not receive an incompatible widget OTA. Dispatch the existing **Android native build** workflow with profile `preview` after all quality checks pass.
 

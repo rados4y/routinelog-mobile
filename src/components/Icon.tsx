@@ -3,6 +3,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme';
 
 const paths = {
+  notes: 'M5 3h14v18H5V3m3 5h8m-8 4h8m-8 4h5',
   widget: 'M3 3h7v7H3V3m11 0h7v7h-7V3M3 14h7v7H3v-7m11 0h7v7h-7v-7',
   circle: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20',
   brand: 'M3 6h9M3 12h6M3 18h9M16 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12',

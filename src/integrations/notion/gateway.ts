@@ -3,6 +3,7 @@ import { dateSchema } from '../../domain/models';
 import { statusFromText, supportedColumn } from './descriptions';
 import { NotionClient } from './client';
 import type { CellStatus, MonthRef, MonthTable, NotionGateway } from './models';
+import { isNotesColumn } from './dailyNotes';
 
 const textSchema = z.array(
   z.object({
@@ -150,6 +151,9 @@ export class HttpNotionGateway implements NotionGateway {
         `The ${ref.month} table is missing its “Data” date column. Restore it before syncing.`,
       );
     const rows: MonthTable['rows'] = [];
+    const noteColumn =
+      columns.find((column) => column.id === ref.notesPropertyId) ??
+      columns.find(isNotesColumn);
     for (const raw of await this.client.all(
       `data_sources/${dataSourceId}/query`,
       'POST',
@@ -175,7 +179,9 @@ export class HttpNotionGateway implements NotionGateway {
           `The ${ref.month} table contains duplicate rows for ${date}. Remove the extra row.`,
         );
       const cells: Record<string, CellStatus> = {};
-      for (const column of columns.filter(supportedColumn)) {
+      for (const column of columns.filter(
+        (item) => item.id !== noteColumn?.id && supportedColumn(item),
+      )) {
         const value = properties.find((property) => property.id === column.id);
         if (!value) throw new Error('Incomplete Notion cell data. Try again.');
         cells[column.id] =
@@ -189,9 +195,54 @@ export class HttpNotionGateway implements NotionGateway {
                   : ((value.select ?? value.status)?.name ?? ''),
               );
       }
-      rows.push({ id: row.id, date, editedAt: row.last_edited_time, cells });
+      let note = '';
+      if (noteColumn) {
+        const value = properties.find(
+          (property) => property.id === noteColumn.id,
+        );
+        if (!value || value.type !== 'rich_text')
+          throw new Error(
+            'Incomplete daily-note data or changed column type. Restore the Text property before syncing.',
+          );
+        let parts = textSchema.parse(value.rich_text);
+        if (parts.length >= 25) {
+          let propertyId = noteColumn.id;
+          try {
+            propertyId = decodeURIComponent(propertyId);
+          } catch {
+            /* Encode raw IDs as-is. */
+          }
+          const items = z
+            .array(
+              z.object({
+                type: z.literal('rich_text'),
+                rich_text: textSchema.element,
+              }),
+            )
+            .parse(
+              await this.client.all(
+                `pages/${row.id}/properties/${encodeURIComponent(propertyId)}`,
+              ),
+            );
+          parts = items.map((item) => item.rich_text);
+        }
+        note = text(parts);
+      }
+      rows.push({
+        id: row.id,
+        date,
+        editedAt: row.last_edited_time,
+        cells,
+        note,
+      });
     }
-    return { ...ref, dataSourceId, columns, rows };
+    return {
+      ...ref,
+      dataSourceId,
+      columns,
+      rows,
+      notesPropertyId: noteColumn?.id,
+    };
   }
   async updateColumns(
     table: MonthTable,
