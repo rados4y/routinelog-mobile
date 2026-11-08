@@ -20,6 +20,8 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Brak EXPO_TOKEN nie może psuć zwykłego CI. Po dodaniu tokenu uruchom Link Expo project.
 - Nigdy nie wypisuj ani nie commituj sekretów. EXPO_TOKEN tylko GitHub/EAS/zarządzane środowisko.
 - Czysta domena w src/domain; UI nie używa AsyncStorage bezpośrednio.
+- Notion v2: definicje w bazie Routines, stabilne Routine ID, zakres start/end i checklisty w obie strony. Miesięczne kolumny są projekcją; ich usunięcie nigdy nie usuwa rutyny. Zachowuj archiwalne kolumny, tombstone Archived i jednorazową migrację. Nigdy nie przenoś ponownie starych ustawień miesięcznych po Migration: complete.
+- Widget wypełnia całą wysokość launchera. Nawigacja zmienia tylko jedną instancję jednym renderem; status odświeża pozostałe bez powtarzania tego samego. Nie zmieniaj natywnej biblioteki bez omówienia złożoności z użytkownikiem.
 - Dzienne notatki są osobnymi rekordami po dacie. Zachowuj puste rekordy jako tombstone, kolejkę zapisów i niezapisane drafty. Kolumna Notion z markerem RoutineLog daily notes (v1) nie jest rutyną; scalaj notatki trójstronnie i nigdy nie nadpisuj edytowanego draftu z synchronizacji.
 - Zachowuj historię, lokalne daty i rozróżnienie pending/overdue/missed.
 - Cele elastyczne rozliczaj po zamknięciu okna tygodniowego.

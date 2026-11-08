@@ -22,6 +22,8 @@ import { colors, common } from '../../theme';
 import { Chip, ScheduleEditor } from './ScheduleEditor';
 
 import { categoryLabels } from '../../i18n/en';
+import { localDate } from '../../domain/dates';
+import { routineStartDate } from '../../domain/routine';
 import { ChecklistEditor } from './ChecklistEditor';
 
 const emojis = [
@@ -64,6 +66,10 @@ export function RoutineEditor() {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(
     existing?.checklist ?? [],
   );
+  const [startDate, setStartDate] = useState(
+    existing ? routineStartDate(existing) : localDate(),
+  );
+  const [endDate, setEndDate] = useState(existing?.endDate ?? '');
   const [error, setError] = useState('');
   const close = () => {
     if (router.canGoBack()) router.back();
@@ -82,12 +88,18 @@ export function RoutineEditor() {
       reminderTime: time.trim(),
       note: note.trim(),
       checklist,
+      startDate: startDate.trim(),
+      endDate: endDate.trim() || null,
     });
+    if (endDate && endDate < startDate) {
+      setError('End date must be on or after the start date.');
+      return;
+    }
     if (!parsed.success) {
       setError(
         parsed.error.issues.some((issue) => issue.path[0] === 'checklist')
           ? 'Fill in or remove empty steps. Each step can contain up to 200 characters.'
-          : 'Check the name, icon, time (HH:MM) and schedule. Select at least one day; intervals must be whole numbers from 1 to 3650 and the first date must use YYYY-MM-DD.',
+          : 'Check the name, icon, time (HH:MM), schedule and date range (YYYY-MM-DD). Select at least one day; intervals must be whole numbers from 1 to 3650 and the first date must use YYYY-MM-DD.',
       );
       return;
     }
@@ -211,6 +223,32 @@ export function RoutineEditor() {
               thumbColor={colors.text}
             />
           </View>
+        </View>
+        <View style={common.card}>
+          <Text style={common.heading}>Date range</Text>
+          <Text style={common.label}>Start date (YYYY-MM-DD)</Text>
+          <TextInput
+            accessibilityLabel="Start date"
+            value={startDate}
+            onChangeText={setStartDate}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={colors.muted}
+            maxLength={10}
+            style={common.field}
+          />
+          <Text style={common.label}>End date (optional, inclusive)</Text>
+          <TextInput
+            accessibilityLabel="End date"
+            value={endDate}
+            onChangeText={setEndDate}
+            placeholder="No end date"
+            placeholderTextColor={colors.muted}
+            maxLength={10}
+            style={common.field}
+          />
+          <Text style={common.small}>
+            Dates limit your plan. Existing results are kept.
+          </Text>
         </View>
         <ChecklistEditor items={checklist} onChange={setChecklist} />
         {!!error && (

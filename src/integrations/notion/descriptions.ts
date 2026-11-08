@@ -46,7 +46,7 @@ export function planText(schedule: Schedule): string {
       return `rok ${schedule.dates.map((item) => `${item.day}.${item.month}`).join(',')}${schedule.flexible ? ' elastycznie' : ''}`;
   }
 }
-function parsePlan(value: string): Schedule {
+export function parsePlan(value: string): Schedule {
   const flexible = value.endsWith(' elastycznie');
   const plain = flexible ? value.slice(0, -' elastycznie'.length) : value;
   if (flexible && /^dni [1-7](,[1-7])*$/.test(plain))
@@ -170,6 +170,8 @@ export function inputFromColumn(
       : (fallback?.unit ?? null),
     note: note.join('\n').trim(),
     checklist: fallback?.checklist,
+    startDate: fallback?.startDate,
+    endDate: fallback?.endDate,
   });
   if (!result.success)
     throw new Error(

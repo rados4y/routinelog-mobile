@@ -41,17 +41,10 @@ export function TodayWidget({
       : undefined);
   const compact = height < 150;
   const headerHeight = 44;
-  const noticeHeight = explanation ? (compact ? 18 : 24) : 0;
-  // Fit the visible panel to its content; the launcher still owns the allocated
-  // grid area. Additional routines scroll once the available height is filled.
-  const panelHeight = Math.min(
-    height,
-    headerHeight +
-      1 +
-      noticeHeight +
-      (model.items.length ? model.items.length * 48 : 36) +
-      64,
-  );
+  // Reserve the same notice slot across dates to keep the collection in place.
+  const noticeHeight = compact ? 18 : 24;
+  // Fill the launcher allocation on every day; only the collection scrolls.
+  const panelHeight = height;
   // Android collections require each row to fit inside the visible list, even
   // when the launcher resizes this widget to its existing 110dp minimum.
   const rowHeight = Math.max(
@@ -147,18 +140,16 @@ export function TodayWidget({
             backgroundColor: palette.divider,
           }}
         />
-        {!!explanation && (
-          <TextWidget
-            text={explanation}
-            maxLines={compact ? 1 : 2}
-            style={{
-              fontSize: 10,
-              color: palette.muted,
-              paddingHorizontal: 12,
-              height: noticeHeight,
-            }}
-          />
-        )}
+        <TextWidget
+          text={explanation ?? ''}
+          maxLines={compact ? 1 : 2}
+          style={{
+            fontSize: 10,
+            color: palette.muted,
+            paddingHorizontal: 12,
+            height: noticeHeight,
+          }}
+        />
         <FlexWidget style={{ width: 'match_parent', flex: 1 }}>
           <ListWidget>
             {model.items.length ? (

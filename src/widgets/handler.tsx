@@ -79,7 +79,10 @@ export async function widgetTaskHandler(
         notice={notice}
       />,
     );
-    await refreshWidgets(notice);
+    // Navigation changes only this instance. renderWidget above already updates it;
+    // replacing all collection adapters a second time causes a visible flash.
+    if (props.widgetAction === 'WIDGET_CLICK' && props.clickAction === 'cycle')
+      await refreshWidgets(notice, props.widgetInfo.widgetId);
   } catch {
     props.renderWidget(
       <TodayWidget

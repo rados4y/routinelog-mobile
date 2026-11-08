@@ -1,6 +1,10 @@
 export const isWidgetAvailable = () => false;
-export async function refreshWidgets(notice?: string): Promise<void> {
+export async function refreshWidgets(
+  notice?: string,
+  excludeWidgetId?: number,
+): Promise<void> {
   void notice;
+  void excludeWidgetId;
 }
 export async function pinTodayWidget(): Promise<boolean> {
   return false;

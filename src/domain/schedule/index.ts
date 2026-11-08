@@ -6,7 +6,7 @@ import type {
   RoutineLog,
   Schedule,
 } from '../models';
-import { routineOn } from '../routine';
+import { routineOn, routineStartDate } from '../routine';
 import {
   isFlexible,
   matchesCalendar,
@@ -98,8 +98,7 @@ export function routineForEntry(
   const window = scheduleWindow(routine.schedule, date);
   if (
     isFlexible(routine.schedule) &&
-    (!window ||
-      window.start < (original.revisions[0]?.from ?? original.effectiveFrom))
+    (!window || window.start < routineStartDate(original))
   )
     return undefined;
   return routine;
@@ -130,7 +129,7 @@ export function occurrencesForDate(
             }
           : undefined;
       const window = scheduleWindow(routine.schedule, date);
-      const firstDate = original.revisions[0]?.from ?? original.effectiveFrom;
+      const firstDate = routineStartDate(original);
       if (
         !log &&
         isFlexible(routine.schedule) &&
