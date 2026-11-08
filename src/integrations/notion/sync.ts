@@ -1,19 +1,22 @@
+import { syncMasterRoutines } from './master/sync';
+import { importLegacyRoutines } from './master/legacy';
 import type { KeyValueStorage } from '../../data/repositories';
 import { addDays, localDate } from '../../domain/dates';
-import { routineInputSchema, type RoutineLog } from '../../domain/models';
-import { createRoutine, routineOn, updateRoutine } from '../../domain/routine';
+import {
+  routineInputSchema,
+  type Routine,
+  type RoutineLog,
+} from '../../domain/models';
+import { routineOn, routineStartDate } from '../../domain/routine';
 import {
   cellWrite,
   columnName,
-  descriptionFor,
-  inputFromColumn,
   linkedRoutineId,
   newColumn,
   observableStatus,
   supportedColumn,
 } from './descriptions';
 import {
-  equal,
   mergeValue,
   monthLedgerSchema,
   type CellStatus,
@@ -44,23 +47,24 @@ const changedDuringSync = () =>
   new Error(
     'Newer local changes were saved during sync. They have been kept. Sync again.',
   );
-const fieldLabels = {
-  name: 'Name',
-  icon: 'Icon',
-  category: 'Category',
-  active: 'Active',
-  schedule: 'Schedule',
-  target: 'Target',
-  unit: 'Unit',
-  reminderTime: 'Time',
-  note: 'Note',
-  checklist: 'Checklist',
-};
+function projectedColumnName(
+  routine: Routine,
+  table: MonthTable,
+  propertyId?: string,
+): string {
+  const base = columnName(routine);
+  if (
+    !table.columns.some((item) => item.id !== propertyId && item.name === base)
+  )
+    return base;
+  let hash = 2166136261;
+  for (const char of routine.id)
+    hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  return `${base} · ${(hash >>> 0).toString(36)}`;
+}
 
 export class NotionSync {
   private pendingChecklists = new Set<string>();
-  private awaitingRoutineIds = new Set<string>();
-  private blockedRetirement = false;
   constructor(
     private root: string,
     private remote: NotionGateway,
@@ -70,58 +74,57 @@ export class NotionSync {
   ) {}
   async run(choice?: ConflictChoice): Promise<void> {
     this.pendingChecklists.clear();
-    this.awaitingRoutineIds.clear();
-    this.blockedRetirement = false;
     const current = localDate(this.clock()).slice(0, 7);
     const refs = await this.remote.listMonths();
-    const authority = refs
-      .filter((ref) => ref.month <= current)
-      .sort((a, b) => b.month.localeCompare(a.month))[0];
-    // Before rolling over, import the last month's schema once, then freeze that archive.
-    if (authority?.databaseId) await this.month(authority, true, choice);
-    let currentRef = refs.find((ref) => ref.month === current);
-    if (!currentRef?.databaseId)
-      currentRef = await this.remote.createMonth(current);
-    if (currentRef.databaseId !== authority?.databaseId)
-      await this.month(currentRef, true, choice);
+    await syncMasterRoutines(
+      this.root,
+      this.remote,
+      this.local,
+      this.storage,
+      this.clock,
+      () =>
+        importLegacyRoutines(
+          this.root,
+          refs,
+          current,
+          this.remote,
+          this.local,
+          this.storage,
+          this.clock,
+          choice,
+        ),
+      choice,
+    );
+    if (!refs.some((ref) => ref.month === current && ref.databaseId)) {
+      const partial = refs.findIndex((ref) => ref.month === current);
+      if (partial !== -1) refs.splice(partial, 1);
+      refs.push(await this.remote.createMonth(current));
+    }
     const data = this.local.read();
-    const logMonths = new Set([
+    for (const month of new Set([
       ...data.logs.map((log) => log.scheduledFor.slice(0, 7)),
       ...data.notes.map((note) => note.date.slice(0, 7)),
-    ]);
-    for (const month of logMonths) {
-      if (
-        month === current ||
-        refs.some((ref) => ref.month === month && ref.databaseId)
-      )
-        continue;
+    ])) {
+      if (refs.some((ref) => ref.month === month && ref.databaseId)) continue;
       const partial = refs.findIndex((ref) => ref.month === month);
       if (partial !== -1) refs.splice(partial, 1);
       refs.push(await this.remote.createMonth(month));
     }
-    for (const ref of refs.sort((a, b) => b.month.localeCompare(a.month))) {
-      if (
-        !ref.databaseId ||
-        ref.databaseId === currentRef.databaseId ||
-        ref.databaseId === authority?.databaseId
-      )
-        continue;
-      await this.month(ref, false, choice, ref.month > current);
-    }
+    for (const ref of refs
+      .filter((ref) => ref.databaseId)
+      .sort((a, b) => b.month.localeCompare(a.month)))
+      await this.month(ref, current, choice);
     if (this.pendingChecklists.size)
       throw new Error(
-        `Confirm the checklist in the app for: ${[...this.pendingChecklists].slice(0, 3).join(', ')}${this.pendingChecklists.size > 3 ? '…' : ''}. These Notion completions are awaiting confirmation. Other changes have synced.${this.blockedRetirement ? ' For a deleted routine, clear its completion in Notion; its column is kept until then.' : ''}`,
+        `Confirm the checklist in the app for: ${[...this.pendingChecklists].slice(0, 3).join(', ')}${this.pendingChecklists.size > 3 ? '…' : ''}. These Notion completions are awaiting confirmation. Other changes have synced.`,
       );
   }
   private async month(
     ref: MonthRef,
-    manageRoutines: boolean,
+    current: string,
     choice?: ConflictChoice,
-    notesOnly = false,
   ): Promise<void> {
-    const currentMonth = ref.month === localDate(this.clock()).slice(0, 7);
-    const key = ledgerKey(this.root, ref.month);
-    const raw = await this.storage.getItem(key);
+    const raw = await this.storage.getItem(ledgerKey(this.root, ref.month));
     const ledger: MonthLedger = raw
       ? monthLedgerSchema.parse(JSON.parse(raw))
       : {
@@ -135,218 +138,107 @@ export class NotionSync {
       throw new Error(
         `The ${ref.month} table was replaced. Restore the original table before syncing.`,
       );
-    const persist = () => this.storage.setItem(key, JSON.stringify(ledger));
+    const persist = () =>
+      this.storage.setItem(
+        ledgerKey(this.root, ref.month),
+        JSON.stringify(ledger),
+      );
     let table = await this.remote.readMonth({
       ...ref,
       notesPropertyId: ledger.notesPropertyId,
     });
     table = await ensureNotesColumn(table, ledger, this.remote, persist);
-    if (notesOnly) {
-      table = await this.ensureDays(table, ledger, persist);
-      await syncDailyNotes(
-        table,
-        ledger,
-        this.remote,
-        this.local,
-        persist,
-        this.clock,
-        choice,
-      );
-      return;
-    }
-    const knownIds = new Set(table.columns.map((column) => column.id));
-    if (manageRoutines) {
-      for (const binding of ledger.bindings) {
-        if (knownIds.has(binding.propertyId)) continue;
-        const routine = this.local
-          .read()
-          .routines.find((item) => item.id === binding.routineId);
-        if (routine && !routine.deletedAt) {
-          // Removing a known column is an explicit deletion, never "no rows returned".
-          const now = this.clock();
-          const deleted = {
-            ...updateRoutine(routine, { ...routine, active: false }, now),
-            deletedAt: now.toISOString(),
-          };
-          if (!(await this.local.applyRoutine(routine, deleted)))
-            throw changedDuringSync();
-        }
-      }
-    }
+    // Columns are projections, never routine definitions after migration.
     for (const column of table.columns) {
-      let binding = ledger.bindings.find(
+      const binding = ledger.bindings.find(
         (item) => item.propertyId === column.id,
       );
       if (binding && !supportedColumn(column))
         throw new Error(
           `Column “${column.name}” changed type. Restore select, checkbox or text. Your data remains saved.`,
         );
-      if (!supportedColumn(column)) continue;
-      const data = this.local.read();
+      if (!supportedColumn(column) || binding) continue;
       const linkedId = linkedRoutineId(column);
-      const routineId =
-        binding?.routineId ??
-        linkedId ??
-        `notion-${ref.databaseId}-${encodeURIComponent(column.id)}`;
-      let routine = data.routines.find((item) => item.id === routineId);
-      if (!routine)
-        routine = data.routines.find(
+      const routines = this.local.read().routines;
+      const routine =
+        routines.find(
           (item) =>
-            !item.deletedAt &&
-            (columnName(item) === column.name || item.name === column.name),
-        );
-      if (!routine) {
-        const created = createRoutine(
-          inputFromColumn(column),
-          routineId,
-          this.clock(),
-        );
-        if (!manageRoutines) {
-          created.active = false;
-          created.deletedAt = `${addDays(daysInMonth(ref.month).at(-1)!, 1)}T00:00:00.000Z`;
-          created.effectiveFrom = `${ref.month}-01`;
-        }
-        if (!(await this.local.applyRoutine(undefined, created)))
-          throw changedDuringSync();
-        routine = created;
-      }
-      if (manageRoutines && !routine.deletedAt) {
-        const localInput = routineInputSchema.parse(routine);
-        const remoteInput = inputFromColumn(
-          column,
-          binding?.base ?? localInput,
-        );
-        // Merge per field so a renamed column and a locally changed time can both survive.
-        const merged = { ...localInput };
-        for (const field of Object.keys(
-          localInput,
-        ) as (keyof typeof localInput)[]) {
-          // Checklists are local-only; the compact Notion column description cannot hold them.
-          if (field === 'checklist') continue;
-          Object.assign(merged, {
-            [field]: mergeValue(
-              binding?.base[field],
-              localInput[field],
-              remoteInput[field],
-              `${routine.name}: ${fieldLabels[field]}`,
-              choice,
-            ),
-          });
-        }
-        const input = routineInputSchema.parse(merged);
-        if (!equal(input, localInput)) {
-          const updated = updateRoutine(routine, input, this.clock());
-          if (!(await this.local.applyRoutine(routine, updated)))
-            throw changedDuringSync();
-          routine = updated;
-        }
-        if (
-          currentMonth &&
-          (column.name !== columnName(routine) ||
-            column.description !== descriptionFor(routine))
-        ) {
-          const name = columnName(routine);
-          if (
-            table.columns.some(
-              (other) => other.id !== column.id && other.name === name,
+            item.id === linkedId ||
+            item.id ===
+              `notion-${ref.databaseId}-${encodeURIComponent(column.id)}`,
+        ) ??
+        (!linkedId
+          ? routines.find(
+              (item) =>
+                columnName(item) === column.name || item.name === column.name,
             )
-          )
-            throw new Error(
-              `Two routines share the name “${name}”. Give them different names before syncing.`,
-            );
-          table = await this.remote.updateColumns(table, {
-            [column.id]: { name, description: descriptionFor(routine) },
-          });
-        }
-      }
+          : undefined);
+      if (routine)
+        ledger.bindings.push({
+          propertyId: column.id,
+          routineId: routine.id,
+          base: routineInputSchema.parse(routine),
+        });
+    }
+    const end = daysInMonth(ref.month).at(-1)!;
+    const data = this.local.read();
+    for (const routine of data.routines) {
+      let binding = ledger.bindings.find(
+        (item) =>
+          item.routineId === routine.id &&
+          table.columns.some((col) => col.id === item.propertyId),
+      );
+      const hasLogs = data.logs.some(
+        (log) =>
+          log.routineId === routine.id &&
+          log.scheduledFor.startsWith(`${ref.month}-`),
+      );
+      const rangeEnd = routine.endDate ?? '9999-12-31';
+      const retirement = routine.deletedAt?.slice(0, 10) ?? '9999-12-31';
+      const overlaps =
+        routineStartDate(routine) <= end &&
+        rangeEnd >= `${ref.month}-01` &&
+        retirement >= `${ref.month}-01`;
+      // Preserve all existing columns. Add current/future definitions by date range;
+      // add missing historical columns only for actual recorded results.
+      if (!binding && !(hasLogs || (ref.month >= current && overlaps)))
+        continue;
+      const name = projectedColumnName(routine, table, binding?.propertyId);
+      const description = `RoutineLog routine (v2)\nSettings: Routines database\nLink: routinelog://routine-editor?id=${encodeURIComponent(routine.id)}`;
       if (!binding) {
+        // New/recreated empty columns cannot mean a mass undo of local statuses.
+        for (const id of Object.keys(ledger.cells))
+          if (id.startsWith(`${routine.id}:`)) delete ledger.cells[id];
+        await persist();
+        table = await this.remote.updateColumns(table, {
+          [name]: { ...newColumn(routine), description },
+        });
+        const column = table.columns.find(
+          (item) =>
+            linkedRoutineId(item) === routine.id &&
+            !ledger.bindings.some((old) => old.propertyId === item.id),
+        );
+        if (!column)
+          throw new Error(
+            'Could not link the generated monthly column. Try again.',
+          );
         binding = {
           propertyId: column.id,
           routineId: routine.id,
           base: routineInputSchema.parse(routine),
         };
         ledger.bindings.push(binding);
-      } else binding.base = routineInputSchema.parse(routine);
-      await persist();
-    }
-    const data = this.local.read();
-    const deletions: Record<string, unknown> = {};
-    if (manageRoutines && currentMonth) {
-      for (const binding of ledger.bindings) {
-        const routine = data.routines.find(
-          (item) => item.id === binding.routineId,
-        );
-        if (
-          routine?.deletedAt &&
-          table.columns.some((column) => column.id === binding.propertyId)
-        )
-          deletions[binding.propertyId] = null;
+      } else if (ref.month >= current) {
+        const column = table.columns.find(
+          (item) => item.id === binding!.propertyId,
+        )!;
+        if (column.name !== name || column.description !== description)
+          table = await this.remote.updateColumns(table, {
+            [column.id]: { name, description },
+          });
       }
     }
-    if (Object.keys(deletions).length) {
-      // Preserve remote-only completions before dropping retired columns. A separate
-      // delete also frees names for replacement routines with different identities.
-      await this.syncCells(table, ledger, persist, choice);
-      // Do not erase remote-only results that are still waiting for local checklist proof.
-      for (const binding of ledger.bindings) {
-        if (
-          Object.hasOwn(deletions, binding.propertyId) &&
-          this.awaitingRoutineIds.has(binding.routineId)
-        ) {
-          delete deletions[binding.propertyId];
-          this.blockedRetirement = true;
-        }
-      }
-      if (Object.keys(deletions).length)
-        table = await this.remote.updateColumns(table, deletions);
-    }
-    const patches: Record<string, unknown> = {};
-    const existingRoutineIds = new Set(
-      ledger.bindings
-        .filter((binding) =>
-          table.columns.some((column) => column.id === binding.propertyId),
-        )
-        .map((binding) => binding.routineId),
-    );
-    for (const routine of data.routines) {
-      const hasLogs = data.logs.some(
-        (log) =>
-          log.routineId === routine.id &&
-          log.scheduledFor.startsWith(`${ref.month}-`),
-      );
-      if (
-        existingRoutineIds.has(routine.id) ||
-        (manageRoutines && currentMonth ? routine.deletedAt : !hasLogs)
-      )
-        continue;
-      const name = columnName(routine);
-      if (
-        table.columns.some((column) => column.name === name) ||
-        Object.hasOwn(patches, name)
-      )
-        throw new Error(
-          `Two routines share the name “${name}”. Give them different names before syncing.`,
-        );
-      patches[name] = newColumn(routine);
-    }
-    if (Object.keys(patches).length) {
-      table = await this.remote.updateColumns(table, patches);
-      for (const column of table.columns.filter(supportedColumn)) {
-        if (ledger.bindings.some((binding) => binding.propertyId === column.id))
-          continue;
-        const routine = this.local
-          .read()
-          .routines.find((item) => item.id === linkedRoutineId(column));
-        if (!routine)
-          throw new Error('Could not link the new Notion column. Try again.');
-        ledger.bindings.push({
-          propertyId: column.id,
-          routineId: routine.id,
-          base: routineInputSchema.parse(routine),
-        });
-      }
-      await persist();
-    }
+    await persist();
     table = await this.ensureDays(table, ledger, persist);
     await this.syncCells(table, ledger, persist, choice);
     await syncDailyNotes(
@@ -420,7 +312,6 @@ export class NotionSync {
           (routineOn(routine, row.date) ?? routine).checklist?.length
         ) {
           this.pendingChecklists.add(`${routine.name} · ${row.date}`);
-          this.awaitingRoutineIds.add(routine.id);
           continue;
         }
         if (merged !== remoteStatus)
@@ -444,8 +335,12 @@ export class NotionSync {
                     source: 'notion',
                     createdAt: existing?.createdAt ?? now,
                     updatedAt: now,
-                    routineName: routine.name,
-                    routineIcon: routine.icon,
+                    routineName:
+                      existing?.routineName ??
+                      (routineOn(routine, row.date) ?? routine).name,
+                    routineIcon:
+                      existing?.routineIcon ??
+                      (routineOn(routine, row.date) ?? routine).icon,
                   },
           });
         }

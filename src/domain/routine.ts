@@ -11,7 +11,10 @@ export function createRoutine(
     id,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
-    effectiveFrom: localDate(now),
+    effectiveFrom:
+      input.startDate && input.startDate < localDate(now)
+        ? input.startDate
+        : localDate(now),
     deletedAt: null,
     sortOrder: now.getTime(),
     revisions: [],
@@ -43,12 +46,24 @@ export function updateRoutine(
     updatedAt: now.toISOString(),
   };
 }
+// Legacy records have no explicit range; their first schedule revision is the start.
+export const routineStartDate = (routine: Routine): string =>
+  routine.startDate ?? routine.revisions[0]?.from ?? routine.effectiveFrom;
+export function inRoutineRange(routine: Routine, date: string): boolean {
+  return (
+    date >= routineStartDate(routine) &&
+    (!routine.endDate || date <= routine.endDate)
+  );
+}
 export function routineOn(routine: Routine, date: string): Routine | undefined {
+  if (!inRoutineRange(routine, date)) return undefined;
   if (date >= routine.effectiveFrom) return routine;
   const revision = routine.revisions.find(
     (item) => date >= item.from && date < item.until,
   );
   return revision
     ? { ...routine, ...revision.data, checklist: revision.data.checklist }
-    : undefined;
+    : routine.startDate && date >= routine.startDate
+      ? routine
+      : undefined;
 }

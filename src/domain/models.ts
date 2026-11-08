@@ -91,22 +91,30 @@ export const checklistResultSchema = checklistItemSchema.extend({
   checked: z.boolean(),
 });
 export type ChecklistResult = z.infer<typeof checklistResultSchema>;
-export const routineInputSchema = z.object({
-  name: z.string().trim().min(1, 'Enter a routine name.').max(100),
-  icon: z.string().trim().min(1).max(16),
-  category: z.enum(categories),
-  active: z.boolean(),
-  schedule: scheduleSchema,
-  target: z.number().positive().nullable(),
-  unit: z.string().max(30).nullable(),
-  reminderTime: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter the time as HH:MM.'),
-  note: z.string().max(1000),
-  checklist: checklistSchema.optional(),
-});
+export const routineInputSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Enter a routine name.').max(100),
+    icon: z.string().trim().min(1).max(16),
+    category: z.enum(categories),
+    active: z.boolean(),
+    schedule: scheduleSchema,
+    target: z.number().positive().nullable(),
+    unit: z.string().max(30).nullable(),
+    reminderTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter the time as HH:MM.'),
+    note: z.string().max(1000),
+    checklist: checklistSchema.optional(),
+    startDate: dateSchema.optional(),
+    endDate: dateSchema.nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      !value.startDate || !value.endDate || value.endDate >= value.startDate,
+    { message: 'End date must be on or after Start date.', path: ['endDate'] },
+  );
 export type RoutineInput = z.infer<typeof routineInputSchema>;
-export const routineSchema = routineInputSchema.extend({
+export const routineSchema = routineInputSchema.safeExtend({
   id: z.string(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),

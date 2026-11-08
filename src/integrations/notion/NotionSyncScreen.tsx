@@ -25,15 +25,15 @@ export function NotionSyncScreen() {
   return (
     <Screen
       title="Notion"
-      subtitle="Your routines and daily notes, on your phone and in monthly tables"
+      subtitle="One routine list, monthly results and daily notes"
       action={<Button label="Back" compact onPress={() => router.back()} />}
     >
       <View style={common.card}>
-        <Text style={common.heading}>One month, one table</Text>
+        <Text style={common.heading}>Routines + monthly tables</Text>
         <Text style={common.subtitle}>
-          Days are rows and routines are columns. Add, rename or remove a column
-          in the current month to update the app. Changes on your phone sync
-          back to Notion.
+          Manage definitions in the Routines database: one row per routine, with
+          frequency, start/end dates, description and checklist. Edit here or in
+          the app; changes sync both ways.
         </Text>
         <Text style={common.subtitle}>
           The Notes text column holds one daily note per row. Notes sync both
@@ -154,10 +154,10 @@ export function NotionSyncScreen() {
           not run in the system background.
         </Text>
         <Text style={common.subtitle}>
-          Routine settings are in the column description. Existing Notion fields
-          and status names stay compatible: Kategoria, Godzina, Plan, Aktywna;
-          Wykonane (done), Pominięte (skipped), Niewykonane (not done). A new
-          column defaults to a daily routine.
+          Monthly tables have days as rows and generated routine columns. New
+          routines appear in the current month when their date range overlaps
+          it. Column names follow the master list; adding a monthly column does
+          not create a routine. Checklist uses one step per line in Routines.
         </Text>
         <Text style={common.subtitle}>
           Select columns support all statuses; clearing a cell undoes its
@@ -165,15 +165,18 @@ export function NotionSyncScreen() {
           remain in the app.
         </Text>
         <Text style={common.subtitle}>
-          Previous months keep their columns. Archived status changes still
-          sync. Removing a column in the current month removes the routine from
-          your plan while keeping its history.
+          Previous months keep their columns and still sync results and notes.
+          Removing a monthly column never deletes a routine; applicable columns
+          are restored. Use Archived in Routines to retire a routine while
+          keeping its history. Active pauses or resumes it. Keep Routine ID
+          unchanged.
         </Text>
         <Text style={common.small}>
-          Notion can restore routine settings and statuses on a new phone. Exact
-          completion times, checklist confirmations, log notes, values and
-          historical schedule versions remain local. Imported completion times
-          refer to the last edit of the Notion row.
+          Existing data migrates automatically on first sync. Notion can restore
+          routine definitions, checklists, date ranges, statuses and daily
+          notes. Exact completion times, checklist confirmations, log values and
+          historical schedule versions remain local. Completing a routine with a
+          checklist in Notion still requires step confirmation in the app.
         </Text>
       </View>
     </Screen>

@@ -1,3 +1,5 @@
+import { HttpMasterGateway } from './master/gateway';
+import type { MasterTable, MasterValue } from './master/models';
 import { z } from 'zod';
 import { dateSchema } from '../../domain/models';
 import { statusFromText, supportedColumn } from './descriptions';
@@ -59,6 +61,28 @@ export class HttpNotionGateway implements NotionGateway {
     private client: NotionClient,
     private rootPageId: string,
   ) {}
+  readRoutines() {
+    return new HttpMasterGateway(this.client, this.rootPageId).readRoutines();
+  }
+  writeRoutine(
+    table: MasterTable,
+    routineId: string,
+    value: MasterValue,
+    pageId?: string,
+  ) {
+    return new HttpMasterGateway(this.client, this.rootPageId).writeRoutine(
+      table,
+      routineId,
+      value,
+      pageId,
+    );
+  }
+  finishRoutineMigration(table: MasterTable) {
+    return new HttpMasterGateway(
+      this.client,
+      this.rootPageId,
+    ).finishRoutineMigration(table);
+  }
   async listMonths(): Promise<MonthRef[]> {
     // A failed/partial listing throws; it must never look like deleted columns.
     await this.client.call(`pages/${this.rootPageId}`);

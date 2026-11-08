@@ -199,42 +199,54 @@ zaszytego w aplikacji. Wersja web nie zapisuje tokenów i nie wykonuje połącze
 do Notion; dostępny jest ekran informacyjny. Dla aplikacji udostępnianej wielu
 użytkownikom należy zastąpić osobisty PAT publiczną integracją OAuth z backendem.
 
-- Dodanie kolumny w bieżącym miesiącu tworzy rutynę (domyślnie codzienną o 08:00).
-  Nazwa może zaczynać się od emoji. Zmiana nazwy zachowuje tożsamość rutyny, bo
-  połączenie używa stabilnego ID kolumny, a nie samej nazwy.
-- Opis kolumny zawiera notatkę oraz czytelne pola `Kategoria`, `Godzina`, `Plan`,
-  `Aktywna`, `Cel`, `Jednostka` i link otwierający rutynę w aplikacji. Plany:
-  `codziennie`, `dni 1,3,5` (Pn=1), `3x/tydzień`, `co 7 dni od 2026-11-01`.
-  Dodatkowo: `miesiąc 15,ostatni elastycznie`, `tygodnie ostatni dni 1 elastycznie`,
-  `rok 29.2,2.11` i `4x/miesiąc`. Flaga `elastycznie` jest zachowywana w obie strony.
-  Pól i linku nie trzeba ręcznie dodawać: synchronizacja je uzupełnia.
-  API Notion ogranicza opis kolumny do 280 znaków łącznie z ustawieniami.
-  Zbyt długi opis jest zgłaszany przed wysłaniem żądania; notatki nie są automatycznie
-  obcinane ani usuwane. Przy zapisie opisu adapter podaje istniejący typ kolumny
-  z pustymi ustawieniami, co zachowuje opcje select i zapisane wartości.
-- Select ma opcje `Wykonane`, `Pominięte`, `Niewykonane`; puste pole cofa oznaczenie.
-  Tekst akceptuje też `x`, `✓`, `done`, `skip`, `missed`. Nieznane wartości zatrzymują
-  synchronizację zamiast być traktowane jako cofnięcie. Checkbox przenosi done/undo;
-  pominięcia pozostają lokalne, dopóki kolumna jest checkboxem.
-- Usunięcie znanej kolumny w bieżącym miesiącu miękko usuwa rutynę z planu.
-  Usunięcie rutyny w aplikacji usuwa jej kolumnę tylko z bieżącego miesiąca.
-  Starsze tabele i zapisane logi pozostają archiwum. Zmiana statusu w archiwum
-  nadal działa w obie strony. Brak wiersza dnia zostaje naprawiony z lokalnych wpisów.
-  Przed usunięciem kolumn silnik najpierw uzgadnia ich wpisy, aby zachować również
-  wykonania istniejące tylko w Notion. Usunięcia są osobnym żądaniem, co pozwala
-  zastąpić rutynę nową o tej samej nazwie, zachowując odrębne historie.
-- Nowy miesiąc powstaje przy pierwszej synchronizacji w tym miesiącu. Przy przejściu
-  silnik najpierw odczytuje ostatnią tabelę, a potem tworzy nową bez zmiany archiwum.
-  Edycje nazw/ustawień w starszych miesiącach nie zmieniają już bieżących rutyn.
-- Lokalny, walidowany ledger porównuje bazową, lokalną i zdalną wersję każdego
-  pola/statusu. Pozwala przenieść cofnięcie także po pracy offline i restarcie.
-  Równoległe zmiany różnych pól są łączone; rozbieżność tego samego pola wymaga
-  wyboru **Zachowaj wersję z aplikacji / z Notion** na ekranie połączenia.
-  Usunięcie znanej kolumny wygrywa ze zmianą jej ustawień w telefonie.
-- Błędy sieci, brak uprawnień, niepełna paginacja i nieznane typy danych nie są
-  interpretowane jako usunięcie. Zapisy do API nie są automatycznie ponawiane po
-  niejednoznacznym błędzie: kolejna synchronizacja najpierw odczytuje stan Notion.
-  Lokalne edycje podczas żądania sieciowego chroni compare-and-save w store.
+### Master Routines database (v2)
+
+`RoutineLog → Routines` is now the definition registry: one row per routine.
+Monthly tables are projections for daily results and notes, not definition editors.
+
+| Property               | Meaning                                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Name / Icon / Category | Routine identity and category; categories use English labels.                                                                                                                                                                  |
+| Frequency              | Readable schedule, e.g. `Every day`, `Weekly days: Mon, Wed`, `3x/week`, `Every 7 days from 2026-11-01`, `Monthly days: 15, last; flexible`, `Monthly weeks: last; weekdays: Mon; flexible`, `Yearly dates: 29.2`, `4x/month`. |
+| Start date / End date  | Inclusive local dates; blank end means ongoing. A blank start is filled from the existing app routine or the Notion row's creation date. Both fields are editable in the app.                                                  |
+| Time / Description     | HH:MM, full routine description (up to 1,000 characters).                                                                                                                                                                      |
+| Checklist              | One step per line, up to 30 steps of 200 characters. Existing step IDs are preserved when the text matches; literal backslashes and line breaks within a step use `\\` and `\n`.                                               |
+| Active / Archived      | Active pauses/resumes; Archived retires without erasing results. Deleted master rows are restored as archived tombstones on the next sync, protecting other devices.                                                           |
+| Routine ID             | Stable link to local definitions and monthly columns. Do not edit it. New rows receive an ID automatically.                                                                                                                    |
+| Target / Unit          | Optional numeric target and unit.                                                                                                                                                                                              |
+
+- On first sync, a resumable migration imports existing month definitions and
+  local-only routines into the registry. Local checklists and full descriptions
+  are preserved. Existing monthly status cells and daily notes stay in place.
+  The shared `Migration: complete` marker prevents later devices from importing
+  stale monthly settings back over master definitions.
+- Master definitions merge field by field using a separate durable v2 ledger.
+  Different fields merge automatically; simultaneous conflicting edits ask for
+  the app or Notion version. Local edits made during a network request are kept.
+  Incomplete pages, invalid schemas, changed IDs and replaced databases stop sync
+  rather than being interpreted as deletions. Ambiguous creates are read back on
+  the next pass instead of being retried blindly.
+- New routines are projected into the current/existing future months whose date
+  ranges overlap. They are added to an already-created current month too. Months
+  are created on first sync in that month, or when needed for recorded logs/notes.
+  Historical missing columns are added only to preserve actual recorded results.
+  Past column names remain snapshots; current/future names follow the registry.
+- Adding/renaming a monthly column no longer creates/renames a routine. Removing
+  a monthly column never deletes its routine. Applicable missing columns are
+  recreated; their empty cells do not undo existing app results. Retiring a
+  routine keeps its existing monthly columns and history. Same-name replacements
+  receive distinct columns and never inherit the retired routine's results.
+- Monthly columns contain only a short definition link, avoiding Notion's
+  280-character column-description limit. Full descriptions and checklists live
+  in master row properties. Legacy descriptions remain readable for migration.
+- Statuses remain `Wykonane`, `Pominięte`, `Niewykonane` for compatibility; empty
+  cells undo. Text cells also accept `done`, `skip`, `missed`, `x`, `✓`. Checkbox
+  columns transfer done/undo only. A Notion completion with a required checklist
+  still waits for step confirmation in the app; definition sync never fabricates
+  checklist proof.
+- Daily notes retain their independent v1 month ledger, clear tombstones,
+  three-way conflicts and draft protection. There is no backend or new token.
+
 - Synchronizacja działa po otwarciu, po lokalnym zapisie i co minutę na pierwszym
   planie. Po zamknięciu procesu nie działa. Ręczny przycisk ponawia ją po błędzie.
   Nie jest to mechanizm powiadomień ani działanie w tle Androida.
@@ -404,8 +416,8 @@ API contracts: [Notion request limits](https://developers.notion.com/reference/r
 Version 1.2.0 (Android versionCode 3) adds a native, resizable RoutineLog Today widget using `react-native-android-widget` 0.26.0 on the existing Expo SDK 57. Expo’s SDK 57 `expo-widgets` API is iOS-only, so upgrading the SDK is not needed for this feature. No handwritten Android application code is maintained.
 
 - Install the new preview APK over the current app to preserve local data. In Today, tap **Add home-screen widget** and accept the launcher prompt. Alternatively, long-press the Android home screen → Widgets → RoutineLog Today.
-- The widget uses a light rounded panel, a Today heading with date arrows, category-coloured bars, simple dividers and circular status controls. Rows scroll and the widget can be resized. Tap today's routine row or circle to cycle done → not done → skipped → unchecked. Other app screens keep their dark theme.
-- The compact panel uses a 44dp header, 48dp rows, 14sp routine names and 24dp status circles. It fits its content instead of drawing empty white space below a short list. The entire row remains tappable. Android owns the allocated home-screen grid area; long-press and resize the widget to reclaim unused grid space. Extra routines scroll when the available height is filled.
+- The widget uses a light rounded panel, a Today heading with date arrows, category-coloured bars, simple dividers and circular status controls. Rows scroll and the widget can be resized. Tap today's status circle to cycle done → not done → skipped → unchecked. Tap the routine name to open its focused details in the app. The daily note preview opens the focused editor. Other app screens keep their dark theme.
+- The compact panel uses a 44dp header, 48dp rows, 14sp routine names and 24dp status circles. The light panel fills the entire launcher allocation regardless of the selected day. The notice slot and list position stay fixed across dates; extra routines scroll. Day navigation redraws only the clicked instance once, rather than immediately rebuilding all widgets twice. Background store changes do not trigger a redundant app-observer refresh. Status changes refresh other instances without redrawing the clicked one again. Android still owns collection rendering; this reduces refresh flicker without native library changes.
 - The arrows browse previous/next days. Past/future days are read-only; tap the heading to return to Today and refresh. Each widget stores its own selected date separately from routine/log data and returns to Today after local midnight. Stale or duplicate arrow taps do not skip dates.
 - Routine definitions, logs and writes use the existing repository/store. The library’s background task shares the app’s React host; writes respect the store’s save guard. Background widget writes stay local and sync to Notion when the app next opens.
 - Required checklists open a confirmation sheet in the app. The background task cannot complete them without proof. Widget deep links only open this confirmation; they do not mark a routine complete by themselves.

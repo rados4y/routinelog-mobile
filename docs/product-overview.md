@@ -8,17 +8,19 @@ Use the section IDs below when requesting changes. Captures show the current web
 
 ## 01 · Screen map & shared rules
 
-| Name / ID                                       | Purpose                                          |
-| ----------------------------------------------- | ------------------------------------------------ |
-| Today · T                                       | Selected day's routines and editable daily note. |
-| Routines · R                                    | All routines, recent results, management.        |
-| Notes · N                                       | Daily notes by date, search and editing.         |
-| Insights · I                                    | Overall activity and consistency.                |
-| Routine editor · E / Frequency · F              | Create/edit identity, schedule and checklist.    |
-| Routine calendar · C / Completion checklist · K | Record a dated result / confirm every step.      |
-| Notion · S / Android widget · W                 | Synchronization / home-screen quick actions.     |
+| Name / ID                                       | Purpose                                                   |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| Today · T                                       | Selected day's routines and editable daily note.          |
+| Routines · R                                    | All routines, recent results, management.                 |
+| Notes · N                                       | Daily notes by date, search and editing.                  |
+| Insights · I                                    | Overall activity and consistency.                         |
+| Routine editor · E / Frequency · F              | Create/edit identity, schedule, date range and checklist. |
+| Routine calendar · C / Completion checklist · K | Record a dated result / confirm every step.               |
+| Notion · S / Android widget · W                 | Synchronization / home-screen quick actions.              |
 
 **Shared logic:** unchecked → done → not done → skipped → unchecked. Future routine results are blocked. Unchecked past deadlines can still count as missed; open flexible targets do not create daily failures. Changes save locally first; Notion sync needs a connection. Routine descriptions and daily notes are separate.
+
+**Current behavior:** Notion now uses a master Routines database and the widget includes daily notes; screenshots below predate those changes.
 
 **Capture guide:** Web-rendered screens with sample data; Android may differ slightly. Widget is a schematic.
 
@@ -84,7 +86,7 @@ Use the section IDs below when requesting changes. Captures show the current web
 | K1 · Step list          | Check every step; shows checked/total progress.                                                |
 | K2 · Completion actions | Confirm completion unlocks only after all steps. Not done, Skip and Cancel are also available. |
 
-**Logic:** the general date picker selects dates only; the routine calendar edits results. Future results are blocked. Canceling a checklist leaves the result unchanged; each new completion starts fresh. Checklist confirmations stay local, outside Notion sync.
+**Logic:** the general date picker selects dates only; the routine calendar edits results. Future results are blocked. Canceling a checklist leaves the result unchanged; each new completion starts fresh. Checklist definitions sync with Notion; completion confirmations stay local.
 
 ## 06 · Notes
 
@@ -119,12 +121,12 @@ Use the section IDs below when requesting changes. Captures show the current web
 
 | Section                | What it does                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| S1 · Monthly tables    | Days = rows; routines = columns; Notes = daily text. Routine settings live in column descriptions.                 |
+| S1 · Monthly tables    | Days = rows; generated routines = columns; Notes = daily text. Master Routines holds definitions.                  |
 | S2 · Connection & sync | Connect/disconnect, last sync, Sync now, errors and conflict choices.                                              |
-| S3 · Sync behavior     | Two-way routine settings/results and daily notes; current-month column additions/renames/removals update routines. |
+| S3 · Sync behavior     | Two-way master definitions, checklists, ranges, results and daily notes; monthly columns never delete definitions. |
 | W1 · Header            | Light home-screen widget: date title, previous/next day; title returns to today.                                   |
 | W2 · Routine rows      | Compact names, category stripes and status circles; today's taps cycle results.                                    |
 
-**Logic:** Notion sync runs on app open, after saves and every minute while open; offline data stays local. Conflicts ask which version to keep. Widget browsing outside today is read-only; checklist routines open the app for confirmation. Widget needs the installed Android APK; it does not display daily notes.
+**Logic:** Notion sync runs on app open, after saves and every minute while open; offline data stays local. Conflicts ask which version to keep. Widget browsing outside today is read-only; checklist routines open the app for confirmation. Widget needs the installed Android APK; it displays the selected day’s note. Names open routine details, status circles cycle directly, and notes open editing. The panel fills its full allocated height.
 
 **Examples:** “Today · T3: show time under the name.” / “Notes · N3: group by month.” / “Widget · W2: hide completed routines.”

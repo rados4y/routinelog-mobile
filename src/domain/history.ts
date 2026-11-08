@@ -1,6 +1,6 @@
 import { addDays, localDate } from './dates';
 import type { Routine, RoutineLog } from './models';
-import { routineOn } from './routine';
+import { routineOn, routineStartDate } from './routine';
 import { occurrencesForDate } from './schedule';
 import {
   isFlexible,
@@ -44,7 +44,7 @@ export function historyForRange(
       if (
         window &&
         isFlexible(routine.schedule) &&
-        window.start < (original.revisions[0]?.from ?? original.effectiveFrom)
+        window.start < routineStartDate(original)
       )
         continue;
       if (
