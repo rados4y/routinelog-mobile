@@ -14,6 +14,7 @@ export interface MonthRef {
   month: string;
   pageId: string;
   databaseId: string;
+  notesPropertyId?: string;
 }
 export interface MonthTable extends MonthRef {
   dataSourceId: string;
@@ -23,6 +24,7 @@ export interface MonthTable extends MonthRef {
     date: string;
     editedAt: string;
     cells: Record<string, CellStatus>;
+    note?: string;
   }[];
 }
 export interface NotionGateway {
@@ -46,6 +48,8 @@ export const monthLedgerSchema = z.object({
   databaseId: z.string(),
   bindings: z.array(bindingSchema),
   cells: z.record(z.string(), z.enum(['pending', 'done', 'skipped', 'missed'])),
+  notesPropertyId: z.string().optional(),
+  notes: z.record(z.string(), z.string()).default({}),
 });
 export type MonthLedger = z.infer<typeof monthLedgerSchema>;
 export const equal = (a: unknown, b: unknown) =>

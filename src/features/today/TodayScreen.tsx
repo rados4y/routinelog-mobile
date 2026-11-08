@@ -13,6 +13,7 @@ import { DateSelector } from './DateSelector';
 import { OccurrenceCard } from './OccurrenceCard';
 import { WidgetButton } from '../../widgets/WidgetButton';
 import { NotionButton } from '../../integrations/notion/NotionButton';
+import { DailyNoteEditor } from '../notes/DailyNoteEditor';
 
 export function TodayScreen() {
   const now = useNow();
@@ -88,6 +89,7 @@ export function TodayScreen() {
             description="Tap + to add a routine, or change the date and filters."
           />
         )}
+        <DailyNoteEditor key={selected} date={selected} />
       </HabitScreen>
       {calendar && (
         <CalendarSheet

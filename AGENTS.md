@@ -20,6 +20,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Brak EXPO_TOKEN nie może psuć zwykłego CI. Po dodaniu tokenu uruchom Link Expo project.
 - Nigdy nie wypisuj ani nie commituj sekretów. EXPO_TOKEN tylko GitHub/EAS/zarządzane środowisko.
 - Czysta domena w src/domain; UI nie używa AsyncStorage bezpośrednio.
+- Dzienne notatki są osobnymi rekordami po dacie. Zachowuj puste rekordy jako tombstone, kolejkę zapisów i niezapisane drafty. Kolumna Notion z markerem RoutineLog daily notes (v1) nie jest rutyną; scalaj notatki trójstronnie i nigdy nie nadpisuj edytowanego draftu z synchronizacji.
 - Zachowuj historię, lokalne daty i rozróżnienie pending/overdue/missed.
 - Cele elastyczne rozliczaj po zamknięciu okna tygodniowego.
 - Testuj logikę i istotne przepływy; bez testów kopiujących JSX i zbędnych snapshotów.

@@ -106,7 +106,7 @@ test('checklists require every step, cancel safely, persist and protect every co
   await expect(row.getByRole('checkbox')).toBeChecked();
   await page.reload();
   await expect(row.getByRole('checkbox')).toBeChecked();
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.goto('/history');
   const history = page
     .locator('[data-testid^="history-entry-"]')
     .filter({ hasText: 'Wieczorne kroki' });
@@ -155,7 +155,7 @@ test('checklists require every step, cancel safely, persist and protect every co
     .getByRole('button', { name: 'Remove step 2', exact: true })
     .click();
   await page.getByRole('button', { name: 'Save routine', exact: true }).click();
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.goto('/history');
   await history.getByRole('button', { name: /^History details:/ }).click();
   await expect(page.getByText('✓ Rozciąganie', { exact: true })).toBeVisible();
   await expect(page.getByText('✓ Oddech', { exact: true })).toBeVisible();

@@ -5,6 +5,7 @@ import { colors, common } from '../theme';
 import { Button } from './Button';
 import { WidgetAutoRefresh } from '../widgets/WidgetAutoRefresh';
 import { AutoSync } from '../integrations/notion/AutoSync';
+import { AutoSaveNotes } from '../features/notes/AutoSaveNotes';
 
 export function AppGate({ children }: { children: ReactNode }) {
   const ready = useRoutines((s) => s.ready);
@@ -36,6 +37,7 @@ export function AppGate({ children }: { children: ReactNode }) {
   return (
     <View style={styles.root}>
       <AutoSync />
+      <AutoSaveNotes />
       <WidgetAutoRefresh />
       {children}
       {error && (

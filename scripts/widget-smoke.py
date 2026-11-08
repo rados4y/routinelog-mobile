@@ -16,12 +16,25 @@ def adb(*args):
 
 
 def screen(name):
-    adb('shell', 'uiautomator', 'dump', '/sdcard/widget-screen.xml')
-    xml = adb('shell', 'cat', '/sdcard/widget-screen.xml')
+    # A cold React host can briefly have no accessibility root. Use a fresh
+    # path and bounded retries so an old dump cannot masquerade as the new UI.
+    for attempt in range(5):
+        path = '/sdcard/widget-screen-' + str(time.monotonic_ns()) + '.xml'
+        try:
+            adb('shell', 'uiautomator', 'dump', path)
+            xml = adb('shell', 'cat', path)
+            root = ET.fromstring(xml)
+            if not list(root.iter('node')):
+                raise ValueError('Accessibility window is not ready.')
+            break
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError, ValueError):
+            if attempt == 4:
+                raise
+            time.sleep(1)
     (results / (name + '.xml')).write_text(xml)
     with (results / (name + '.png')).open('wb') as image:
         subprocess.run(['adb', 'exec-out', 'screencap', '-p'], stdout=image, check=True, timeout=30)
-    return ET.fromstring(xml)
+    return root
 
 
 def tap(node):
@@ -43,8 +56,18 @@ def wait_label(label, name):
     raise RuntimeError('Launcher did not display: ' + label)
 
 
+def wait_text(text, name):
+    for _ in range(10):
+        time.sleep(2)
+        root = screen(name)
+        if any(text in node.attrib.get('text', '') for node in root.iter('node')):
+            return root
+    raise RuntimeError('App did not display: ' + text)
+
+
 try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
+    adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
     adb('logcat', '-c')
     adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
     # A released APK may have a compatible OTA newer than its embedded bundle.
@@ -61,6 +84,38 @@ try:
             break
     if button is None:
         raise RuntimeError('The app did not display the widget action.')
+    # Exercise inline daily notes and durable navigation on the real Android UI.
+    date = adb('shell', 'date', '+%F').strip()
+    editor = None
+    for _ in range(4):
+        root = screen('daily-notes-editor')
+        editor = find_label(root, 'Daily note for ' + date)
+        if editor is not None:
+            break
+        adb('shell', 'input', 'swipe', '200', '650', '200', '300', '300')
+    if editor is None:
+        raise RuntimeError('Inline daily-note editor is missing below routines.')
+    tap(editor)
+    adb('shell', 'input', 'text', 'Native%sdaily%snote')
+    time.sleep(2)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root = wait_text('Saved on device', 'daily-notes-saved')
+    notes_tab = find_label(root, 'Notes')
+    if notes_tab is None:
+        raise RuntimeError('Notes tab is missing.')
+    tap(notes_tab)
+    wait_text('Native daily note', 'daily-notes-list')
+    adb('shell', 'am', 'force-stop', package)
+    adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
+    root, notes_tab = wait_label('Notes', 'daily-notes-restart')
+    tap(notes_tab)
+    root = wait_text('Native daily note', 'daily-notes-persisted')
+    today_tab = find_label(root, 'Today')
+    if today_tab is None:
+        raise RuntimeError('Today tab is missing.')
+    tap(today_tab)
+    root, button = wait_label('Add home-screen widget', 'app')
+    print('Native daily note saved inline, appeared in Notes and survived process restart.')
     tap(button)
     time.sleep(3)
     root = screen('pin-dialog')

@@ -25,7 +25,7 @@ export function NotionSyncScreen() {
   return (
     <Screen
       title="Notion"
-      subtitle="Your routines, on your phone and in monthly tables"
+      subtitle="Your routines and daily notes, on your phone and in monthly tables"
       action={<Button label="Back" compact onPress={() => router.back()} />}
     >
       <View style={common.card}>
@@ -34,6 +34,11 @@ export function NotionSyncScreen() {
           Days are rows and routines are columns. Add, rename or remove a column
           in the current month to update the app. Changes on your phone sync
           back to Notion.
+        </Text>
+        <Text style={common.subtitle}>
+          The Notes text column holds one daily note per row. Notes sync both
+          ways, including cleared text. Keep this column as Text; renaming it is
+          supported. Conflicting edits ask which version to keep.
         </Text>
         <Button
           label="Open RoutineLog in Notion"

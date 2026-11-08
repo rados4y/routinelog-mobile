@@ -7,7 +7,7 @@ import { colors } from '../../src/theme';
 const tabs: { name: string; title: string; icon: IconName }[] = [
   { name: 'index', title: 'Today', icon: 'today' },
   { name: 'routines', title: 'Routines', icon: 'routines' },
-  { name: 'history', title: 'History', icon: 'history' },
+  { name: 'notes', title: 'Notes', icon: 'notes' },
   { name: 'insights', title: 'Insights', icon: 'insights' },
 ];
 export default function TabsLayout() {
@@ -53,6 +53,7 @@ export default function TabsLayout() {
           }}
         />
       ))}
+      <Tabs.Screen name="history" options={{ href: null, title: 'History' }} />
     </Tabs>
   );
 }

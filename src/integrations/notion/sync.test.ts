@@ -11,6 +11,7 @@ import {
   inputFromColumn,
   newColumn,
   statusFromText,
+  supportedColumn,
 } from './descriptions';
 import {
   SyncConflictError,
@@ -19,10 +20,13 @@ import {
   type NotionGateway,
 } from './models';
 import { daysInMonth, NotionSync } from './sync';
+import { isNotesColumn, noteWrite } from './dailyNotes';
+import { maxNoteLength } from '../../domain/note';
 
 class FakeNotion implements NotionGateway {
   tables: MonthTable[];
   writes = 0;
+  private columnSequence = 0;
   constructor() {
     const r = routine();
     this.tables = [
@@ -97,15 +101,16 @@ class FakeNotion implements NotionGateway {
         name?: string;
         description: string;
         select?: unknown;
+        rich_text?: unknown;
       };
       if (column) Object.assign(column, patch);
       else {
-        const id = `new-${table.columns.length}`;
+        const id = `new-${++this.columnSequence}`;
         table.columns.push({
           id,
           name: key,
           description: patch.description,
-          type: 'select',
+          type: patch.rich_text ? 'rich_text' : 'select',
         });
         table.rows.forEach((row) => {
           row.cells[id] = 'pending';
@@ -123,9 +128,7 @@ class FakeNotion implements NotionGateway {
       date,
       editedAt: `${monday}T10:00:00Z`,
       cells: Object.fromEntries(
-        table.columns
-          .filter((col) => !['title', 'date'].includes(col.type))
-          .map((col) => [col.id, 'pending']),
+        table.columns.filter(supportedColumn).map((col) => [col.id, 'pending']),
       ),
     });
   }
@@ -138,7 +141,12 @@ class FakeNotion implements NotionGateway {
       const value = raw as {
         select?: { name: string } | null;
         checkbox?: boolean;
+        rich_text?: { text: { content: string } }[];
       };
+      if (value.rich_text) {
+        row.note = value.rich_text.map((part) => part.text.content).join('');
+        continue;
+      }
       row.cells[key] =
         value.checkbox === undefined
           ? statusFromText(value.select?.name ?? '')
@@ -167,6 +175,7 @@ async function setup() {
       remote,
       {
         read: () => store.getState(),
+        applyNote: (...args) => store.getState().applySyncedNote(...args),
         applyRoutine: (...args) => store.getState().applySyncedRoutine(...args),
         applyLog: (...args) => store.getState().applySyncedLog(...args),
       },
@@ -184,6 +193,134 @@ async function setup() {
     },
   };
 }
+
+describe('daily note synchronization', () => {
+  it('treats the literal text pending as note content and retains an explicit first-sync clear', async () => {
+    const { store, remote, sync, storage } = await setup();
+    await sync().run();
+    await storage.removeItem('@routinelog/notion/v1/root/2026-10');
+    await store.getState().saveNote(monday, 'pending');
+    remote.day.note = 'Remote journal';
+    await expect(sync().run()).rejects.toThrow(SyncConflictError);
+    expect(store.getState().notes[0]?.content).toBe('pending');
+    await store.getState().saveNote(monday, '');
+    await expect(sync().run()).rejects.toThrow(SyncConflictError);
+    expect(remote.day.note).toBe('Remote journal');
+    await sync().run('app');
+    expect(remote.day.note).toBe('');
+  });
+  it('syncs multiline notes both ways without creating a routine for the Notes column', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().saveNote(monday, 'First line\nSecond 💛');
+    await sync().run();
+    expect(remote.day.note).toBe('First line\nSecond 💛');
+    expect(remote.table.columns.filter(isNotesColumn)).toHaveLength(1);
+    expect(store.getState().routines).toHaveLength(1);
+    remote.day.note = 'Edited in Notion';
+    await sync().run();
+    expect(store.getState().notes[0]).toMatchObject({
+      date: monday,
+      content: 'Edited in Notion',
+      source: 'notion',
+    });
+    remote.table.columns.find(isNotesColumn)!.name = 'My journal';
+    await store.getState().saveNote(monday, 'Updated on phone');
+    await sync().run();
+    expect(remote.day.note).toBe('Updated on phone');
+    expect(remote.table.columns.filter(isNotesColumn)).toHaveLength(1);
+  });
+  it('propagates clearing in either direction and retains the empty local record after reload', async () => {
+    const { store, repos, remote, sync } = await setup();
+    await store.getState().saveNote(monday, 'Clear me');
+    await sync().run();
+    await store.getState().saveNote(monday, '');
+    await sync().run();
+    expect(remote.day.note).toBe('');
+    await store.getState().saveNote(monday, 'Again');
+    await sync().run();
+    remote.day.note = '';
+    await sync().run();
+    const reload = createRoutineStore(repos);
+    await reload.getState().load();
+    expect(
+      reload.getState().notes.find((note) => note.date === monday)?.content,
+    ).toBe('');
+    await sync().run();
+    expect(remote.day.note).toBe('');
+  });
+  it('surfaces simultaneous edits and supports both explicit conflict choices', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().saveNote(monday, 'Base');
+    await sync().run();
+    await store.getState().saveNote(monday, 'Phone edit');
+    remote.day.note = 'Notion edit';
+    await expect(sync().run()).rejects.toThrow(SyncConflictError);
+    expect(store.getState().notes[0]?.content).toBe('Phone edit');
+    expect(remote.day.note).toBe('Notion edit');
+    await sync().run('app');
+    expect(remote.day.note).toBe('Phone edit');
+    await store.getState().saveNote(monday, 'Another phone edit');
+    remote.day.note = 'Another Notion edit';
+    await sync().run('notion');
+    expect(store.getState().notes[0]?.content).toBe('Another Notion edit');
+  });
+  it('restores a deleted Notes column from local content instead of interpreting it as a mass deletion', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().saveNote(monday, 'Preserved');
+    await sync().run();
+    remote.table.columns = remote.table.columns.filter(
+      (column) => !isNotesColumn(column),
+    );
+    for (const row of remote.table.rows) row.note = '';
+    await sync().run();
+    expect(store.getState().notes[0]?.content).toBe('Preserved');
+    expect(remote.day.note).toBe('Preserved');
+  });
+  it('creates past and future note months without changing the active routine schema', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().saveNote('2026-09-02', 'Past');
+    await store.getState().saveNote('2027-01-04', 'Future plan');
+    await sync().run();
+    expect(
+      remote.tables
+        .find((table) => table.month === '2026-09')
+        ?.rows.find((row) => row.date === '2026-09-02')?.note,
+    ).toBe('Past');
+    expect(
+      remote.tables
+        .find((table) => table.month === '2027-01')
+        ?.rows.find((row) => row.date === '2027-01-04')?.note,
+    ).toBe('Future plan');
+    expect(store.getState().routines).toHaveLength(1);
+    expect(store.getState().routines[0]?.active).toBe(true);
+  });
+  it('keeps a newer phone edit made during a remote write ready for the next sync', async () => {
+    const { store, remote, sync } = await setup();
+    await sync().run();
+    await store.getState().saveNote(monday, 'Sent text');
+    const original = remote.writeCells.bind(remote);
+    vi.spyOn(remote, 'writeCells').mockImplementationOnce(async (...args) => {
+      await original(...args);
+      await store.getState().saveNote(monday, 'Newer text');
+    });
+    await sync().run();
+    expect(store.getState().notes[0]?.content).toBe('Newer text');
+    await sync().run();
+    expect(remote.day.note).toBe('Newer text');
+  });
+  it('splits long Unicode notes into safe rich-text chunks without truncation', () => {
+    const content = '💛a\n'.repeat(3000);
+    const value = noteWrite(content);
+    expect(value.rich_text.length).toBeGreaterThan(1);
+    expect(
+      value.rich_text.every((part) => part.text.content.length <= 1800),
+    ).toBe(true);
+    expect(value.rich_text.map((part) => part.text.content).join('')).toBe(
+      content,
+    );
+    expect(() => noteWrite('x'.repeat(maxNoteLength + 1))).toThrow('20');
+  });
+});
 
 describe('monthly, bidirectional Notion synchronization', () => {
   it('pushes done, skipped and durable undo across sync instances', async () => {

@@ -45,6 +45,13 @@ export function HistoryScreen() {
     <>
       <HabitScreen
         title="History"
+        tools={
+          <ToolButton
+            icon="arrowLeft"
+            label="Back to notes"
+            onPress={() => router.replace('/notes')}
+          />
+        }
         addRoutine={false}
         fixed={
           <Text style={styles.period}>

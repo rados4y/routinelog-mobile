@@ -27,7 +27,7 @@ test('compact English UI preserves status, history, editing, pause and delete', 
   await dog.getByRole('checkbox').click();
   await dog.getByRole('checkbox').click();
   await expect(dog).toContainText('Skipped');
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.goto('/history');
   await expect(
     page
       .locator('[data-testid^="history-entry-"]')

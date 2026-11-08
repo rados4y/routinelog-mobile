@@ -5,6 +5,7 @@ import {
   type Schedule,
 } from '../../domain/models';
 import type { Column, CellStatus } from './models';
+import { isNotesColumn } from './dailyNotes';
 
 export const statusNames = {
   done: 'Wykonane',
@@ -12,6 +13,7 @@ export const statusNames = {
   missed: 'Niewykonane',
 } as const;
 export const supportedColumn = (column: Column) =>
+  !isNotesColumn(column) &&
   ['checkbox', 'select', 'rich_text'].includes(column.type);
 export const columnName = (routine: RoutineInput) =>
   `${routine.icon} ${routine.name}`;
