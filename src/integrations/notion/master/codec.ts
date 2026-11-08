@@ -56,7 +56,12 @@ const propertySchema = z.object({
 export function readMasterInput(
   raw: Record<string, unknown>,
   id: string,
-): { input: RoutineInput; archived: boolean; routineId: string } {
+): {
+  input: RoutineInput;
+  archived: boolean;
+  routineId: string;
+  needsIdentityWrite: boolean;
+} {
   const props = Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [
       key,
@@ -87,6 +92,7 @@ export function readMasterInput(
     checklist: string('Checklist')
       ? string('Checklist')
           .split('\n')
+          .filter((line) => line.trim().length > 0)
           .map((line, index) => ({
             id: `notion-${id}-step-${index}`,
             text: decodeStep(line),
@@ -113,6 +119,7 @@ export function readMasterInput(
     input: input.data,
     archived: props.Archived!.checkbox ?? false,
     routineId: string('Routine ID') || `notion-${id}`,
+    needsIdentityWrite: !string('Routine ID'),
   };
 }
 const encodeStep = (text: string) =>

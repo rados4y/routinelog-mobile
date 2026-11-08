@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { routineInputSchema, type RoutineInput } from '../../../domain/models';
+import {
+  checklistSchema,
+  routineInputSchema,
+  type RoutineInput,
+} from '../../../domain/models';
 
 export const masterMarker = 'RoutineLog routines (v2)';
 export const masterReadyMarker = `${masterMarker}\nMigration: complete`;
@@ -9,6 +13,7 @@ export interface MasterRow {
   input: RoutineInput;
   archived: boolean;
   createdDate: string;
+  needsIdentityWrite?: boolean;
 }
 export interface MasterTable {
   databaseId: string;
@@ -19,7 +24,7 @@ export interface MasterTable {
 export const masterValueSchema = routineInputSchema.safeExtend({
   startDate: z.iso.date(),
   endDate: z.iso.date().nullable(),
-  checklist: z.array(z.object({ id: z.string(), text: z.string() })),
+  checklist: checklistSchema,
   archived: z.boolean(),
 });
 export type MasterValue = z.infer<typeof masterValueSchema>;

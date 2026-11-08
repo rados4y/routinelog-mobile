@@ -150,7 +150,12 @@ export async function syncMasterRoutines(
       );
     const valid = masterValueSchema.parse(merged);
     let pageId = row?.pageId;
-    if (!pageId || !equal(valid, remoteValue) || !row?.input.startDate)
+    if (
+      !pageId ||
+      !equal(valid, remoteValue) ||
+      !row?.input.startDate ||
+      row.needsIdentityWrite
+    )
       pageId = await remote.writeRoutine(table, id, valid, pageId);
     if (!current || !equal(current, valid)) {
       const next = routine

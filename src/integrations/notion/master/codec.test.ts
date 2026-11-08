@@ -99,6 +99,28 @@ describe('master Notion schema and encoding', () => {
       endDate: null,
     });
   });
+  it('flags blank IDs for write-back and ignores spacing between checklist steps', () => {
+    const props = withTypes(
+      routineProperties('stable-id', valueFromRoutine(routine())),
+    );
+    const decoded = readMasterInput(
+      {
+        ...props,
+        'Routine ID': { type: 'rich_text', rich_text: [] },
+        Checklist: {
+          type: 'rich_text',
+          rich_text: [{ text: { content: '\nFirst step\n\nSecond step\n' } }],
+        },
+      },
+      'fresh-page',
+    );
+    expect(decoded.needsIdentityWrite).toBe(true);
+    expect(decoded.routineId).toBe('notion-fresh-page');
+    expect(decoded.input.checklist?.map((step) => step.text)).toEqual([
+      'First step',
+      'Second step',
+    ]);
+  });
   it('rejects a malformed schema or invalid dates instead of treating a row as deleted', () => {
     const props = withTypes(
       routineProperties('stable-id', valueFromRoutine(routine())),

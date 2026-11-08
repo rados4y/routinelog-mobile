@@ -8,6 +8,31 @@ import { createRoutine } from '../../../domain/routine';
 import { valueFromRoutine } from './sync';
 
 describe('master routine definitions and monthly projections', () => {
+  it('writes generated stable IDs even when a new Notion row already has a start date', async () => {
+    const { remote, sync } = await setup();
+    await sync().run();
+    remote.master.rows.push({
+      pageId: 'fresh-page',
+      routineId: 'notion-fresh-page',
+      input: { ...routine(), name: 'New with date', startDate: monday },
+      archived: false,
+      createdDate: monday,
+      needsIdentityWrite: true,
+    });
+    const write = vi.spyOn(remote, 'writeRoutine');
+    await sync().run();
+    expect(write).toHaveBeenCalledWith(
+      expect.anything(),
+      'notion-fresh-page',
+      expect.objectContaining({ name: 'New with date', startDate: monday }),
+      'fresh-page',
+    );
+    expect(
+      remote.master.rows.find((row) => row.routineId === 'notion-fresh-page')
+        ?.needsIdentityWrite,
+    ).toBeUndefined();
+  });
+
   it('migrates existing columns, local-only routines and full descriptions/checklists exactly once', async () => {
     const { store, remote, sync } = await setup();
     const checklist = [{ id: 'local-step', text: 'Read first' }];
