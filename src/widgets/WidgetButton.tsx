@@ -45,8 +45,9 @@ export function WidgetButton() {
       >
         <Text style={common.subtitle}>{message}</Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>
-          Tap a routine circle to cycle its status. Checklists open in the app
-          before completion.
+          Tap a routine name to open its details, or its circle to cycle status.
+          Tap the daily note to edit it in the app. Checklists open before
+          completion.
         </Text>
       </Sheet>
     </>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, TextInput, ScrollView } from 'react-native';
 import { categories, type Routine } from '../../domain/models';
 import { colors, common } from '../../theme';
@@ -10,7 +10,14 @@ export function useRoutineFilter() {
   const [filters, setFilters] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
+  const reset = useCallback(() => {
+    setSearch(false);
+    setFilters(false);
+    setQuery('');
+    setCategory(null);
+  }, []);
   return {
+    reset,
     search,
     filters,
     toggleSearch: () => {

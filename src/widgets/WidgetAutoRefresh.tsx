@@ -16,12 +16,16 @@ export function WidgetAutoRefresh() {
       clearTimeout(timer);
       timer = setTimeout(refresh, 200);
     };
-    let routinesChanged = false;
+    let contentChanged = false;
     const unsubscribe = routineStore.subscribe((state, previous) => {
-      if (state.logs !== previous.logs || state.routines !== previous.routines)
-        routinesChanged = true;
-      if (state.ready && !state.saving && routinesChanged) {
-        routinesChanged = false;
+      if (
+        state.logs !== previous.logs ||
+        state.routines !== previous.routines ||
+        state.notes !== previous.notes
+      )
+        contentChanged = true;
+      if (state.ready && !state.saving && contentChanged) {
+        contentChanged = false;
         schedule();
       }
     });

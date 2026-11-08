@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useRoutineActions } from '../../components/RoutineActionsProvider';
@@ -12,30 +12,53 @@ import { scheduleLabel } from '../../domain/schedule';
 import type { Occurrence } from '../../domain/models';
 import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
+import { useRevealSection } from '../../components/KeyboardAwareScrollView';
 
 export function OccurrenceCard({
   occurrence,
   future,
+  focusRequest,
 }: {
   occurrence: Occurrence;
   future: boolean;
+  focusRequest?: number;
 }) {
   const { routine, status, overdue, date, windowProgress } = occurrence;
-  const [expanded, setExpanded] = useState(false);
+  const [expansion, setExpansion] = useState<{
+    request?: number;
+    value: boolean;
+  }>({ value: false });
+  const expanded =
+    expansion.request === focusRequest
+      ? expansion.value
+      : Boolean(focusRequest);
+  const card = useRef<View>(null);
+  const reveal = useRevealSection();
+  useEffect(() => {
+    if (!focusRequest || !expanded) return;
+    const frame = requestAnimationFrame(() => reveal(card.current));
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest, expanded, reveal]);
   const { cycleStatus } = useRoutineActions();
   const explicitStatus = occurrence.log?.status ?? 'pending';
   const saving = useRoutines((state) => state.saving);
   const checked = status === 'done';
   const tint = categoryColors[routine.category];
   return (
-    <View testID={`occurrence-${routine.id}`} style={styles.card}>
+    <View
+      ref={card}
+      testID={`occurrence-${routine.id}`}
+      style={[styles.card, Boolean(focusRequest) && expanded && styles.focused]}
+    >
       <View style={styles.row}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Routine details: ${routine.name}`}
           accessibilityState={{ expanded }}
           aria-expanded={expanded}
-          onPress={() => setExpanded(!expanded)}
+          onPress={() =>
+            setExpansion({ request: focusRequest, value: !expanded })
+          }
           style={styles.body}
         >
           <HabitIcon routine={routine} small />
@@ -135,6 +158,11 @@ export function OccurrenceCard({
 }
 const styles = StyleSheet.create({
   card: { borderBottomWidth: 1, borderColor: '#1c1c1c', paddingVertical: 13 },
+  focused: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+    paddingLeft: 8,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   body: {
     flex: 1,

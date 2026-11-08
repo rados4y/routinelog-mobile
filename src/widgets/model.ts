@@ -4,6 +4,8 @@ import type { Routine, RoutineLog, OccurrenceStatus } from '../domain/models';
 import { occurrencesForDate } from '../domain/schedule';
 import { nextStatus } from '../domain/status';
 import { categoryColors } from '../theme/colors';
+import type { DailyNote } from '../domain/note';
+import { widgetFocusUrl } from './focus';
 
 export const widgetName = 'RoutineLogToday';
 export const widgetClickSchema = z.object({
@@ -22,12 +24,14 @@ export interface WidgetRoutine {
   requiresChecklist: boolean;
   click: WidgetClick;
   checklistUrl: string;
+  openUrl: string;
 }
 export function todayWidgetModel(
   routines: Routine[],
   logs: RoutineLog[],
   now = new Date(),
   date = localDate(now),
+  notes: readonly Pick<DailyNote, 'date' | 'content'>[] = [],
 ) {
   const today = localDate(now);
   const isToday = date === today;
@@ -54,6 +58,11 @@ export function todayWidgetModel(
         Boolean(routine.checklist?.length),
       click: { routineId: routine.id, date, expectedStatus: status },
       checklistUrl: `routinelog://widget-action?routineId=${encodeURIComponent(routine.id)}&date=${date}&expectedStatus=${status}`,
+      openUrl: widgetFocusUrl({
+        focus: 'routine',
+        date,
+        routineId: routine.id,
+      }),
     };
   });
   return {
@@ -73,6 +82,17 @@ export function todayWidgetModel(
       month: 'short',
     }),
     items,
+    note: {
+      preview: Array.from(
+        notes
+          .find((note) => note.date === date)
+          ?.content.trim()
+          .replace(/\s+/g, ' ') ?? '',
+      )
+        .slice(0, 240)
+        .join(''),
+      openUrl: widgetFocusUrl({ focus: 'note', date }),
+    },
     done: items.filter((item) => item.status === 'done').length,
   };
 }

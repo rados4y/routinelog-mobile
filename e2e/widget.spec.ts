@@ -1,6 +1,54 @@
 import { expect, test } from '@playwright/test';
 import { openApp } from './helpers';
 
+test('widget view links select dates, expand routines, focus notes and never change results', async ({
+  page,
+}) => {
+  await openApp(
+    page,
+    '/widget-open?focus=routine&date=2026-11-02&routineId=preset-dog',
+  );
+  const row = page.getByTestId('occurrence-preset-dog');
+  await expect(
+    row.getByRole('button', { name: /^Routine details:/ }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  await expect(row).toBeInViewport();
+  await expect(row.getByRole('checkbox')).not.toBeChecked();
+  await expect(page).toHaveURL('http://127.0.0.1:8081/');
+  await page.getByRole('button', { name: /^Routine details: Wyjście/ }).click();
+  await page.goto(
+    '/widget-open?focus=routine&date=2026-11-02&routineId=preset-dog',
+  );
+  await expect(
+    row.getByRole('button', { name: /^Routine details:/ }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  await page.goto('/widget-open?focus=note&date=2026-11-01');
+  const note = page.getByRole('textbox', {
+    name: 'Daily note for 2026-11-01',
+    exact: true,
+  });
+  await expect(note).toBeFocused();
+  await expect(note).toBeInViewport();
+  await note.fill('Opened from the widget');
+  await expect(page.getByTestId('daily-note-2026-11-01')).toContainText(
+    'Saved on device',
+  );
+  await page.goto('/widget-open?focus=note&date=2026-11-02');
+  const today = page.getByRole('textbox', {
+    name: 'Daily note for 2026-11-02',
+    exact: true,
+  });
+  await expect(today).toBeFocused();
+  await expect(today).toHaveValue('');
+  await expect(row.getByRole('checkbox')).not.toBeChecked();
+  await page.goto(
+    '/widget-open?focus=routine&date=2026-11-02&routineId=removed',
+  );
+  await expect(page.getByRole('alert')).toContainText('no longer scheduled');
+  await page.goto('/widget-open?focus=note&date=invalid');
+  await expect(today).toBeVisible();
+});
+
 test('widget setup explains Android availability without breaking the browser preview', async ({
   page,
 }) => {

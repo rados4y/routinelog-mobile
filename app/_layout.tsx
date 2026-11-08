@@ -38,6 +38,7 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: colors.background },
             }}
           >
+            <Stack.Screen name="widget-open" options={{ animation: 'none' }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="notion" />
             <Stack.Screen

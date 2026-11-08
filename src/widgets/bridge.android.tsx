@@ -25,6 +25,7 @@ export async function refreshWidgets(notice?: string): Promise<void> {
         state.logs,
         now,
         view.date,
+        state.notes,
       );
       return (
         <TodayWidget
