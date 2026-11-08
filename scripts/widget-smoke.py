@@ -65,6 +65,22 @@ def wait_text(text, name):
     raise RuntimeError('App did not display: ' + text)
 
 
+def widget_item(label, name):
+    for attempt in range(5):
+        root = screen(name)
+        node = find_label(root, label)
+        if node is not None:
+            return root, node
+        widget = find_label(root, 'RoutineLog today')
+        if widget is None:
+            raise RuntimeError('Launcher widget is missing while looking for ' + label)
+        left, top, right, bottom = map(int, re.findall(r'\d+', widget.attrib['bounds']))
+        x = (left + right) // 2
+        adb('shell', 'input', 'swipe', str(x), str(top + (bottom - top) * 85 // 100), str(x), str(top + (bottom - top) * 35 // 100), '400')
+        time.sleep(2)
+    raise RuntimeError('Widget did not display ' + label)
+
+
 def verify_note_above_keyboard(name, date, text):
     time.sleep(2)
     windows = adb('shell', 'dumpsys', 'window', 'windows')
@@ -246,6 +262,42 @@ try:
         if find_label(root, 'RoutineLog today') is None:
             raise RuntimeError('Routine click unexpectedly opened the app.')
     print('Native circular control cycled all four statuses without opening the app.')
+    root, body = widget_item('Open routine: ' + name, 'routine-link')
+    tap(body)
+    root, _ = wait_label('Edit routine: ' + name, 'focused-routine')
+    if find_label(root, 'Status: ' + name + '. Unchecked.') is None:
+        raise RuntimeError('Opening a routine changed its status.')
+    details = find_label(root, 'Routine details: ' + name)
+    tap(details)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, body = widget_item('Open routine: ' + name, 'repeat-routine-link')
+    tap(body)
+    wait_label('Edit routine: ' + name, 'focused-routine-again')
+    print('Routine name opened expanded details without changing status, including a repeated warm link.')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, note_link = widget_item('Open daily note:', 'widget-note')
+    if 'Native daily note' not in note_link.attrib.get('content-desc', ''):
+        raise RuntimeError('The widget did not show the saved daily-note preview.')
+    tap(note_link)
+    root, editor = wait_label('Daily note for ' + date, 'widget-focused-note')
+    if editor.attrib.get('focused') != 'true':
+        raise RuntimeError('Widget note link did not focus the inline editor.')
+    verify_note_above_keyboard('widget-focused-note-keyboard', date, 'Native daily note')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
+    adb('shell', 'input', 'text', '%sWidget%sedition')
+    time.sleep(2)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, note_link = widget_item('Open daily note:', 'widget-note-updated')
+    if 'Widget edition' not in note_link.attrib.get('content-desc', ''):
+        time.sleep(3)
+        root, note_link = widget_item('Open daily note:', 'widget-note-updated')
+    if 'Widget edition' not in note_link.attrib.get('content-desc', ''):
+        raise RuntimeError('Editing the daily note did not refresh its widget preview.')
+    tap(note_link)
+    wait_label('Daily note for ' + date, 'widget-note-reopened')
+    verify_note_above_keyboard('widget-note-reopened-keyboard', date, 'Widget edition')
+    print('Widget displayed the daily note, opened its focused editor and refreshed after editing.')
 except Exception:
     root = screen('failure')
     labels = [node.attrib.get('text') or node.attrib.get('content-desc') for node in root.iter('node')]

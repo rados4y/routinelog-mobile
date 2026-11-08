@@ -37,7 +37,7 @@ export function TodayWidget({
   const explanation =
     notice ??
     (!model.isToday
-      ? 'View only · tap the heading to return to today'
+      ? 'Statuses view only · tap the heading for today'
       : undefined);
   const compact = height < 150;
   const headerHeight = 44;
@@ -49,7 +49,8 @@ export function TodayWidget({
     headerHeight +
       1 +
       noticeHeight +
-      (model.items.length ? model.items.length * 48 : 52),
+      (model.items.length ? model.items.length * 48 : 36) +
+      64,
   );
   // Android collections require each row to fit inside the visible list, even
   // when the launcher resizes this widget to its existing 110dp minimum.
@@ -58,6 +59,10 @@ export function TodayWidget({
     Math.min(48, panelHeight - headerHeight - 1 - noticeHeight),
   );
   const circleSize = Math.min(24, Math.max(18, rowHeight - 14));
+  const noteHeight = Math.max(
+    1,
+    Math.min(64, panelHeight - headerHeight - 1 - noticeHeight),
+  );
   return (
     <FlexWidget
       style={{
@@ -154,37 +159,13 @@ export function TodayWidget({
             }}
           />
         )}
-        {!model.items.length ? (
-          <FlexWidget style={{ width: 'match_parent', flex: 1, padding: 12 }}>
-            <TextWidget
-              text={
-                model.isToday
-                  ? 'No routines scheduled today'
-                  : 'No routines for this day'
-              }
-              style={{ fontSize: 12, color: palette.muted }}
-            />
-          </FlexWidget>
-        ) : (
-          <FlexWidget style={{ width: 'match_parent', flex: 1 }}>
-            <ListWidget>
-              {model.items.map((item) => (
+        <FlexWidget style={{ width: 'match_parent', flex: 1 }}>
+          <ListWidget>
+            {model.items.length ? (
+              model.items.map((item) => (
                 <FlexWidget
                   key={item.id}
                   style={{ width: 'match_parent', height: rowHeight }}
-                  clickAction={
-                    model.isToday
-                      ? item.requiresChecklist
-                        ? 'OPEN_URI'
-                        : 'cycle'
-                      : undefined
-                  }
-                  clickActionData={
-                    item.requiresChecklist
-                      ? { uri: item.checklistUrl }
-                      : item.click
-                  }
-                  accessibilityLabel={`${item.name}. ${statusLabels[item.status]}. ${!model.isToday ? 'View only' : item.requiresChecklist ? 'Open checklist' : nextActionLabel(item.status)}`}
                 >
                   <FlexWidget
                     style={{
@@ -192,48 +173,78 @@ export function TodayWidget({
                       height: rowHeight - 1,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      paddingHorizontal: 12,
                     }}
                   >
                     <FlexWidget
                       style={{
-                        width: 3,
-                        height: Math.min(26, Math.max(16, rowHeight - 16)),
-                        borderRadius: 1.5,
-                        backgroundColor: item.color,
-                        marginRight: 10,
-                      }}
-                    />
-                    <FlexWidget
-                      style={{
                         flex: 1,
                         width: 0,
-                        justifyContent: 'center',
-                        marginRight: 10,
+                        height: 'match_parent',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingLeft: 12,
+                        paddingRight: 6,
                       }}
+                      clickAction="OPEN_URI"
+                      clickActionData={{ uri: item.openUrl }}
+                      accessibilityLabel={`Open routine: ${item.name}`}
+                    >
+                      <FlexWidget
+                        style={{
+                          width: 3,
+                          height: Math.min(26, Math.max(16, rowHeight - 16)),
+                          borderRadius: 1.5,
+                          backgroundColor: item.color,
+                          marginRight: 10,
+                        }}
+                      />
+                      <FlexWidget style={{ flex: 1, width: 0 }}>
+                        <TextWidget
+                          text={item.name}
+                          maxLines={rowHeight < 44 ? 1 : 2}
+                          truncate="END"
+                          style={{
+                            fontSize: compact ? 13 : 14,
+                            color: palette.text,
+                            width: 'match_parent',
+                          }}
+                        />
+                      </FlexWidget>
+                    </FlexWidget>
+                    <FlexWidget
+                      style={{
+                        width: 44,
+                        height: 'match_parent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      clickAction={
+                        model.isToday
+                          ? item.requiresChecklist
+                            ? 'OPEN_URI'
+                            : 'cycle'
+                          : undefined
+                      }
+                      clickActionData={
+                        item.requiresChecklist
+                          ? { uri: item.checklistUrl }
+                          : item.click
+                      }
+                      accessibilityLabel={`${item.name}. ${statusLabels[item.status]}. ${!model.isToday ? 'View only' : item.requiresChecklist ? 'Open checklist' : nextActionLabel(item.status)}`}
                     >
                       <TextWidget
-                        text={item.name}
-                        maxLines={rowHeight < 44 ? 1 : 2}
-                        truncate="END"
+                        text={symbols[item.status]}
                         style={{
-                          fontSize: compact ? 13 : 14,
-                          color: palette.text,
+                          width: circleSize,
+                          height: circleSize,
+                          borderRadius: circleSize / 2,
+                          textAlign: 'center',
+                          fontSize: 17,
+                          color: '#ffffff',
+                          backgroundColor: palette[item.status],
                         }}
                       />
                     </FlexWidget>
-                    <TextWidget
-                      text={symbols[item.status]}
-                      style={{
-                        width: circleSize,
-                        height: circleSize,
-                        borderRadius: circleSize / 2,
-                        textAlign: 'center',
-                        fontSize: 17,
-                        color: '#ffffff',
-                        backgroundColor: palette[item.status],
-                      }}
-                    />
                   </FlexWidget>
                   <FlexWidget
                     style={{
@@ -243,10 +254,57 @@ export function TodayWidget({
                     }}
                   />
                 </FlexWidget>
-              ))}
-            </ListWidget>
-          </FlexWidget>
-        )}
+              ))
+            ) : (
+              <FlexWidget
+                style={{
+                  width: 'match_parent',
+                  height: Math.min(36, rowHeight),
+                  paddingHorizontal: 12,
+                  justifyContent: 'center',
+                }}
+              >
+                <TextWidget
+                  text={
+                    model.isToday
+                      ? 'No routines scheduled today'
+                      : 'No routines for this day'
+                  }
+                  maxLines={1}
+                  style={{ fontSize: 11, color: palette.muted }}
+                />
+              </FlexWidget>
+            )}
+            <FlexWidget
+              style={{
+                width: 'match_parent',
+                height: noteHeight,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                justifyContent: 'center',
+              }}
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: model.note.openUrl }}
+              accessibilityLabel={
+                model.note.preview
+                  ? `Open daily note: ${model.note.preview}`
+                  : 'Add daily note'
+              }
+            >
+              <TextWidget
+                text="Daily note"
+                maxLines={1}
+                style={{ fontSize: 11, color: palette.muted, marginBottom: 3 }}
+              />
+              <TextWidget
+                text={model.note.preview || 'Tap to add a daily note'}
+                maxLines={noteHeight < 54 ? 1 : 2}
+                truncate="END"
+                style={{ fontSize: 12, color: palette.text }}
+              />
+            </FlexWidget>
+          </ListWidget>
+        </FlexWidget>
       </FlexWidget>
     </FlexWidget>
   );

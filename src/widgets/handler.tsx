@@ -54,7 +54,8 @@ export async function widgetTaskHandler(
           props.clickActionData,
         );
         if (result === 'checklist')
-          notice = 'Tap the routine to confirm its checklist in the app.';
+          notice =
+            'Open the routine, then tap its status to confirm the checklist.';
         else if (result === 'error' || result === 'unavailable')
           notice = 'Open RoutineLog to review this routine.';
         else if (result === 'busy')
@@ -67,7 +68,13 @@ export async function widgetTaskHandler(
     if (!state.ready) notice = 'Open RoutineLog to load your saved routines.';
     props.renderWidget(
       <TodayWidget
-        model={todayWidgetModel(state.routines, state.logs, now, view.date)}
+        model={todayWidgetModel(
+          state.routines,
+          state.logs,
+          now,
+          view.date,
+          state.notes,
+        )}
         height={props.widgetInfo.height}
         notice={notice}
       />,

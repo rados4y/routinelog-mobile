@@ -1,6 +1,9 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
-import { useRevealInput } from '../../components/KeyboardAwareScrollView';
+import {
+  useRevealInput,
+  useRevealSection,
+} from '../../components/KeyboardAwareScrollView';
 import { Button } from '../../components/Button';
 import { dateLabel } from '../../domain/dates';
 import { maxNoteLength } from '../../domain/note';
@@ -8,8 +11,16 @@ import { useRoutines } from '../../store/useRoutines';
 import { useNoteDrafts } from '../../store/useNoteDrafts';
 import { colors, common } from '../../theme';
 
-export function DailyNoteEditor({ date }: { date: string }) {
+export function DailyNoteEditor({
+  date,
+  focusRequest,
+}: {
+  date: string;
+  focusRequest?: number;
+}) {
   const input = useRef<TextInput>(null);
+  const card = useRef<View>(null);
+  const revealSection = useRevealSection();
   const reveal = useRevealInput();
   const note = useRoutines((state) =>
     state.notes.find((item) => item.date === date),
@@ -20,8 +31,18 @@ export function DailyNoteEditor({ date }: { date: string }) {
   const edit = useNoteDrafts((state) => state.edit);
   const save = useNoteDrafts((state) => state.save);
   const value = draft?.content ?? note?.content ?? '';
+  useEffect(() => {
+    if (!focusRequest) return;
+    // Android can keep input focus after Back hides the IME. A repeated widget
+    // request should bring the keyboard back as well as reveal the same note.
+    input.current?.blur();
+    const frame = requestAnimationFrame(() =>
+      revealSection(card.current, () => input.current?.focus()),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest, revealSection]);
   return (
-    <View style={styles.card} testID={`daily-note-${date}`}>
+    <View ref={card} style={styles.card} testID={`daily-note-${date}`}>
       <View style={common.spread}>
         <Text accessibilityRole="header" style={common.heading}>
           Daily note

@@ -13,6 +13,7 @@ import {
   StyleSheet,
   type ScrollViewProps,
   type TextInput,
+  type View,
 } from 'react-native';
 
 export function useKeyboardTop() {
@@ -41,6 +42,9 @@ export function useKeyboardTop() {
 
 const FocusedInput = createContext<(input: TextInput | null) => void>(() => {});
 export const useRevealInput = () => useContext(FocusedInput);
+type RevealSection = (view: View | null, afterScroll?: () => void) => void;
+const Section = createContext<RevealSection>(() => {});
+export const useRevealSection = () => useContext(Section);
 
 // Measure actual window coordinates: Android may resize the viewport or let the
 // keyboard cover it. Only add the overlap that remains, never keyboard height
@@ -59,6 +63,18 @@ export function KeyboardAwareScrollView({
   const frame = useRef<number | undefined>(undefined);
   const keyboardTop = useKeyboardTop();
   const [overlap, setOverlap] = useState(0);
+  const revealSection = useCallback<RevealSection>((view, afterScroll) => {
+    if (!view) return;
+    scroll.current?.getNativeScrollRef()?.measureInWindow((_x, top) => {
+      view.measureInWindow((_vx, viewTop) => {
+        scroll.current?.scrollTo({
+          y: Math.max(0, offset.current + viewTop - top - 12),
+          animated: false,
+        });
+        if (afterScroll) requestAnimationFrame(afterScroll);
+      });
+    });
+  }, []);
   const reveal = useCallback(() => {
     if (Platform.OS === 'web') return;
     if (frame.current !== undefined) cancelAnimationFrame(frame.current);
@@ -101,33 +117,37 @@ export function KeyboardAwareScrollView({
         reveal();
       }}
     >
-      <ScrollView
-        {...props}
-        ref={scroll}
-        keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={16}
-        contentContainerStyle={[
-          contentContainerStyle,
-          {
-            paddingBottom:
-              (typeof bottomPadding === 'number' ? bottomPadding : 0) + overlap,
-          },
-        ]}
-        onScroll={(event) => {
-          offset.current = event.nativeEvent.contentOffset.y;
-          onScroll?.(event);
-        }}
-        onLayout={(event) => {
-          onLayout?.(event);
-          reveal();
-        }}
-        onContentSizeChange={(width, height) => {
-          onContentSizeChange?.(width, height);
-          reveal();
-        }}
-      >
-        {children}
-      </ScrollView>
+      <Section.Provider value={revealSection}>
+        <ScrollView
+          {...props}
+          ref={scroll}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          removeClippedSubviews={false}
+          contentContainerStyle={[
+            contentContainerStyle,
+            {
+              paddingBottom:
+                (typeof bottomPadding === 'number' ? bottomPadding : 0) +
+                overlap,
+            },
+          ]}
+          onScroll={(event) => {
+            offset.current = event.nativeEvent.contentOffset.y;
+            onScroll?.(event);
+          }}
+          onLayout={(event) => {
+            onLayout?.(event);
+            reveal();
+          }}
+          onContentSizeChange={(width, height) => {
+            onContentSizeChange?.(width, height);
+            reveal();
+          }}
+        >
+          {children}
+        </ScrollView>
+      </Section.Provider>
     </FocusedInput.Provider>
   );
 }

@@ -6,6 +6,7 @@ import { createLog } from '../domain/log';
 import { localDate } from '../domain/dates';
 import { todayWidgetModel } from './model';
 import { cycleFromWidget } from './actions';
+import { widgetFocusSchema, widgetFocusUrl } from './focus';
 
 const clock = () => new Date('2026-11-04T12:00:00');
 const today = localDate(clock());
@@ -26,6 +27,48 @@ async function setup(checklist = false) {
   return { repos, store, r };
 }
 describe('today widget projection and actions', () => {
+  it('shows only the selected date’s durable note, preserves Unicode, and never puts note content in links', () => {
+    const notes = [
+      { date: '2026-11-03', content: 'Yesterday' },
+      { date: today, content: ' A private\n daily note 💛 ' },
+      { date: '2026-11-05', content: '' },
+    ];
+    const model = todayWidgetModel([], [], clock(), today, notes);
+    expect(model.note.preview).toBe('A private daily note 💛');
+    expect(model.note.openUrl).not.toContain('private');
+    expect(
+      todayWidgetModel([], [], clock(), '2026-11-03', notes).note.preview,
+    ).toBe('Yesterday');
+    expect(
+      todayWidgetModel([], [], clock(), '2026-11-05', notes).note.preview,
+    ).toBe('');
+    expect(
+      todayWidgetModel([], [], clock(), today, [
+        { date: today, content: '💛'.repeat(250) },
+      ]).note.preview,
+    ).toBe('💛'.repeat(240));
+    expect(notes[1]?.content).toBe(' A private\n daily note 💛 ');
+  });
+  it('validates focus requests and encodes names and dates independently of status mutation', () => {
+    const request = {
+      focus: 'routine',
+      date: today,
+      routineId: 'id/with & special?chars',
+    } as const;
+    const url = new URL(widgetFocusUrl(request));
+    expect(
+      widgetFocusSchema.parse(Object.fromEntries(url.searchParams)),
+    ).toEqual(request);
+    expect(
+      widgetFocusSchema.safeParse({ focus: 'routine', date: today }).success,
+    ).toBe(false);
+    expect(
+      widgetFocusSchema.safeParse({ focus: 'note', date: 'invalid' }).success,
+    ).toBe(false);
+    expect(
+      widgetFocusSchema.safeParse({ focus: ['note'], date: today }).success,
+    ).toBe(false);
+  });
   it('uses the same current-day plan and does not carry yesterday’s completion forward', () => {
     const r = routine();
     const yesterday = createLog(r, '2026-11-03', 'done', clock());

@@ -12,6 +12,8 @@ Concise screen names, section IDs and behavior: [PDF deck](docs/product-overview
 [editable PowerPoint](docs/product-overview.pptx), [Markdown reference](docs/product-overview.md).
 For example: “On Today · T5, add a word count below the daily note.”
 
+[App icon concepts A–D](docs/design/icon-options.md) are available for selection.
+
 ## Stack i wybór SDK
 
 React Native 0.86, React 19, Expo SDK 57, Expo Router, TypeScript strict,
@@ -54,6 +56,7 @@ Aktualizacja SDK wymaga ponownego sprawdzenia zgodności Expo Go i nowego runtim
   nowego potwierdzenia. Historia zachowuje kopię potwierdzonych tekstów kroków.
 - Notatki: edycja bezpośrednio pod rutynami wybranego dnia, autosave i lista dat w zakładce Notes. Historia wyników pozostaje zachowana pod dotychczasową trasą `/history`, poza główną nawigacją.
   Edytor przewija aktywne pole ponad klawiaturę (również w panelu Notes), z przewijaniem długiego tekstu wewnątrz pola. Ikona notatki oznacza dni z treścią w pasku dat Today i kalendarzach; reaguje także na niezapisany tekst i znika po wyczyszczeniu notatki. Znacznik dzisiejszego dnia i statusy rutyn pozostają osobne.
+  Widget wyświetla krótki podgląd zapisanej notatki wybranego dnia, z przewijaniem listy przy małym rozmiarze. Dotknięcie notatki otwiera Today na odpowiedniej dacie, przewija i ustawia kursor w edytorze. Dotknięcie nazwy rutyny rozwija jej szczegóły w aplikacji bez zmiany statusu; osobny obszar ikony statusu nadal działa bezpośrednio w widgecie (checklista wymaga potwierdzenia w aplikacji). Zapisy notatek, w tym z Notion, odświeżają widget.
 - Statystyki: ostatnie siedem dni, wykonania/pominięcia/niewykonania, regularność, wykres.
 - Pięć rutyn z referencji: niedzielna książka, rozmowy z Pawłem (ostatni dzień),
   Piotrkiem (15.), rodzicami (15. i ostatni) oraz spacer z psem (1×/tydzień).
