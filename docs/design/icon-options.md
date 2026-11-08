@@ -9,6 +9,13 @@
 | C · Small steps | Green/pink progress blocks on charcoal.                 |
 | D · RL monogram | Geometric white monogram and pink dot.                  |
 
-Concepts for the user's selection. No option has been applied to the launcher icon yet.
-The selected icon will be prepared as Android adaptive icon assets. Installing a new
-APK is required for a launcher icon change; the widget note/link feature uses OTA.
+**Selected: C · Small steps.** Applied in Android 1.3.0 (versionCode 4).
+
+The launcher uses [the full icon](../../assets/branding/icon.png) and a separately
+[padded adaptive foreground](../../assets/branding/adaptive-icon.png), with a charcoal background.
+The extra padding keeps the symbol inside Android launcher masks.
+Installing the new APK applies the launcher icon; widget JS changes remain OTA-compatible
+within the corresponding runtime.
+
+Configuration checked against the [Expo SDK 57 app icon reference](https://docs.expo.dev/versions/v57.0.0/config/app/#adaptiveicon)
+and [runtime version guidance](https://docs.expo.dev/eas-update/runtime-versions/).

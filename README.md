@@ -12,7 +12,9 @@ Concise screen names, section IDs and behavior: [PDF deck](docs/product-overview
 [editable PowerPoint](docs/product-overview.pptx), [Markdown reference](docs/product-overview.md).
 For example: “On Today · T5, add a word count below the daily note.”
 
-[App icon concepts A–D](docs/design/icon-options.md) are available for selection.
+[App icon concepts A–D](docs/design/icon-options.md): selected **C · Small steps**,
+applied in Android **1.3.0 / versionCode 4**. This launcher resource change requires
+one new preview APK; later compatible JavaScript changes continue through OTA.
 
 ## Stack i wybór SDK
 
