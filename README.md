@@ -6,6 +6,12 @@ dwukierunkową synchronizacją z Notion. The application interface is in English
 
 **Current runtime: Android build with home-screen widget; core screens remain Expo Go compatible**
 
+## Product overview for change requests
+
+Concise screen names, section IDs and behavior: [PDF deck](docs/product-overview.pdf),
+[editable PowerPoint](docs/product-overview.pptx), [Markdown reference](docs/product-overview.md).
+For example: “On Today · T5, add a word count below the daily note.”
+
 ## Stack i wybór SDK
 
 React Native 0.86, React 19, Expo SDK 57, Expo Router, TypeScript strict,
