@@ -217,8 +217,8 @@ try:
     widget = find_label(root, 'RoutineLog today')
     bounds = tuple(map(int, re.findall(r'\d+', widget.attrib['bounds'])))
     pixels = Image.open(results / 'launcher.png').convert('RGB').crop(bounds)
-    # The drawn panel fits its contents; unused launcher grid space is now
-    # transparent. Validate the visible light panel, allowing thin dividers.
+    # The panel fills the entire launcher allocation for every selected day.
+    # Allow rounded corners and thin dividers, but no content-sized shrinkage.
     first = last = None
     gap = 0
     for y in range(pixels.height):
@@ -234,6 +234,8 @@ try:
                 break
     if first is None:
         raise RuntimeError('The compact light panel is missing.')
+    if last - first < pixels.height * 0.94:
+        raise RuntimeError('Widget panel does not fill the allocated height.')
     pixels = pixels.crop((0, first, pixels.width, last))
     light = sum(1 for r, g, b in pixels.getdata() if min(r, g, b) >= 230 and max(r, g, b) - min(r, g, b) < 8)
     ratio = light / (pixels.width * pixels.height)
@@ -245,6 +247,10 @@ try:
         raise RuntimeError('Previous-day arrow is missing.')
     tap(previous)
     root, heading = wait_label('Return to today', 'previous-day')
+    previous_widget = find_label(root, 'RoutineLog ')
+    previous_bounds = tuple(map(int, re.findall(r'\d+', previous_widget.attrib['bounds'])))
+    if previous_bounds != bounds:
+        raise RuntimeError('Widget bounds changed when navigating to another day.')
     if find_label(root, 'Next status:') is not None:
         raise RuntimeError('Past-day routines must be read-only.')
     tap(heading)

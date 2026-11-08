@@ -24,7 +24,12 @@ export function WidgetAutoRefresh() {
         state.notes !== previous.notes
       )
         contentChanged = true;
-      if (state.ready && !state.saving && contentChanged) {
+      if (
+        state.ready &&
+        !state.saving &&
+        contentChanged &&
+        AppState.currentState === 'active'
+      ) {
         contentChanged = false;
         schedule();
       }

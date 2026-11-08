@@ -25,6 +25,27 @@ function widgetProps(tree: WidgetTree): Record<string, unknown>[] {
 }
 
 describe('native widget rendering', () => {
+  it('fills the same launcher height with zero, one and many routines on every date', () => {
+    const now = new Date(2026, 10, 4, 12);
+    for (const height of [110, 145, 260, 420]) {
+      for (const count of [0, 1, 12]) {
+        for (const date of ['2026-11-03', '2026-11-04', '2026-11-05']) {
+          const routines = Array.from({ length: count }, (_, index) => ({
+            ...routine(),
+            id: `routine-${index}`,
+          }));
+          const model = todayWidgetModel(routines, [], now, date);
+          const tree = buildWidgetTree(
+            createElement(TodayWidget, { model, height }),
+          );
+          const props = widgetProps(tree);
+          const panel = props.find((p) => p.backgroundColor === '#f1f1f1');
+          expect(panel).toMatchObject({ height });
+        }
+      }
+    }
+  });
+
   it('serializes today, empty and error views with the native widget renderer', () => {
     const now = new Date(2026, 10, 4, 12);
     const model = todayWidgetModel([routine()], [], now);
