@@ -1,6 +1,7 @@
 """Exercise the released APK and real Android launcher, using only seeded emulator data."""
 import pathlib
 import re
+import shlex
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -173,7 +174,7 @@ def verify_change_guide(date):
     root, copy = guide_control('Copy instructions', 'change-guide-prompt')
     tap(copy)
     wait_text('Copied.', 'change-guide-copied')
-    adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', 'routinelog://widget-open?focus=note&date=' + date, package)
+    adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', shlex.quote('routinelog://widget-open?focus=note&date=' + date), package)
     root, note = wait_label('Daily note for ' + date, 'change-guide-paste-target')
     tap(note)
     adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
