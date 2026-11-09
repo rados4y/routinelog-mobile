@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>RoutineLog · Request changes</title>
+    <style>
+      /* GUIDE_STYLE */
+    </style>
+  </head>
+  <body>
+    <main>
+      <section id="composer">
+        <div class="intro">
+          <span class="eyebrow">SCREEN & BEHAVIOR GUIDE</span>
+          <h1>What would you change?</h1>
+          <p>
+            Pick a screen and section. Build a list of changes, then copy one
+            request into ChatGPT.
+          </p>
+        </div>
+        <label for="screen">Screen</label
+        ><select id="screen" aria-label="Screen"></select>
+        <div class="screen-info">
+          <h2 id="screen-name"></h2>
+          <p id="purpose"></p>
+        </div>
+        <details id="reference" hidden>
+          <summary>View reference layout</summary>
+          <img id="screen-image" alt="" />
+          <p class="hint">
+            Reference layout; the section descriptions below explain current
+            behavior.
+          </p>
+        </details>
+        <h3>Choose a section</h3>
+        <div
+          id="sections"
+          class="section-grid"
+          aria-label="Screen sections"
+        ></div>
+        <div class="logic">
+          <span class="eyebrow" id="section-name"></span>
+          <p id="section-logic"></p>
+          <details>
+            <summary>Screen logic</summary>
+            <p id="screen-logic"></p>
+          </details>
+        </div>
+        <form id="change-form">
+          <label for="change">What should change?</label
+          ><textarea
+            id="change"
+            aria-label="Requested change"
+            rows="4"
+            maxlength="2000"
+            placeholder="Describe the result you want…"
+          ></textarea>
+          <div class="form-actions">
+            <button id="add" class="primary" type="submit">Add change</button
+            ><button id="cancel-edit" type="button" hidden>Cancel edit</button>
+          </div>
+        </form>
+        <p id="error" class="error" role="alert" hidden></p>
+        <section class="queue">
+          <div class="section-heading">
+            <h2>Your changes <span id="count">0</span></h2>
+            <span id="saved" class="hint" role="status"
+              >Draft stays on this device</span
+            >
+          </div>
+          <div id="items"></div>
+          <p id="empty" class="hint">
+            No changes yet. Add the first one above.
+          </p>
+        </section>
+        <label for="constraints"
+          >Anything to keep unchanged? <span class="hint">Optional</span></label
+        ><textarea
+          id="constraints"
+          aria-label="Constraints"
+          rows="2"
+          maxlength="1000"
+          placeholder="e.g. Keep the compact layout and current colors"
+        ></textarea>
+        <div class="bottom">
+          <button id="generate" class="primary" type="button" disabled>
+            Generate prompt</button
+          ><button id="clear" class="quiet" type="button">Clear draft</button>
+        </div>
+      </section>
+      <section id="review" hidden>
+        <span class="eyebrow">READY TO PASTE</span>
+        <h1>Your change request</h1>
+        <p>
+          Copy these instructions, return to this ChatGPT conversation and paste
+          them into a new message.
+        </p>
+        <button id="copy" class="primary" type="button">
+          Copy instructions
+        </button>
+        <p id="copy-status" role="status" aria-live="polite"></p>
+        <label for="prompt">Instructions</label
+        ><textarea
+          id="prompt"
+          aria-label="Generated instructions"
+          readonly
+          rows="16"
+          spellcheck="false"
+        ></textarea>
+        <div class="bottom">
+          <button id="back-edit" type="button">Edit changes</button
+          ><button id="clear-review" class="quiet" type="button">
+            Clear draft
+          </button>
+        </div>
+      </section>
+      <aside id="clear-confirm" class="confirm" role="alert" hidden>
+        <h2>Clear this draft?</h2>
+        <p>Your prepared changes will be removed from this device.</p>
+        <button id="keep" type="button">Keep draft</button
+        ><button id="confirm-clear" class="danger" type="button">
+          Clear all changes
+        </button>
+      </aside>
+    </main>
+    <script type="application/json" id="bootstrap">
+      { "host": "standalone", "appVersion": "1.4.0" }
+    </script>
+    <script>
+      /* GUIDE_SCRIPT */
+    </script>
+  </body>
+</html>

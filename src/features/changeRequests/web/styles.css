@@ -1,0 +1,280 @@
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  color-scheme: dark;
+  font:
+    14px/1.5 system-ui,
+    -apple-system,
+    sans-serif;
+  background: #0c0e10;
+  color: #f4f7f8;
+  --accent: #c33161;
+  --border: #2a3036;
+  --muted: #919aa3;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 680px;
+  margin: auto;
+  padding: 18px 16px max(28px, env(safe-area-inset-bottom));
+}
+h1 {
+  font-size: 25px;
+  line-height: 1.2;
+  letter-spacing: -0.7px;
+  margin: 6px 0 10px;
+}
+h2 {
+  font-size: 17px;
+  margin: 0;
+}
+h3 {
+  font-size: 13px;
+  margin: 18px 0 8px;
+}
+p {
+  margin: 6px 0 12px;
+}
+.intro > p,
+.screen-info > p {
+  color: var(--muted);
+}
+.eyebrow {
+  color: #ed7b9d;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  font-weight: 800;
+}
+.hint {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  margin: 16px 0 7px;
+}
+button,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #1a1e22;
+}
+button {
+  min-height: 44px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 650;
+  touch-action: manipulation;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #f08aac;
+  outline-offset: 3px;
+}
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.quiet {
+  background: transparent;
+  color: var(--muted);
+}
+.danger {
+  color: #ff9393;
+}
+select {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 12px;
+}
+textarea {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: vertical;
+  scroll-margin-bottom: 16px;
+}
+.screen-info {
+  margin: 16px 0 8px;
+}
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.section {
+  text-align: left;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+}
+.section > span {
+  flex: 0 0 25px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.section[aria-pressed='true'] {
+  border-color: #d6547e;
+  background: #3c1d27;
+}
+.section[aria-pressed='true'] > span {
+  color: #ed7b9d;
+}
+.logic {
+  background: #14171a;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 10px 0 16px;
+  padding: 12px;
+  font-size: 12px;
+}
+.logic p {
+  margin-bottom: 6px;
+}
+details {
+  color: var(--muted);
+}
+summary {
+  cursor: pointer;
+  padding: 6px 0;
+  font-size: 12px;
+}
+#reference {
+  text-align: left;
+}
+#screen-image {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 8px auto;
+}
+.form-actions,
+.bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.bottom > .primary {
+  flex: 1;
+}
+.error {
+  color: #ff9393;
+  margin-top: 10px;
+}
+.queue {
+  margin-top: 28px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.section-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+#count {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.change-item {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #14171a;
+  overflow-wrap: anywhere;
+}
+.change-item h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #ed7b9d;
+}
+.change-item p {
+  white-space: pre-wrap;
+  font-size: 13px;
+}
+.item-actions {
+  display: flex;
+  gap: 8px;
+}
+.item-actions button {
+  font-size: 12px;
+  min-height: 40px;
+  padding: 7px 12px;
+}
+#prompt {
+  font-size: 12px;
+  min-height: 320px;
+}
+#copy {
+  width: 100%;
+}
+#copy-status {
+  color: #65db95;
+  min-height: 20px;
+  font-size: 12px;
+}
+.confirm {
+  position: fixed;
+  inset: auto 12px max(12px, env(safe-area-inset-bottom));
+  max-width: 640px;
+  margin: auto;
+  padding: 18px;
+  background: #20252b;
+  border: 1px solid #555;
+  border-radius: 16px;
+  box-shadow: 0 0 0 100vmax #000b;
+  z-index: 3;
+}
+.confirm p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.confirm button {
+  margin-right: 8px;
+}
+@media (max-width: 350px) {
+  main {
+    padding: 12px;
+  }
+  .section-grid {
+    gap: 5px;
+  }
+  .section {
+    font-size: 11px;
+    padding: 8px;
+  }
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
