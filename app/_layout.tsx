@@ -41,6 +41,8 @@ export default function RootLayout() {
             <Stack.Screen name="widget-open" options={{ animation: 'none' }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="notion" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="request-changes" />
             <Stack.Screen
               name="routine-editor"
               options={{ presentation: 'modal' }}

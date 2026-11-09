@@ -433,3 +433,39 @@ A new APK is required for this native widget installation. Future JS/UI updates 
 References: [SDK 57 widget support](https://docs.expo.dev/versions/v57.0.0/sdk/widgets/), [Android widget Expo registration](https://saleksovski.github.io/react-native-android-widget/docs/tutorial/register-widget-expo/), [task handler](https://saleksovski.github.io/react-native-android-widget/docs/api/register-widget-task-handler), [runtime compatibility](https://docs.expo.dev/eas-update/runtime-versions/).
 
 The Android native build workflow also supports `mode: status` for read-only Expo build monitoring. This mode skips quality/build jobs and prints only whitelisted status metadata; it never prints the Expo token, environment values or signed log URLs. Use `mode: build` (the default) only when a native runtime change actually requires a new binary.
+
+## In-app change requests
+
+**Settings → Request changes** opens a bundled, offline HTML guide inside the app.
+The gear at the left of the main toolbar opens Settings. The four main tabs stay
+unchanged. Choose a named screen and stable section ID, inspect its short logic
+or reference layout, describe a change and add it to the request. Up to 20 changes
+can be edited or removed. Optional constraints apply to the whole request.
+**Generate prompt → Copy instructions** prepares one contextual prompt to paste
+into the existing ChatGPT conversation; it does not create issues or send messages.
+
+A dedicated `ChangeRequestRepository` persists the UI draft separately from
+routines, logs, daily notes and Notion. Ordered writes preserve the newest draft;
+failed saves keep the current text in memory and expose Retry. In-app drafts are
+stored in AsyncStorage under `@routinelog/ui/change-request/v1`. The standalone
+HTML uses browser localStorage when available. Copying on Android uses the native
+clipboard; browser copying has a selectable-text fallback.
+
+The guide's source of truth is `src/features/changeRequests/catalog.ts` (screens,
+section IDs and concise logic). `model.ts` owns request validation and prompt
+composition; `web/` contains the HTML/CSS/controller. `npm run guide:build`
+compiles the guide with esbuild into a bundled TS string and the standalone
+[interactive HTML](docs/change-requests/index.html). `npm run guide:check` and CI
+reject stale generated files. Keep IDs stable and update this catalog alongside
+screen/logic changes. Reference images are illustrative snapshots; current
+behavior is described in text. No remote web hosting is needed.
+
+Android **1.4.0 / versionCode 5** adds `react-native-webview` 13.16.1 and
+`expo-clipboard` ~57.0.2, matched to the installed Expo SDK 57. One new APK is
+required for these native modules; the package ID and signing identity stay the
+same, preserving device data when installed as an update. Subsequent guide and
+HTML/JS changes use fingerprint-compatible EAS Update. Current runtime: Expo Go compatible.
+
+References: [Expo SDK 57 WebView](https://docs.expo.dev/versions/v57.0.0/sdk/webview/),
+[Expo SDK 57 Clipboard](https://docs.expo.dev/versions/v57.0.0/sdk/clipboard/),
+[runtime compatibility](https://docs.expo.dev/eas-update/runtime-versions/).
