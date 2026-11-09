@@ -4,3 +4,6 @@ dist
 coverage
 package-lock.json
 playwright-report
+
+src/features/changeRequests/generated
+docs/change-requests

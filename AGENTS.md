@@ -26,6 +26,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Zachowuj historię, lokalne daty i rozróżnienie pending/overdue/missed.
 - Cele elastyczne rozliczaj po zamknięciu okna tygodniowego.
 - Testuj logikę i istotne przepływy; bez testów kopiujących JSX i zbędnych snapshotów.
+- Przy zmianach ekranów/logiki aktualizuj zwięzły katalog src/features/changeRequests/catalog.ts, zachowuj stabilne ID sekcji i uruchom npm run guide:build. Nie edytuj ręcznie generated/guide.ts ani docs/change-requests/index.html; CI sprawdza ich aktualność. Guide jest lokalnym HTML w WebView, draft jest osobnym rekordem UI i nie synchronizuje się z Notion.
 - Aktualizuj README przy zmianach workflow, runtime, modeli lub architektury.
 - Końcowy komunikat krótki: wynik, commit/PR, testy/CI, deploy i jedna konkretna
   czynność telefonu tylko jeśli jest konieczna. Nie oznaczaj testów na urządzeniu jako

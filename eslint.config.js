@@ -5,5 +5,13 @@ const prettier = require('eslint-config-prettier');
 module.exports = defineConfig([
   expo,
   prettier,
-  { ignores: ['dist/**', '.expo/**', 'coverage/**', 'playwright-report/**'] },
+  {
+    ignores: [
+      'dist/**',
+      '.expo/**',
+      'coverage/**',
+      'playwright-report/**',
+      'src/features/changeRequests/generated/**',
+    ],
+  },
 ]);

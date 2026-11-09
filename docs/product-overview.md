@@ -2,6 +2,8 @@
 
 Change-request reference · 8 November 2026 · application baseline `16963bd`.
 
+Current interactive version: **Settings → Request changes** in the app, or the [standalone HTML guide](change-requests/index.html). It builds a copyable prompt from your selected screen sections.
+
 [PDF deck](product-overview.pdf) · [Editable PowerPoint](product-overview.pptx)
 
 Use the section IDs below when requesting changes. Captures show the current web-rendered interface with illustrative local data; Android may differ slightly. The widget illustration is a schematic.

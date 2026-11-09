@@ -1,6 +1,7 @@
 """Exercise the released APK and real Android launcher, using only seeded emulator data."""
 import pathlib
 import re
+import shlex
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -81,7 +82,7 @@ def widget_item(label, name):
     raise RuntimeError('Widget did not display ' + label)
 
 
-def verify_note_above_keyboard(name, date, text):
+def verify_note_above_keyboard(name, date, text, html_field=False):
     time.sleep(2)
     windows = adb('shell', 'dumpsys', 'window', 'windows')
     (results / (name + '-windows.txt')).write_text(windows)
@@ -108,7 +109,11 @@ def verify_note_above_keyboard(name, date, text):
     if keyboard_top is None:
         raise RuntimeError('Could not measure the real Android software keyboard.')
     root = screen(name)
-    editor = find_label(root, 'Daily note for ' + date)
+    editor = (next((node for node in root.iter('node')
+                    if node.attrib.get('class') == 'android.widget.EditText'
+                    and node.attrib.get('focused') == 'true'
+                    and text in node.attrib.get('text', '')), None)
+              if html_field else find_label(root, 'Daily note for ' + date))
     if editor is None or text not in editor.attrib.get('text', ''):
         raise RuntimeError('The focused daily note did not retain entered text.')
     left, top, right, bottom = map(int, re.findall(r'\d+', editor.attrib['bounds']))
@@ -121,6 +126,65 @@ def verify_note_above_keyboard(name, date, text):
     if ink < 120:
         raise RuntimeError('Entered note text is not visibly rendered above the keyboard.')
     print(f'{name}: entered text visible above keyboard (field bottom {bottom}, IME top {keyboard_top}).')
+
+
+
+def guide_control(label, name, editor=False):
+    for _ in range(8):
+        root = screen(name)
+        nodes = list(root.iter('node'))
+        for index, node in enumerate(nodes):
+            if label not in (node.attrib.get('content-desc', ''), node.attrib.get('text', '')):
+                continue
+            # WebView exposes HTML labels separately from empty textareas.
+            # Find the textbox following its visible label, like a user would.
+            if editor:
+                node = next((item for item in nodes[index + 1:]
+                             if item.attrib.get('class') == 'android.widget.EditText'), None)
+                if node is None:
+                    continue
+            x1, y1, x2, y2 = map(int, re.findall(r'\d+', node.attrib['bounds']))
+            if x2 > x1 and y2 > y1 and y1 > 100 and y2 < 1800:
+                return root, node
+        adb('shell', 'input', 'swipe', '450', '1500', '450', '650', '350')
+        time.sleep(1)
+    raise RuntimeError('Guide control missing: ' + label)
+
+
+def verify_change_guide(date):
+    adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', 'routinelog://settings', package)
+    root, request = wait_label('Request changes', 'settings')
+    tap(request)
+    wait_text('What would you change?', 'change-guide')
+    root, field = guide_control('What should change?', 'change-guide-field', editor=True)
+    tap(field)
+    adb('shell', 'input', 'text', 'Native%sguide%srequest')
+    verify_note_above_keyboard('change-guide-keyboard', date, 'Native guide request', html_field=True)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root, add = guide_control('Add change', 'change-guide-add')
+    tap(add)
+    time.sleep(2)
+    adb('shell', 'am', 'force-stop', package)
+    adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', 'routinelog://request-changes', package)
+    time.sleep(3)
+    root, generate = guide_control('Generate prompt', 'change-guide-restored')
+    if not any('Native guide request' in node.attrib.get('text', '') for node in root.iter('node')):
+        raise RuntimeError('The change-request draft did not survive process restart.')
+    tap(generate)
+    root, copy = guide_control('Copy instructions', 'change-guide-prompt')
+    tap(copy)
+    wait_text('Copied.', 'change-guide-copied')
+    adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', shlex.quote('routinelog://widget-open?focus=note&date=' + date), package)
+    root, note = wait_label('Daily note for ' + date, 'change-guide-paste-target')
+    tap(note)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_PASTE')
+    time.sleep(2)
+    root = screen('change-guide-clipboard')
+    note = find_label(root, 'Daily note for ' + date)
+    if note is None or 'Update RoutineLog.' not in note.attrib.get('text', '') or 'Native guide request' not in note.attrib.get('text', ''):
+        raise RuntimeError('Native clipboard did not contain the generated change instructions.')
+    print('In-app HTML guide preserved its draft after restart and copied the generated request to the native Android clipboard.')
 
 
 try:
@@ -304,6 +368,7 @@ try:
     wait_label('Daily note for ' + date, 'widget-note-reopened')
     verify_note_above_keyboard('widget-note-reopened-keyboard', date, 'Widget edition')
     print('Widget displayed the daily note, opened its focused editor and refreshed after editing.')
+    verify_change_guide(date)
 except Exception:
     root = screen('failure')
     labels = [node.attrib.get('text') or node.attrib.get('content-desc') for node in root.iter('node')]

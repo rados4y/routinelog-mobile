@@ -57,7 +57,11 @@ export function HabitScreen({
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
       <View style={styles.toolbar}>
         <View style={styles.brand}>
-          <Icon name="brand" color={colors.accentLight} size={24} />
+          <ToolButton
+            icon="settings"
+            label="Settings"
+            onPress={() => router.push('/settings')}
+          />
           <Text accessibilityRole="header" style={styles.title}>
             {title}
           </Text>
@@ -90,7 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  brand: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  brand: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '700', color: colors.text },
   tools: { flexDirection: 'row', alignItems: 'center' },
   tool: {
