@@ -81,7 +81,7 @@ def widget_item(label, name):
     raise RuntimeError('Widget did not display ' + label)
 
 
-def verify_note_above_keyboard(name, date, text, field_label=None):
+def verify_note_above_keyboard(name, date, text, html_field=False):
     time.sleep(2)
     windows = adb('shell', 'dumpsys', 'window', 'windows')
     (results / (name + '-windows.txt')).write_text(windows)
@@ -108,7 +108,11 @@ def verify_note_above_keyboard(name, date, text, field_label=None):
     if keyboard_top is None:
         raise RuntimeError('Could not measure the real Android software keyboard.')
     root = screen(name)
-    editor = find_label(root, field_label or ('Daily note for ' + date))
+    editor = (next((node for node in root.iter('node')
+                    if node.attrib.get('class') == 'android.widget.EditText'
+                    and node.attrib.get('focused') == 'true'
+                    and text in node.attrib.get('text', '')), None)
+              if html_field else find_label(root, 'Daily note for ' + date))
     if editor is None or text not in editor.attrib.get('text', ''):
         raise RuntimeError('The focused daily note did not retain entered text.')
     left, top, right, bottom = map(int, re.findall(r'\d+', editor.attrib['bounds']))
@@ -124,12 +128,20 @@ def verify_note_above_keyboard(name, date, text, field_label=None):
 
 
 
-def guide_control(label, name):
+def guide_control(label, name, editor=False):
     for _ in range(8):
         root = screen(name)
-        for node in root.iter('node'):
+        nodes = list(root.iter('node'))
+        for index, node in enumerate(nodes):
             if label not in (node.attrib.get('content-desc', ''), node.attrib.get('text', '')):
                 continue
+            # WebView exposes HTML labels separately from empty textareas.
+            # Find the textbox following its visible label, like a user would.
+            if editor:
+                node = next((item for item in nodes[index + 1:]
+                             if item.attrib.get('class') == 'android.widget.EditText'), None)
+                if node is None:
+                    continue
             x1, y1, x2, y2 = map(int, re.findall(r'\d+', node.attrib['bounds']))
             if x2 > x1 and y2 > y1 and y1 > 100 and y2 < 1800:
                 return root, node
@@ -143,10 +155,10 @@ def verify_change_guide(date):
     root, request = wait_label('Request changes', 'settings')
     tap(request)
     wait_text('What would you change?', 'change-guide')
-    root, field = guide_control('Requested change', 'change-guide-field')
+    root, field = guide_control('What should change?', 'change-guide-field', editor=True)
     tap(field)
     adb('shell', 'input', 'text', 'Native%sguide%srequest')
-    verify_note_above_keyboard('change-guide-keyboard', date, 'Native guide request', field_label='Requested change')
+    verify_note_above_keyboard('change-guide-keyboard', date, 'Native guide request', html_field=True)
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
     root, add = guide_control('Add change', 'change-guide-add')
     tap(add)
