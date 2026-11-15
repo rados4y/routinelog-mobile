@@ -36,6 +36,7 @@ export async function refreshWidgets(
               now,
               view.date,
               state.notes,
+              state.tasks,
             );
             return (
               <TodayWidget

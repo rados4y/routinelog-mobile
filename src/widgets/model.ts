@@ -6,6 +6,7 @@ import { nextStatus } from '../domain/status';
 import { categoryColors } from '../theme/colors';
 import type { DailyNote } from '../domain/note';
 import { widgetFocusUrl } from './focus';
+import { tasksForDate, type DailyTask } from '../domain/task';
 
 export const widgetName = 'RoutineLogToday';
 export const widgetClickSchema = z.object({
@@ -14,6 +15,11 @@ export const widgetClickSchema = z.object({
   expectedStatus: z.enum(['pending', 'done', 'missed', 'skipped']),
 });
 export type WidgetClick = z.infer<typeof widgetClickSchema>;
+export const taskClickSchema = z.object({
+  taskId: z.string().min(1),
+  date: z.iso.date(),
+  expectedDone: z.boolean(),
+});
 export interface WidgetRoutine {
   id: string;
   name: string;
@@ -32,6 +38,7 @@ export function todayWidgetModel(
   now = new Date(),
   date = localDate(now),
   notes: readonly Pick<DailyNote, 'date' | 'content'>[] = [],
+  tasks: readonly DailyTask[] = [],
 ) {
   const today = localDate(now);
   const isToday = date === today;
@@ -82,6 +89,13 @@ export function todayWidgetModel(
       month: 'short',
     }),
     items,
+    canAddTask: date >= today,
+    addTaskUrl: widgetFocusUrl({ focus: 'new-task', date }),
+    tasks: tasksForDate(tasks, date).map((task) => ({
+      ...task,
+      openUrl: widgetFocusUrl({ focus: 'task', date, taskId: task.id }),
+      click: { taskId: task.id, date, expectedDone: task.done },
+    })),
     note: {
       preview: Array.from(
         notes

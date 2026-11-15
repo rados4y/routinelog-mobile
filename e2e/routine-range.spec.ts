@@ -4,7 +4,7 @@ import { openApp } from './helpers';
 test('routine date ranges validate, persist and control the daily plan', async ({
   page,
 }) => {
-  await openApp(page);
+  await openApp(page, '/routines');
   await page.getByRole('button', { name: 'Add routine', exact: true }).click();
   await page
     .getByLabel('Routine name', { exact: true })
@@ -18,6 +18,7 @@ test('routine date ranges validate, persist and control the daily plan', async (
   await page.getByLabel('Start date', { exact: true }).fill('2026-11-03');
   await page.getByLabel('End date', { exact: true }).fill('2026-11-04');
   await page.getByRole('button', { name: 'Save routine', exact: true }).click();
+  await page.getByRole('tab', { name: 'Today', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Today', exact: true }),
   ).toBeVisible();

@@ -16,6 +16,7 @@ import { NotionButton } from '../../integrations/notion/NotionButton';
 import { DailyNoteEditor } from '../notes/DailyNoteEditor';
 import { useNoteDates } from '../notes/useNoteDates';
 import { useTodayFocus } from '../../store/useTodayFocus';
+import { TaskSection } from '../tasks/TaskSection';
 
 export function TodayScreen() {
   const now = useNow();
@@ -46,6 +47,18 @@ export function TodayScreen() {
     <>
       <HabitScreen
         title="Today"
+        addRoutine={false}
+        addAction={
+          selected >= today
+            ? {
+                label: 'Add task',
+                onPress: () =>
+                  useTodayFocus
+                    .getState()
+                    .open({ focus: 'new-task', date: selected }),
+              }
+            : undefined
+        }
         tools={
           <>
             <ToolButton
@@ -115,9 +128,22 @@ export function TodayScreen() {
           <EmptyState
             icon="✓"
             title="No routines for this day"
-            description="Tap + to add a routine, or change the date and filters."
+            description="Add recurring routines on the Routines page, or change the date and filters."
           />
         )}
+        <TaskSection
+          key={`tasks-${selected}-${focus && (focus.focus === 'task' || focus.focus === 'new-task') ? focus.request : 'none'}`}
+          date={selected}
+          today={today}
+          openRequest={
+            focus &&
+            (focus.focus === 'task' || focus.focus === 'new-task') &&
+            focus.date === selected
+              ? focus.request
+              : undefined
+          }
+          taskId={focus?.focus === 'task' ? focus.taskId : undefined}
+        />
         <DailyNoteEditor
           key={selected}
           date={selected}

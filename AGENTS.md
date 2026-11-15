@@ -24,6 +24,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Widget wypełnia całą wysokość launchera. Nawigacja zmienia tylko jedną instancję jednym renderem; status odświeża pozostałe bez powtarzania tego samego. Nie zmieniaj natywnej biblioteki bez omówienia złożoności z użytkownikiem.
 - Dzienne notatki są osobnymi rekordami po dacie. Zachowuj puste rekordy jako tombstone, kolejkę zapisów i niezapisane drafty. Kolumna Notion z markerem RoutineLog daily notes (v1) nie jest rutyną; scalaj notatki trójstronnie i nigdy nie nadpisuj edytowanego draftu z synchronizacji.
 - Zachowuj historię, lokalne daty i rozróżnienie pending/overdue/missed.
+- Tasks: opis bez tytułu/checklisty/harmonogramu; data z wybranego dnia Today/widgetu. Today + dodaje task, Routines + rutynę. Taski nie przechodzą na następny dzień i nie zmieniają statystyk rutyn. Usunięcia zachowują tombstone; Notion Tasks jest osobną bazą ze stabilnym Task ID.
 - Cele elastyczne rozliczaj po zamknięciu okna tygodniowego.
 - Testuj logikę i istotne przepływy; bez testów kopiujących JSX i zbędnych snapshotów.
 - Przy zmianach ekranów/logiki aktualizuj zwięzły katalog src/features/changeRequests/catalog.ts, zachowuj stabilne ID sekcji i uruchom npm run guide:build. Nie edytuj ręcznie generated/guide.ts ani docs/change-requests/index.html; CI sprawdza ich aktualność. Guide jest lokalnym HTML w WebView, draft jest osobnym rekordem UI i nie synchronizuje się z Notion.

@@ -1,4 +1,5 @@
 import { syncMasterRoutines } from './master/sync';
+import { syncTasks } from './tasks/sync';
 import { importLegacyRoutines } from './master/legacy';
 import type { KeyValueStorage } from '../../data/repositories';
 import { addDays, localDate } from '../../domain/dates';
@@ -74,6 +75,14 @@ export class NotionSync {
   ) {}
   async run(choice?: ConflictChoice): Promise<void> {
     this.pendingChecklists.clear();
+    await syncTasks(
+      this.root,
+      this.remote,
+      this.local,
+      this.storage,
+      this.clock,
+      choice,
+    );
     const current = localDate(this.clock()).slice(0, 7);
     const refs = await this.remote.listMonths();
     await syncMasterRoutines(

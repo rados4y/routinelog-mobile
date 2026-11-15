@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import { taskActions, type TaskActions } from './taskActions';
 import type { Repositories } from '../data/repositories';
 import { seedOnce } from '../data/seed';
 import { localDate } from '../domain/dates';
@@ -28,7 +29,7 @@ import {
   type DailyNote,
 } from '../domain/note';
 
-export interface RoutineState {
+export interface RoutineState extends TaskActions {
   routines: Routine[];
   logs: RoutineLog[];
   notes: DailyNote[];
@@ -112,6 +113,7 @@ export function createRoutineStore(
       });
     };
     return {
+      ...taskActions(get, set, perform, repos, clock, nextId),
       routines: [],
       logs: [],
       notes: [],
@@ -184,12 +186,13 @@ export function createRoutineStore(
         set({ loading: true, error: null });
         try {
           await seedOnce(repos, clock());
-          const [routines, logs, notes] = await Promise.all([
+          const [routines, logs, notes, tasks] = await Promise.all([
             repos.routines.list(),
             repos.logs.list(),
             repos.notes.list(),
+            repos.tasks.list(),
           ]);
-          set({ routines, logs, notes, ready: true });
+          set({ routines, logs, notes, tasks, ready: true });
         } catch {
           set({
             error:

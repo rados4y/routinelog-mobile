@@ -7,6 +7,7 @@ import {
 import { TodayWidget } from './TodayWidget';
 import { todayWidgetModel } from './model';
 import { routine } from '../test/fixtures';
+import { createTask } from '../domain/task';
 
 // Use the real widget serializer and primitives, without loading the RN runtime.
 vi.mock('react-native-android-widget', async () => ({
@@ -25,6 +26,58 @@ function widgetProps(tree: WidgetTree): Record<string, unknown>[] {
 }
 
 describe('native widget rendering', () => {
+  it('renders separate task add, edit and guarded completion actions at every widget height', () => {
+    const now = new Date(2026, 10, 4, 12);
+    const task = createTask('one-off', '2026-11-04', 'Buy bread', now);
+    for (const height of [110, 145, 260, 420]) {
+      const model = todayWidgetModel([], [], now, '2026-11-04', [], [task]);
+      const props = widgetProps(
+        buildWidgetTree(createElement(TodayWidget, { model, height })),
+      );
+      expect(
+        props.find((item) => item.accessibilityLabel === 'Add task'),
+      ).toMatchObject({
+        clickAction: 'OPEN_URI',
+        clickActionData: { uri: model.addTaskUrl },
+      });
+      expect(
+        props.find(
+          (item) => item.accessibilityLabel === 'Open task: Buy bread',
+        ),
+      ).toMatchObject({
+        clickAction: 'OPEN_URI',
+        clickActionData: { uri: model.tasks[0]!.openUrl },
+      });
+      expect(
+        props.find((item) => item.clickAction === 'task_toggle'),
+      ).toMatchObject({
+        clickActionData: {
+          taskId: task.id,
+          date: task.date,
+          expectedDone: false,
+        },
+      });
+    }
+    for (const date of ['2026-11-03', '2026-11-05']) {
+      const model = todayWidgetModel(
+        [],
+        [],
+        now,
+        date,
+        [],
+        [{ ...task, date }],
+      );
+      const props = widgetProps(
+        buildWidgetTree(createElement(TodayWidget, { model })),
+      );
+      expect(props.some((item) => item.clickAction === 'task_toggle')).toBe(
+        false,
+      );
+      expect(props.some((item) => item.accessibilityLabel === 'Add task')).toBe(
+        date > '2026-11-04',
+      );
+    }
+  });
   it('fills the same launcher height with zero, one and many routines on every date', () => {
     const now = new Date(2026, 10, 4, 12);
     for (const height of [110, 145, 260, 420]) {

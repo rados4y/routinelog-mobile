@@ -15,6 +15,7 @@ for (const name of [
   'register.android.ts',
   'bridge.android.tsx',
   'TodayWidget.tsx',
+  'TaskWidgetRow.tsx',
 ]) {
   if (!sources.some((source) => source.endsWith(`/src/widgets/${name}`)))
     throw new Error(

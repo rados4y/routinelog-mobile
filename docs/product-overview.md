@@ -22,6 +22,8 @@ Use the section IDs below when requesting changes. Captures show the current web
 
 **Shared logic:** unchecked → done → not done → skipped → unchecked. Future routine results are blocked. Unchecked past deadlines can still count as missed; open flexible targets do not create daily failures. Changes save locally first; Notion sync needs a connection. Routine descriptions and daily notes are separate.
 
+**Daily tasks:** Today + adds description-only tasks for the selected day, including future days. No date field, title, time or checklist. Routines + still adds recurring routines. Pending tasks remain on their original day. The widget shows tasks with direct completion toggles for today and a + shortcut to the app. A separate Notion Tasks database syncs descriptions, dates, completion and deletions both ways.
+
 **Current behavior:** Notion now uses a master Routines database and the widget includes daily notes; screenshots below predate those changes.
 
 **Capture guide:** Web-rendered screens with sample data; Android may differ slightly. Widget is a schematic.
@@ -32,14 +34,15 @@ Use the section IDs below when requesting changes. Captures show the current web
 
 ![Today](screens/today.png)
 
-| Section               | What it does                                                                                        |
-| --------------------- | --------------------------------------------------------------------------------------------------- |
-| T1 · Toolbar          | Search, category filter, date picker, widget and Notion shortcuts; widget shortcut is Android-only. |
-| T2 · Date strip       | Select a day; updates both the routine list and daily note.                                         |
-| T3 · Routine rows     | Icon, name, status circle. Tap circle to cycle result; tap name for details.                        |
-| T4 · Expanded details | Schedule, time, category, period progress, routine description and edit icon.                       |
-| T5 · Daily note       | Editable text directly below routines; autosaves, shows save status and retry. One note per date.   |
-| T6 · Add routine (+)  | Opens a new Routine editor.                                                                         |
+| Section               | What it does                                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| T1 · Toolbar          | Search, category filter, date picker, widget and Notion shortcuts; widget shortcut is Android-only.      |
+| T2 · Date strip       | Select a day; updates both the routine list and daily note.                                              |
+| T3 · Routine rows     | Icon, name, status circle. Tap circle to cycle result; tap name for details.                             |
+| T4 · Expanded details | Schedule, time, category, period progress, routine description and edit icon.                            |
+| T7 · Daily tasks      | Description + completion checkbox; edit/delete by tapping the text. No carry-over or routine statistics. |
+| T5 · Daily note       | Editable text below routines and tasks; autosaves, shows save status and retry. One note per date.       |
+| T6 · Add task (+)     | Opens a description-only task form for the selected day (today/future).                                  |
 
 **Logic:** schedule determines the list. Future dates preview routines but allow notes. Completing a routine with steps opens K first.
 
@@ -129,6 +132,6 @@ Use the section IDs below when requesting changes. Captures show the current web
 | W1 · Header            | Light home-screen widget: date title, previous/next day; title returns to today.                                   |
 | W2 · Routine rows      | Compact names, category stripes and status circles; today's taps cycle results.                                    |
 
-**Logic:** Notion sync runs on app open, after saves and every minute while open; offline data stays local. Conflicts ask which version to keep. Widget browsing outside today is read-only; checklist routines open the app for confirmation. Widget needs the installed Android APK; it displays the selected day’s note. Names open routine details, status circles cycle directly, and notes open editing. The panel fills its full allocated height.
+**Logic:** Notion sync runs on app open, after saves and every minute while open; offline data stays local. Conflicts ask which version to keep. Widget statuses outside today are read-only; + can add tasks for today/future dates; checklist routines open the app for confirmation. Widget needs the installed Android APK; it displays the selected day’s note. Names open routine details, status circles cycle directly, and notes open editing. The panel fills its full allocated height.
 
 **Examples:** “Today · T3: show time under the name.” / “Notes · N3: group by month.” / “Widget · W2: hide completed routines.”

@@ -1,4 +1,5 @@
 """Exercise the released APK and real Android launcher, using only seeded emulator data."""
+import os
 import pathlib
 import re
 import shlex
@@ -82,7 +83,7 @@ def widget_item(label, name):
     raise RuntimeError('Widget did not display ' + label)
 
 
-def verify_note_above_keyboard(name, date, text, html_field=False):
+def verify_note_above_keyboard(name, date, text, html_field=False, input_label=None):
     time.sleep(2)
     windows = adb('shell', 'dumpsys', 'window', 'windows')
     (results / (name + '-windows.txt')).write_text(windows)
@@ -113,7 +114,7 @@ def verify_note_above_keyboard(name, date, text, html_field=False):
                     if node.attrib.get('class') == 'android.widget.EditText'
                     and node.attrib.get('focused') == 'true'
                     and text in node.attrib.get('text', '')), None)
-              if html_field else find_label(root, 'Daily note for ' + date))
+              if html_field else find_label(root, input_label or ('Daily note for ' + date)))
     if editor is None or text not in editor.attrib.get('text', ''):
         raise RuntimeError('The focused daily note did not retain entered text.')
     left, top, right, bottom = map(int, re.findall(r'\d+', editor.attrib['bounds']))
@@ -149,6 +150,63 @@ def guide_control(label, name, editor=False):
         adb('shell', 'input', 'swipe', '450', '1500', '450', '650', '350')
         time.sleep(1)
     raise RuntimeError('Guide control missing: ' + label)
+
+
+def verify_daily_tasks(date, from_launcher=False):
+    # Back on the launcher switches to its default page and can hide a widget
+    # placed on another page. Only dismiss IME/leave the app in the full flow.
+    if not from_launcher:
+        adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+        adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, add = wait_label('Add task', 'task-widget-add')
+    tap(add)
+    root, editor = wait_label('Task description', 'task-editor')
+    # Autofocus may already have opened IME and moved the field since the dump.
+    # Tapping stale bounds can hit a keyboard key instead of the textbox.
+    if editor.attrib.get('focused') != 'true':
+        tap(editor)
+    adb('shell', 'input', 'text', 'Native%swidget%stask')
+    verify_note_above_keyboard('task-editor-keyboard', date, 'Native widget task', input_label='Task description')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root, save = wait_label('Add task', 'task-editor-save')
+    tap(save)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, status = widget_item('Task: Native widget task. Pending. Complete task', 'task-widget-pending')
+    tap(status)
+    root, status = widget_item('Task: Native widget task. Done. Undo task', 'task-widget-done')
+    tap(status)
+    root, status = widget_item('Task: Native widget task. Pending. Complete task', 'task-widget-undone')
+    root, title = widget_item('Open task: Native widget task', 'task-widget-open')
+    tap(title)
+    root, editor = wait_label('Task description', 'task-widget-editor')
+    if editor.attrib.get('text') != 'Native widget task':
+        raise RuntimeError('The widget did not open the existing task description.')
+    # Autofocus may already have opened IME and moved the field since the dump.
+    # Tapping stale bounds can hit a keyboard key instead of the textbox.
+    if editor.attrib.get('focused') != 'true':
+        tap(editor)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
+    adb('shell', 'input', 'text', '%sedited')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root, save = wait_label('Save task', 'task-editor-edited')
+    tap(save)
+    time.sleep(2)
+    # Stopping the app returns to the launcher underneath it. Another Home
+    # press here could switch away from the page that contains the widget.
+    adb('shell', 'am', 'force-stop', package)
+    root, title = widget_item('Open task: Native widget task edited', 'task-widget-persisted')
+    tap(title)
+    root, editor = wait_label('Task description', 'task-editor-restarted')
+    if editor.attrib.get('text') != 'Native widget task edited':
+        raise RuntimeError('The daily task did not survive process restart.')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root = screen('task-editor-close')
+    # On a cold start Back may already dismiss an unchanged sheet. If the
+    # keyboard consumed Back instead, close the sheet with its exact button.
+    close = next((node for node in root.iter('node') if node.attrib.get('content-desc') == 'Close'), None)
+    if close is not None:
+        tap(close)
+    print('Native widget added a description-only daily task, completed/undid it directly, opened editing and preserved changes after restart.')
 
 
 def verify_change_guide(date):
@@ -187,27 +245,68 @@ def verify_change_guide(date):
     print('In-app HTML guide preserved its draft after restart and copied the generated request to the native Android clipboard.')
 
 
+def pin_widget(button):
+    tap(button)
+    time.sleep(3)
+    root = screen('pin-dialog')
+    confirm = next((node for node in root.iter('node') if node.attrib.get('text', '').lower() in ['add', 'add automatically', 'add to home screen']), None)
+    if confirm is None:
+        raise RuntimeError('Android did not display its add-widget confirmation.')
+    tap(confirm)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    rendered = False
+    for _ in range(15):
+        time.sleep(2)
+        root = screen('launcher')
+        rendered = any('RoutineLog today' in node.attrib.get('content-desc', '') for node in root.iter('node'))
+        if rendered:
+            break
+    if not rendered:
+        raise RuntimeError('Widget did not render in the Android launcher.')
+    print('Native launcher rendered RoutineLog Today.')
+    return root
+
+
 try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
     adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
     adb('logcat', '-c')
-    adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
-    # A released APK may have a compatible OTA newer than its embedded bundle.
-    # Let Expo download it, then cold-launch to apply it before testing.
-    time.sleep(20)
-    adb('shell', 'am', 'force-stop', package)
-    adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
-    button = None
-    for _ in range(20):
-        time.sleep(2)
-        root = screen('app')
-        button = next((node for node in root.iter('node') if 'Add home-screen widget' in node.attrib.get('content-desc', '')), None)
-        if button is not None:
+    # A freshly booted emulator can report ready before DNS is usable. Never
+    # test the embedded APK by mistake when a compatible OTA is required.
+    for _ in range(12):
+        try:
+            lookup = adb('shell', 'ping', '-c', '1', '-W', '1', 'u.expo.dev')
+        except subprocess.CalledProcessError as error:
+            lookup = error.output.decode(errors='replace')
+        if re.search(r'PING .*\(', lookup):
             break
+        time.sleep(2)
+    button = None
+    for attempt in range(4):
+        adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
+        time.sleep(20)
+        adb('shell', 'am', 'force-stop', package)
+        adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
+        for _ in range(6):
+            time.sleep(2)
+            root = screen('app')
+            button = find_label(root, 'Add home-screen widget')
+            if button is not None and find_label(root, 'Add task') is not None:
+                break
+        if button is not None and find_label(root, 'Add task') is not None:
+            print('Compatible tasks OTA is loaded; native checks can start.')
+            break
+        button = None
+        print('Waiting for the compatible OTA download; retrying a cold launch.')
     if button is None:
-        raise RuntimeError('The app did not display the widget action.')
+        raise RuntimeError('Compatible tasks OTA did not load. Check Expo/DNS logs; the embedded older APK was not tested.')
     # Exercise inline daily notes and durable navigation on the real Android UI.
     date = adb('shell', 'date', '+%F').strip()
+    if os.environ.get('ROUTINELOG_SMOKE_SCOPE') == 'tasks':
+        pin_widget(button)
+        verify_daily_tasks(date, from_launcher=True)
+        print('Targeted native daily-task flow passed.')
+        raise SystemExit(0)
     details = find_label(root, 'Routine details: Wyjście na spacer z psem')
     if details is not None:
         tap(details)
@@ -260,24 +359,7 @@ try:
     tap(today_tab)
     root, button = wait_label('Add home-screen widget', 'app')
     print('Native daily note saved inline, appeared in Notes and survived process restart.')
-    tap(button)
-    time.sleep(3)
-    root = screen('pin-dialog')
-    confirm = next((node for node in root.iter('node') if node.attrib.get('text', '').lower() in ['add', 'add automatically', 'add to home screen']), None)
-    if confirm is None:
-        raise RuntimeError('Android did not display its add-widget confirmation.')
-    tap(confirm)
-    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
-    rendered = False
-    for _ in range(15):
-        time.sleep(2)
-        root = screen('launcher')
-        rendered = any('RoutineLog today' in node.attrib.get('content-desc', '') for node in root.iter('node'))
-        if rendered:
-            break
-    if not rendered:
-        raise RuntimeError('Widget did not render in the Android launcher.')
-    print('Native launcher rendered RoutineLog Today.')
+    root = pin_widget(button)
     widget = find_label(root, 'RoutineLog today')
     bounds = tuple(map(int, re.findall(r'\d+', widget.attrib['bounds'])))
     pixels = Image.open(results / 'launcher.png').convert('RGB').crop(bounds)
@@ -368,6 +450,7 @@ try:
     wait_label('Daily note for ' + date, 'widget-note-reopened')
     verify_note_above_keyboard('widget-note-reopened-keyboard', date, 'Widget edition')
     print('Widget displayed the daily note, opened its focused editor and refreshed after editing.')
+    verify_daily_tasks(date)
     verify_change_guide(date)
 except Exception:
     root = screen('failure')

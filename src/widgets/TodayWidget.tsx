@@ -8,6 +8,7 @@ import {
 } from 'react-native-android-widget';
 import type { TodayWidgetModel } from './model';
 import { statusLabels, nextActionLabel } from '../domain/status';
+import { TaskWidgetRow } from './TaskWidgetRow';
 
 // The launcher widget deliberately uses the light reference design, independent
 // of the app's dark theme. Native widget primitives render without React hooks.
@@ -106,6 +107,24 @@ export function TodayWidget({
               style={{ fontSize: 16, color: palette.text }}
             />
           </FlexWidget>
+          {model.canAddTask && (
+            <FlexWidget
+              style={{
+                width: 44,
+                height: headerHeight,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: model.addTaskUrl }}
+              accessibilityLabel="Add task"
+            >
+              <TextWidget
+                text="+"
+                style={{ fontSize: 25, color: palette.text }}
+              />
+            </FlexWidget>
+          )}
           <FlexWidget
             style={{
               width: 44,
@@ -266,6 +285,30 @@ export function TodayWidget({
                 />
               </FlexWidget>
             )}
+            {model.tasks.length > 0 && (
+              <FlexWidget
+                style={{
+                  width: 'match_parent',
+                  height: Math.min(24, rowHeight),
+                  paddingHorizontal: 12,
+                  justifyContent: 'center',
+                }}
+              >
+                <TextWidget
+                  text="Tasks"
+                  maxLines={1}
+                  style={{ fontSize: 11, color: palette.muted }}
+                />
+              </FlexWidget>
+            )}
+            {model.tasks.map((task) => (
+              <TaskWidgetRow
+                key={task.id}
+                task={task}
+                height={rowHeight}
+                isToday={model.isToday}
+              />
+            ))}
             <FlexWidget
               style={{
                 width: 'match_parent',

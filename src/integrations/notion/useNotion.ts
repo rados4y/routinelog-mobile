@@ -100,6 +100,8 @@ export const useNotion = create<NotionState>((set, get) => ({
         new HttpNotionGateway(new NotionClient(token), project.rootPageId),
         {
           read: () => routineStore.getState(),
+          applyTask: (expected, next) =>
+            routineStore.getState().applySyncedTask(expected, next),
           applyNote: (expected, next) =>
             noteDraftStore.getState().drafts[next.date]
               ? Promise.resolve(false)

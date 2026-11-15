@@ -9,7 +9,9 @@ test('Notion setup is reachable without leaving the compact daily workflow', asy
   await expect(
     page.getByRole('heading', { name: 'Notion', exact: true }),
   ).toBeVisible();
-  await expect(page.getByText('Routines + monthly tables')).toBeVisible();
+  await expect(
+    page.getByText('Routines, tasks + monthly tables'),
+  ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Open RoutineLog in Notion' }),
   ).toBeVisible();
