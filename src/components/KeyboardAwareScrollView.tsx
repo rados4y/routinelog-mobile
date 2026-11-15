@@ -15,6 +15,7 @@ import {
   type TextInput,
   type View,
 } from 'react-native';
+import { observeKeyboardTop } from './keyboardMonitor';
 
 export function useKeyboardTop() {
   const [top, setTop] = useState<number | undefined>(() =>
@@ -22,20 +23,7 @@ export function useKeyboardTop() {
   );
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const show = Keyboard.addListener('keyboardDidShow', (event) =>
-      setTop(event.endCoordinates.screenY),
-    );
-    const change = Keyboard.addListener('keyboardDidChangeFrame', (event) =>
-      setTop(event.endCoordinates.screenY),
-    );
-    const hide = Keyboard.addListener('keyboardDidHide', () =>
-      setTop(undefined),
-    );
-    return () => {
-      show.remove();
-      change.remove();
-      hide.remove();
-    };
+    return observeKeyboardTop(Keyboard, setTop);
   }, []);
   return top;
 }

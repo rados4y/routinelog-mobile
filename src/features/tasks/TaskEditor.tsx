@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { Sheet } from '../../components/Sheet';
 import { Button } from '../../components/Button';
@@ -17,6 +17,13 @@ function DescriptionInput({
 }) {
   const input = useRef<TextInput>(null);
   const reveal = useRevealInput();
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      // Native autofocus can precede the JS onFocus handler inside a Modal.
+      if (input.current?.isFocused()) reveal(input.current);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal]);
   return (
     <TextInput
       ref={input}
