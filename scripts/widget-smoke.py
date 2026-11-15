@@ -161,7 +161,10 @@ def verify_daily_tasks(date, from_launcher=False):
     root, add = wait_label('Add task', 'task-widget-add')
     tap(add)
     root, editor = wait_label('Task description', 'task-editor')
-    tap(editor)
+    # Autofocus may already have opened IME and moved the field since the dump.
+    # Tapping stale bounds can hit a keyboard key instead of the textbox.
+    if editor.attrib.get('focused') != 'true':
+        tap(editor)
     adb('shell', 'input', 'text', 'Native%swidget%stask')
     verify_note_above_keyboard('task-editor-keyboard', date, 'Native widget task', input_label='Task description')
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
@@ -178,7 +181,10 @@ def verify_daily_tasks(date, from_launcher=False):
     root, editor = wait_label('Task description', 'task-widget-editor')
     if editor.attrib.get('text') != 'Native widget task':
         raise RuntimeError('The widget did not open the existing task description.')
-    tap(editor)
+    # Autofocus may already have opened IME and moved the field since the dump.
+    # Tapping stale bounds can hit a keyboard key instead of the textbox.
+    if editor.attrib.get('focused') != 'true':
+        tap(editor)
     adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
     adb('shell', 'input', 'text', '%sedited')
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
