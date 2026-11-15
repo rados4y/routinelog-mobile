@@ -1,4 +1,5 @@
 """Exercise the released APK and real Android launcher, using only seeded emulator data."""
+import os
 import pathlib
 import re
 import shlex
@@ -189,8 +190,12 @@ def verify_daily_tasks(date):
     if editor.attrib.get('text') != 'Native widget task edited':
         raise RuntimeError('The daily task did not survive process restart.')
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
-    root, close = wait_label('Close', 'task-editor-close')
-    tap(close)
+    root = screen('task-editor-close')
+    # On a cold start Back may already dismiss an unchanged sheet. If the
+    # keyboard consumed Back instead, close the sheet with its exact button.
+    close = next((node for node in root.iter('node') if node.attrib.get('content-desc') == 'Close'), None)
+    if close is not None:
+        tap(close)
     print('Native widget added a description-only daily task, completed/undid it directly, opened editing and preserved changes after restart.')
 
 
@@ -230,6 +235,28 @@ def verify_change_guide(date):
     print('In-app HTML guide preserved its draft after restart and copied the generated request to the native Android clipboard.')
 
 
+def pin_widget(button):
+    tap(button)
+    time.sleep(3)
+    root = screen('pin-dialog')
+    confirm = next((node for node in root.iter('node') if node.attrib.get('text', '').lower() in ['add', 'add automatically', 'add to home screen']), None)
+    if confirm is None:
+        raise RuntimeError('Android did not display its add-widget confirmation.')
+    tap(confirm)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    rendered = False
+    for _ in range(15):
+        time.sleep(2)
+        root = screen('launcher')
+        rendered = any('RoutineLog today' in node.attrib.get('content-desc', '') for node in root.iter('node'))
+        if rendered:
+            break
+    if not rendered:
+        raise RuntimeError('Widget did not render in the Android launcher.')
+    print('Native launcher rendered RoutineLog Today.')
+    return root
+
+
 try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
     adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
@@ -251,6 +278,11 @@ try:
         raise RuntimeError('The app did not display the widget action.')
     # Exercise inline daily notes and durable navigation on the real Android UI.
     date = adb('shell', 'date', '+%F').strip()
+    if os.environ.get('ROUTINELOG_SMOKE_SCOPE') == 'tasks':
+        pin_widget(button)
+        verify_daily_tasks(date)
+        print('Targeted native daily-task flow passed.')
+        raise SystemExit(0)
     details = find_label(root, 'Routine details: Wyjście na spacer z psem')
     if details is not None:
         tap(details)
@@ -303,24 +335,7 @@ try:
     tap(today_tab)
     root, button = wait_label('Add home-screen widget', 'app')
     print('Native daily note saved inline, appeared in Notes and survived process restart.')
-    tap(button)
-    time.sleep(3)
-    root = screen('pin-dialog')
-    confirm = next((node for node in root.iter('node') if node.attrib.get('text', '').lower() in ['add', 'add automatically', 'add to home screen']), None)
-    if confirm is None:
-        raise RuntimeError('Android did not display its add-widget confirmation.')
-    tap(confirm)
-    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
-    rendered = False
-    for _ in range(15):
-        time.sleep(2)
-        root = screen('launcher')
-        rendered = any('RoutineLog today' in node.attrib.get('content-desc', '') for node in root.iter('node'))
-        if rendered:
-            break
-    if not rendered:
-        raise RuntimeError('Widget did not render in the Android launcher.')
-    print('Native launcher rendered RoutineLog Today.')
+    root = pin_widget(button)
     widget = find_label(root, 'RoutineLog today')
     bounds = tuple(map(int, re.findall(r'\d+', widget.attrib['bounds'])))
     pixels = Image.open(results / 'launcher.png').convert('RGB').crop(bounds)
