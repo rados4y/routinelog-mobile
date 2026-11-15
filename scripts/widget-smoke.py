@@ -152,9 +152,12 @@ def guide_control(label, name, editor=False):
     raise RuntimeError('Guide control missing: ' + label)
 
 
-def verify_daily_tasks(date):
-    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
-    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+def verify_daily_tasks(date, from_launcher=False):
+    # Back on the launcher switches to its default page and can hide a widget
+    # placed on another page. Only dismiss IME/leave the app in the full flow.
+    if not from_launcher:
+        adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+        adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     root, add = wait_label('Add task', 'task-widget-add')
     tap(add)
     root, editor = wait_label('Task description', 'task-editor')
@@ -280,7 +283,7 @@ try:
     date = adb('shell', 'date', '+%F').strip()
     if os.environ.get('ROUTINELOG_SMOKE_SCOPE') == 'tasks':
         pin_widget(button)
-        verify_daily_tasks(date)
+        verify_daily_tasks(date, from_launcher=True)
         print('Targeted native daily-task flow passed.')
         raise SystemExit(0)
     details = find_label(root, 'Routine details: Wyjście na spacer z psem')
