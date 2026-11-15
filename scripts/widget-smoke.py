@@ -185,8 +185,9 @@ def verify_daily_tasks(date, from_launcher=False):
     root, save = wait_label('Save task', 'task-editor-edited')
     tap(save)
     time.sleep(2)
+    # Stopping the app returns to the launcher underneath it. Another Home
+    # press here could switch away from the page that contains the widget.
     adb('shell', 'am', 'force-stop', package)
-    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     root, title = widget_item('Open task: Native widget task edited', 'task-widget-persisted')
     tap(title)
     root, editor = wait_label('Task description', 'task-editor-restarted')
