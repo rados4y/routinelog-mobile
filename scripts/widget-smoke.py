@@ -271,21 +271,35 @@ try:
     adb('install', '-r', '/tmp/routinelog-preview.apk')
     adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
     adb('logcat', '-c')
-    adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
-    # A released APK may have a compatible OTA newer than its embedded bundle.
-    # Let Expo download it, then cold-launch to apply it before testing.
-    time.sleep(20)
-    adb('shell', 'am', 'force-stop', package)
-    adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
-    button = None
-    for _ in range(20):
-        time.sleep(2)
-        root = screen('app')
-        button = next((node for node in root.iter('node') if 'Add home-screen widget' in node.attrib.get('content-desc', '')), None)
-        if button is not None:
+    # A freshly booted emulator can report ready before DNS is usable. Never
+    # test the embedded APK by mistake when a compatible OTA is required.
+    for _ in range(12):
+        try:
+            lookup = adb('shell', 'ping', '-c', '1', '-W', '1', 'u.expo.dev')
+        except subprocess.CalledProcessError as error:
+            lookup = error.output.decode(errors='replace')
+        if re.search(r'PING .*\(', lookup):
             break
+        time.sleep(2)
+    button = None
+    for attempt in range(4):
+        adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
+        time.sleep(20)
+        adb('shell', 'am', 'force-stop', package)
+        adb('shell', 'am', 'start', '-n', package + '/.MainActivity')
+        for _ in range(6):
+            time.sleep(2)
+            root = screen('app')
+            button = find_label(root, 'Add home-screen widget')
+            if button is not None and find_label(root, 'Add task') is not None:
+                break
+        if button is not None and find_label(root, 'Add task') is not None:
+            print('Compatible tasks OTA is loaded; native checks can start.')
+            break
+        button = None
+        print('Waiting for the compatible OTA download; retrying a cold launch.')
     if button is None:
-        raise RuntimeError('The app did not display the widget action.')
+        raise RuntimeError('Compatible tasks OTA did not load. Check Expo/DNS logs; the embedded older APK was not tested.')
     # Exercise inline daily notes and durable navigation on the real Android UI.
     date = adb('shell', 'date', '+%F').strip()
     if os.environ.get('ROUTINELOG_SMOKE_SCOPE') == 'tasks':
