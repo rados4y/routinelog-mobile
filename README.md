@@ -469,3 +469,15 @@ HTML/JS changes use fingerprint-compatible EAS Update. Current runtime: Expo Go 
 References: [Expo SDK 57 WebView](https://docs.expo.dev/versions/v57.0.0/sdk/webview/),
 [Expo SDK 57 Clipboard](https://docs.expo.dev/versions/v57.0.0/sdk/clipboard/),
 [runtime compatibility](https://docs.expo.dev/eas-update/runtime-versions/).
+
+## One-off daily tasks
+
+Today displays Routines → Tasks → Daily note. Its existing + adds a task with just a description (up to 2,000 characters); the selected day supplies the date. Today and future days allow creation. Routines are created from Routines +. Tasks have no title, checklist, recurrence or time. Completion toggles Pending/Done; future completion is blocked. Editing preserves the assigned date, deletion requires confirmation, and unfinished tasks never roll forward or affect routine statistics.
+
+The widget shows tasks for its selected date. + opens the same keyboard-ready form in the app; tapping a description opens editing. Today’s task checkbox toggles directly in the widget, with stale-tap protection. Other dates’ statuses remain read-only. The widget keeps its allocated height.
+
+Task records use a separate repository/namespace `@routinelog/v1/task/` and domain module `src/domain/task.ts`. Deletions persist as tombstones. Existing routine/note records need no migration.
+
+Notion sync automatically creates a separate **Tasks** database under the connected RoutineLog page: **Description** (title property required by Notion; this is the task’s only text), **Date**, **Done**, **Task ID**, **Archived**. One task per row; monthly routine columns are unchanged. Create/edit/complete/archive from either side. A new Notion task without Date defaults to its creation day; Task ID is filled automatically and must remain unchanged. An untouched blank row stays a Notion draft. Keep the database and column names/types intact. Deleting a synced Notion row produces a durable archived record for other devices.
+
+Sync uses a separate ledger, complete pagination, stable IDs, field-level three-way merges, explicit conflict choice and compare-and-save protection for concurrent local edits. It uses the existing foreground sync lifecycle; offline app/widget changes persist locally until synchronization can run. No new native dependencies are introduced; compatible APK 1.4.0 receives this feature via EAS Update.

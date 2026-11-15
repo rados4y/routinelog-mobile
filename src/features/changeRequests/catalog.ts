@@ -1,4 +1,4 @@
-export const guideVersion = '2026-11-09';
+export const guideVersion = '2026-11-15';
 export const repositoryUrl = 'https://github.com/rados4y/routinelog-mobile';
 export interface GuideSection {
   id: string;
@@ -23,7 +23,8 @@ export const screens: GuideScreen[] = [
     id: 'T',
     name: 'Today',
     image: 'today',
-    purpose: "The selected day's routines and editable daily note.",
+    purpose:
+      "The selected day's routines, one-off tasks and editable daily note.",
     logic:
       'The schedule and date range determine the plan. Status cycles unchecked → done → not done → skipped → unchecked. Future results are blocked; future notes are allowed. Required steps open the checklist before completion.',
     sections: [
@@ -54,8 +55,13 @@ export const screens: GuideScreen[] = [
       ),
       section(
         'T6',
-        'Add routine (+)',
-        'Opens the routine editor for a new routine.',
+        'Add task (+)',
+        'Opens a description-only task form for the selected day (today or future). Recurring routines are created on Routines.',
+      ),
+      section(
+        'T7',
+        'Daily tasks',
+        'Compact description and Pending/Done checkbox. Tap the description to edit/delete. Tasks stay on their assigned date, never carry over or count toward routine statistics. Future tasks cannot be completed early.',
       ),
     ],
   },
@@ -256,7 +262,7 @@ export const screens: GuideScreen[] = [
     id: 'S',
     name: 'Notion',
     purpose:
-      'Connect and synchronize routine definitions, results and daily notes.',
+      'Connect and synchronize routine definitions, results, daily tasks and notes.',
     logic:
       'Sync runs on app open, after saves and every minute while open. Offline changes stay local. Conflicts ask which version to keep. First sync migrates existing definitions; monthly-column removal never deletes a routine.',
     sections: [
@@ -275,6 +281,11 @@ export const screens: GuideScreen[] = [
         'Monthly tables',
         'Days are rows; routine columns are generated from date ranges. Daily results and Notes sync both ways. Retired/history columns are preserved.',
       ),
+      section(
+        'S4',
+        'Tasks database',
+        'One row per one-off task: Description, Date, Done, stable Task ID and Archived. Edits and deletions sync both ways; no task columns are added to monthly tables. New Notion rows default to their creation day when Date is empty.',
+      ),
     ],
   },
   {
@@ -282,12 +293,12 @@ export const screens: GuideScreen[] = [
     name: 'Android widget',
     purpose: 'Current-day actions and date browsing from the home screen.',
     logic:
-      'The light panel fills its allocated height. Date navigation updates one instance once. Browsing other days is read-only; the heading returns to today. Stale taps refresh without recording an old result. Requires the Android APK.',
+      'The light panel fills its allocated height. Date navigation updates one instance once. Statuses outside today are read-only; the heading returns to today. Adding tasks is allowed for today/future dates. Stale taps refresh without recording an old result. Requires the Android APK.',
     sections: [
       section(
         'W1',
         'Header',
-        'Date title and previous/next arrows. The selected date is separate for each widget and resets after local midnight.',
+        'Date title, + task and previous/next arrows. + opens the task form in the app for the displayed day. Each widget has a separate selected date that resets after midnight.',
       ),
       section(
         'W2',
@@ -298,6 +309,30 @@ export const screens: GuideScreen[] = [
         'W3',
         'Daily note',
         'Selected day’s preview or add-note prompt. Tapping opens the focused editor; saved changes refresh the preview.',
+      ),
+      section(
+        'W4',
+        'Task rows',
+        'Description opens the task editor. Today’s checkbox toggles Pending/Done directly; other dates are view-only. Only tasks assigned to the displayed day appear.',
+      ),
+    ],
+  },
+  {
+    id: 'D',
+    name: 'Task editor',
+    purpose: 'Add or edit one ad-hoc task.',
+    logic:
+      'One description field, no title, date input, time, recurrence or checklist. The day comes from Today or the widget. Save persists locally and schedules Notion sync. Cancel keeps the previous record; discarding typed text requires confirmation.',
+    sections: [
+      section(
+        'D1',
+        'Description',
+        'Required plain text up to 2,000 characters; keyboard-ready on opening.',
+      ),
+      section(
+        'D2',
+        'Save and delete',
+        'Add/Save, confirm deletion, or close and discard edits. Completed tasks can be undone on their assigned day.',
       ),
     ],
   },

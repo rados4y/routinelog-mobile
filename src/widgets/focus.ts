@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { dateSchema } from '../domain/models';
 
 export const widgetFocusSchema = z.discriminatedUnion('focus', [
+  z.object({ focus: z.literal('new-task'), date: dateSchema }),
+  z.object({
+    focus: z.literal('task'),
+    date: dateSchema,
+    taskId: z.string().min(1),
+  }),
   z.object({ focus: z.literal('note'), date: dateSchema }),
   z.object({
     focus: z.literal('routine'),
@@ -13,5 +19,5 @@ export type WidgetFocus = z.infer<typeof widgetFocusSchema>;
 
 export function widgetFocusUrl(target: WidgetFocus): string {
   const query = `focus=${target.focus}&date=${target.date}`;
-  return `routinelog://widget-open?${query}${target.focus === 'routine' ? `&routineId=${encodeURIComponent(target.routineId)}` : ''}`;
+  return `routinelog://widget-open?${query}${target.focus === 'routine' ? `&routineId=${encodeURIComponent(target.routineId)}` : target.focus === 'task' ? `&taskId=${encodeURIComponent(target.taskId)}` : ''}`;
 }

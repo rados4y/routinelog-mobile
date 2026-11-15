@@ -10,6 +10,7 @@ const mock = vi.hoisted(() => ({
   remove: vi.fn(),
   refresh: vi.fn(),
   cycle: vi.fn(),
+  toggleTask: vi.fn(),
 }));
 vi.mock('../store/useRoutines', () => ({
   routineStore: { getState: mock.getState, subscribe: mock.subscribe },
@@ -19,7 +20,10 @@ vi.mock('./storage', () => ({
   widgetViews: { navigate: mock.navigate, get: mock.get, remove: mock.remove },
 }));
 vi.mock('./bridge', () => ({ refreshWidgets: mock.refresh }));
-vi.mock('./actions', () => ({ cycleFromWidget: mock.cycle }));
+vi.mock('./actions', () => ({
+  cycleFromWidget: mock.cycle,
+  toggleTaskFromWidget: mock.toggleTask,
+}));
 const props = (): WidgetTaskHandlerProps => ({
   widgetInfo: {
     widgetId: 7,
@@ -48,11 +52,21 @@ beforeEach(() => {
     routines: [],
     logs: [],
     notes: [],
+    tasks: [],
   });
   mock.get.mockResolvedValue({ date: '2026-11-09', viewedOn: '2026-11-08' });
   mock.cycle.mockResolvedValue('done');
 });
 describe('widget update targeting', () => {
+  it('toggles tasks separately and refreshes the other widget instances once', async () => {
+    mock.toggleTask.mockResolvedValue('saved');
+    const event = { ...props(), clickAction: 'task_toggle' };
+    await widgetTaskHandler(event);
+    expect(mock.toggleTask).toHaveBeenCalledTimes(1);
+    expect(mock.cycle).not.toHaveBeenCalled();
+    expect(event.renderWidget).toHaveBeenCalledTimes(1);
+    expect(mock.refresh).toHaveBeenCalledWith(undefined, 7);
+  });
   it('changes a date with one render and leaves other instances untouched', async () => {
     const event = props();
     await widgetTaskHandler(event);

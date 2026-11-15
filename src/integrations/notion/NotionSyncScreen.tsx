@@ -25,15 +25,20 @@ export function NotionSyncScreen() {
   return (
     <Screen
       title="Notion"
-      subtitle="One routine list, monthly results and daily notes"
+      subtitle="Routines, daily tasks, monthly results and notes"
       action={<Button label="Back" compact onPress={() => router.back()} />}
     >
       <View style={common.card}>
-        <Text style={common.heading}>Routines + monthly tables</Text>
+        <Text style={common.heading}>Routines, tasks + monthly tables</Text>
         <Text style={common.subtitle}>
           Manage definitions in the Routines database: one row per routine, with
           frequency, start/end dates, description and checklist. Edit here or in
           the app; changes sync both ways.
+        </Text>
+        <Text style={common.subtitle}>
+          The Tasks database holds one-off tasks: Description, Date and Done.
+          Add or edit tasks here or in the app. Archived removes a task from the
+          app; tasks never carry over to another day.
         </Text>
         <Text style={common.subtitle}>
           The Notes text column holds one daily note per row. Notes sync both

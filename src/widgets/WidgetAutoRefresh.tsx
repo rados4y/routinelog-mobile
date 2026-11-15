@@ -21,7 +21,8 @@ export function WidgetAutoRefresh() {
       if (
         state.logs !== previous.logs ||
         state.routines !== previous.routines ||
-        state.notes !== previous.notes
+        state.notes !== previous.notes ||
+        state.tasks !== previous.tasks
       )
         contentChanged = true;
       if (

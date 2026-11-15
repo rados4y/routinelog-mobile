@@ -2,7 +2,7 @@ import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { routineStore } from '../store/useRoutines';
 import { TodayWidget } from './TodayWidget';
 import { todayWidgetModel, widgetName } from './model';
-import { cycleFromWidget } from './actions';
+import { cycleFromWidget, toggleTaskFromWidget } from './actions';
 import { refreshWidgets } from './bridge';
 import { widgetViews } from './storage';
 import { isWidgetNavigation } from './viewState';
@@ -47,12 +47,13 @@ export async function widgetTaskHandler(
       if (!routineStore.getState().ready) await routineStore.getState().load();
       if (
         props.widgetAction === 'WIDGET_CLICK' &&
-        props.clickAction === 'cycle'
+        (props.clickAction === 'cycle' || props.clickAction === 'task_toggle')
       ) {
-        const result = await cycleFromWidget(
-          routineStore.getState(),
-          props.clickActionData,
-        );
+        const result = await (
+          props.clickAction === 'task_toggle'
+            ? toggleTaskFromWidget
+            : cycleFromWidget
+        )(routineStore.getState(), props.clickActionData);
         if (result === 'checklist')
           notice =
             'Open the routine, then tap its status to confirm the checklist.';
@@ -74,6 +75,7 @@ export async function widgetTaskHandler(
           now,
           view.date,
           state.notes,
+          state.tasks,
         )}
         height={props.widgetInfo.height}
         notice={notice}
@@ -81,7 +83,10 @@ export async function widgetTaskHandler(
     );
     // Navigation changes only this instance. renderWidget above already updates it;
     // replacing all collection adapters a second time causes a visible flash.
-    if (props.widgetAction === 'WIDGET_CLICK' && props.clickAction === 'cycle')
+    if (
+      props.widgetAction === 'WIDGET_CLICK' &&
+      (props.clickAction === 'cycle' || props.clickAction === 'task_toggle')
+    )
       await refreshWidgets(notice, props.widgetInfo.widgetId);
   } catch {
     props.renderWidget(

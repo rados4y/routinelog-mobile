@@ -1,4 +1,6 @@
 import { HttpMasterGateway } from './master/gateway';
+import { HttpTaskGateway } from './tasks/gateway';
+import type { TaskTable, TaskValue } from './tasks/models';
 import type { MasterTable, MasterValue } from './master/models';
 import { z } from 'zod';
 import { dateSchema } from '../../domain/models';
@@ -61,6 +63,17 @@ export class HttpNotionGateway implements NotionGateway {
     private client: NotionClient,
     private rootPageId: string,
   ) {}
+  readTasks() {
+    return new HttpTaskGateway(this.client, this.rootPageId).readTasks();
+  }
+  writeTask(table: TaskTable, id: string, value: TaskValue, pageId?: string) {
+    return new HttpTaskGateway(this.client, this.rootPageId).writeTask(
+      table,
+      id,
+      value,
+      pageId,
+    );
+  }
   readRoutines() {
     return new HttpMasterGateway(this.client, this.rootPageId).readRoutines();
   }

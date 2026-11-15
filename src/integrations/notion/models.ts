@@ -1,4 +1,5 @@
 import type { MasterGateway } from './master/models';
+import type { TaskGateway } from './tasks/models';
 import { z } from 'zod';
 import { routineInputSchema, type RoutineLog } from '../../domain/models';
 export type { SyncLocal } from '../../data/sync';
@@ -28,7 +29,7 @@ export interface MonthTable extends MonthRef {
     note?: string;
   }[];
 }
-export interface NotionGateway extends MasterGateway {
+export interface NotionGateway extends MasterGateway, TaskGateway {
   listMonths(): Promise<MonthRef[]>;
   createMonth(month: string): Promise<MonthRef>;
   readMonth(ref: MonthRef): Promise<MonthTable>;

@@ -82,7 +82,7 @@ def widget_item(label, name):
     raise RuntimeError('Widget did not display ' + label)
 
 
-def verify_note_above_keyboard(name, date, text, html_field=False):
+def verify_note_above_keyboard(name, date, text, html_field=False, input_label=None):
     time.sleep(2)
     windows = adb('shell', 'dumpsys', 'window', 'windows')
     (results / (name + '-windows.txt')).write_text(windows)
@@ -113,7 +113,7 @@ def verify_note_above_keyboard(name, date, text, html_field=False):
                     if node.attrib.get('class') == 'android.widget.EditText'
                     and node.attrib.get('focused') == 'true'
                     and text in node.attrib.get('text', '')), None)
-              if html_field else find_label(root, 'Daily note for ' + date))
+              if html_field else find_label(root, input_label or ('Daily note for ' + date)))
     if editor is None or text not in editor.attrib.get('text', ''):
         raise RuntimeError('The focused daily note did not retain entered text.')
     left, top, right, bottom = map(int, re.findall(r'\d+', editor.attrib['bounds']))
@@ -149,6 +149,49 @@ def guide_control(label, name, editor=False):
         adb('shell', 'input', 'swipe', '450', '1500', '450', '650', '350')
         time.sleep(1)
     raise RuntimeError('Guide control missing: ' + label)
+
+
+def verify_daily_tasks(date):
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, add = wait_label('Add task', 'task-widget-add')
+    tap(add)
+    root, editor = wait_label('Task description', 'task-editor')
+    tap(editor)
+    adb('shell', 'input', 'text', 'Native%swidget%stask')
+    verify_note_above_keyboard('task-editor-keyboard', date, 'Native widget task', input_label='Task description')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root, save = wait_label('Add task', 'task-editor-save')
+    tap(save)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, status = widget_item('Task: Native widget task. Pending. Complete task', 'task-widget-pending')
+    tap(status)
+    root, status = widget_item('Task: Native widget task. Done. Undo task', 'task-widget-done')
+    tap(status)
+    root, status = widget_item('Task: Native widget task. Pending. Complete task', 'task-widget-undone')
+    root, title = widget_item('Open task: Native widget task', 'task-widget-open')
+    tap(title)
+    root, editor = wait_label('Task description', 'task-widget-editor')
+    if editor.attrib.get('text') != 'Native widget task':
+        raise RuntimeError('The widget did not open the existing task description.')
+    tap(editor)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
+    adb('shell', 'input', 'text', '%sedited')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root, save = wait_label('Save task', 'task-editor-edited')
+    tap(save)
+    time.sleep(2)
+    adb('shell', 'am', 'force-stop', package)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    root, title = widget_item('Open task: Native widget task edited', 'task-widget-persisted')
+    tap(title)
+    root, editor = wait_label('Task description', 'task-editor-restarted')
+    if editor.attrib.get('text') != 'Native widget task edited':
+        raise RuntimeError('The daily task did not survive process restart.')
+    adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+    root, close = wait_label('Close', 'task-editor-close')
+    tap(close)
+    print('Native widget added a description-only daily task, completed/undid it directly, opened editing and preserved changes after restart.')
 
 
 def verify_change_guide(date):
@@ -368,6 +411,7 @@ try:
     wait_label('Daily note for ' + date, 'widget-note-reopened')
     verify_note_above_keyboard('widget-note-reopened-keyboard', date, 'Widget edition')
     print('Widget displayed the daily note, opened its focused editor and refreshed after editing.')
+    verify_daily_tasks(date)
     verify_change_guide(date)
 except Exception:
     root = screen('failure')

@@ -10,8 +10,36 @@ import {
 } from './descriptions';
 import type { MonthRef, MonthTable, NotionGateway } from './models';
 import type { MasterTable, MasterValue } from './master/models';
+import type { TaskTable, TaskValue } from './tasks/models';
 import { NotionSync, daysInMonth } from './sync';
 export class FakeNotion implements NotionGateway {
+  tasks: TaskTable = {
+    databaseId: 'tasks-db',
+    dataSourceId: 'tasks-ds',
+    rows: [],
+  };
+  async readTasks() {
+    return structuredClone(this.tasks);
+  }
+  async writeTask(
+    _table: TaskTable,
+    id: string,
+    value: TaskValue,
+    pageId?: string,
+  ) {
+    const row = {
+      id,
+      pageId: pageId ?? `task-page-${id}`,
+      value: structuredClone(value),
+      createdAt: `${monday}T10:00:00Z`,
+      updatedAt: `${monday}T10:00:00Z`,
+    };
+    this.tasks.rows = [
+      ...this.tasks.rows.filter((item) => item.id !== id),
+      row,
+    ];
+    return row.pageId;
+  }
   master: MasterTable = {
     databaseId: 'master-db',
     dataSourceId: 'master-ds',
@@ -195,6 +223,7 @@ export async function setup() {
       remote,
       {
         read: () => store.getState(),
+        applyTask: (...args) => store.getState().applySyncedTask(...args),
         applyNote: (...args) => store.getState().applySyncedNote(...args),
         applyRoutine: (...args) => store.getState().applySyncedRoutine(...args),
         applyLog: (...args) => store.getState().applySyncedLog(...args),

@@ -45,12 +45,14 @@ export function HabitScreen({
   fixed,
   children,
   addRoutine = true,
+  addAction,
 }: {
   title: string;
   tools?: ReactNode;
   fixed?: ReactNode;
   children: ReactNode;
   addRoutine?: boolean;
+  addAction?: { label: string; onPress(): void };
 }) {
   const keyboardTop = useKeyboardTop();
   return (
@@ -72,11 +74,11 @@ export function HabitScreen({
       <KeyboardAwareScrollView contentContainerStyle={styles.content}>
         {children}
       </KeyboardAwareScrollView>
-      {addRoutine && keyboardTop === undefined && (
+      {(addAction || addRoutine) && keyboardTop === undefined && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add routine"
-          onPress={() => router.push('/routine-editor')}
+          accessibilityLabel={addAction?.label ?? 'Add routine'}
+          onPress={addAction?.onPress ?? (() => router.push('/routine-editor'))}
           style={styles.fab}
         >
           <Icon name="plus" size={30} color={colors.text} />

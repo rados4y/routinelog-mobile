@@ -46,8 +46,9 @@ export function WidgetButton() {
         <Text style={common.subtitle}>{message}</Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>
           Tap a routine name to open its details, or its circle to cycle status.
-          Tap the daily note to edit it in the app. Checklists open before
-          completion.
+          Tap + to add a task for the displayed day. Task descriptions open
+          their editor; today’s task checkboxes toggle directly. Tap the daily
+          note to edit it in the app. Checklists open before completion.
         </Text>
       </Sheet>
     </>
