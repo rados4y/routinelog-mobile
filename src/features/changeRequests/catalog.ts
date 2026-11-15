@@ -51,7 +51,7 @@ export const screens: GuideScreen[] = [
       section(
         'T5',
         'Daily note',
-        'One editable plain-text note per date, directly below routines. Autosaves, reports save/retry state and stays above the keyboard.',
+        'One editable plain-text note per date, below routines and tasks. Autosaves, reports save/retry state and stays above the keyboard.',
       ),
       section(
         'T6',

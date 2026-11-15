@@ -106,7 +106,7 @@ export function TaskEditor({
       {confirmDelete && (
         <View style={{ gap: 8 }}>
           <Text style={common.text}>
-            Delete this task from the app and Notion?
+            Delete this task? It will be archived in Notion.
           </Text>
           <Button
             label="Confirm delete task"

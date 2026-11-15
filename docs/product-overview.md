@@ -41,7 +41,7 @@ Use the section IDs below when requesting changes. Captures show the current web
 | T3 · Routine rows     | Icon, name, status circle. Tap circle to cycle result; tap name for details.                             |
 | T4 · Expanded details | Schedule, time, category, period progress, routine description and edit icon.                            |
 | T7 · Daily tasks      | Description + completion checkbox; edit/delete by tapping the text. No carry-over or routine statistics. |
-| T5 · Daily note       | Editable text directly below routines; autosaves, shows save status and retry. One note per date.        |
+| T5 · Daily note       | Editable text below routines and tasks; autosaves, shows save status and retry. One note per date.       |
 | T6 · Add task (+)     | Opens a description-only task form for the selected day (today/future).                                  |
 
 **Logic:** schedule determines the list. Future dates preview routines but allow notes. Completing a routine with steps opens K first.
@@ -132,6 +132,6 @@ Use the section IDs below when requesting changes. Captures show the current web
 | W1 · Header            | Light home-screen widget: date title, previous/next day; title returns to today.                                   |
 | W2 · Routine rows      | Compact names, category stripes and status circles; today's taps cycle results.                                    |
 
-**Logic:** Notion sync runs on app open, after saves and every minute while open; offline data stays local. Conflicts ask which version to keep. Widget browsing outside today is read-only; checklist routines open the app for confirmation. Widget needs the installed Android APK; it displays the selected day’s note. Names open routine details, status circles cycle directly, and notes open editing. The panel fills its full allocated height.
+**Logic:** Notion sync runs on app open, after saves and every minute while open; offline data stays local. Conflicts ask which version to keep. Widget statuses outside today are read-only; + can add tasks for today/future dates; checklist routines open the app for confirmation. Widget needs the installed Android APK; it displays the selected day’s note. Names open routine details, status circles cycle directly, and notes open editing. The panel fills its full allocated height.
 
 **Examples:** “Today · T3: show time under the name.” / “Notes · N3: group by month.” / “Widget · W2: hide completed routines.”
