@@ -68,7 +68,8 @@ def wait_text(text, name):
 
 
 def widget_item(label, name):
-    for attempt in range(5):
+    # Section actions are inside the collection, so search both directions.
+    for attempt in range(10):
         root = screen(name)
         node = find_label(root, label)
         if node is not None:
@@ -78,7 +79,8 @@ def widget_item(label, name):
             raise RuntimeError('Launcher widget is missing while looking for ' + label)
         left, top, right, bottom = map(int, re.findall(r'\d+', widget.attrib['bounds']))
         x = (left + right) // 2
-        adb('shell', 'input', 'swipe', str(x), str(top + (bottom - top) * 85 // 100), str(x), str(top + (bottom - top) * 35 // 100), '400')
+        start, end = (85, 35) if attempt < 5 else (35, 85)
+        adb('shell', 'input', 'swipe', str(x), str(top + (bottom - top) * start // 100), str(x), str(top + (bottom - top) * end // 100), '400')
         time.sleep(2)
     raise RuntimeError('Widget did not display ' + label)
 
@@ -87,14 +89,16 @@ def edit_widget_row(label, name):
     root, body = widget_item(label, name)
     tap(body)
     time.sleep(2)
-    root = screen(name + '-expanded')
-    # A repeated warm visit can find this row already expanded; the first tap
-    # collapses it, so expand once more before following the separate edit link.
-    if find_label(root, 'Edit in app') is None:
+    # An expanded bottom row can put its action below the viewport. Scroll
+    # before toggling: absence from the current window does not mean collapsed.
+    try:
+        root, edit = widget_item('Edit in app', name + '-edit')
+    except RuntimeError:
+        # Repeated warm visits can start expanded, so the first tap collapsed it.
         root, body = widget_item(label, name + '-toggle')
         tap(body)
         time.sleep(2)
-    root, edit = widget_item('Edit in app', name + '-edit')
+        root, edit = widget_item('Edit in app', name + '-edit-retry')
     tap(edit)
 
 
