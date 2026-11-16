@@ -123,7 +123,7 @@ export function OccurrenceCard({
             onChangeText={setName}
             onFocus={() => revealInput(nameInput.current)}
             onSelectionChange={() => revealInput(nameInput.current)}
-            onBlur={() => revealInput(null)}
+            onBlur={() => revealInput(null, nameInput.current)}
             style={{
               color: colors.text,
               backgroundColor: colors.panelSecondary,

@@ -102,7 +102,7 @@ export function DailyNoteEditor({
         onSelectionChange={() => reveal(input.current)}
         onContentSizeChange={() => reveal(input.current)}
         onBlur={() => {
-          reveal(null);
+          reveal(null, input.current);
           void save(date);
         }}
         placeholder="Write about your day…"

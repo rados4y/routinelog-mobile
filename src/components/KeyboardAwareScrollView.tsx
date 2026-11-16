@@ -28,7 +28,9 @@ export function useKeyboardTop() {
   return top;
 }
 
-const FocusedInput = createContext<(input: TextInput | null) => void>(() => {});
+const FocusedInput = createContext<
+  (input: TextInput | null, blurredInput?: TextInput | null) => void
+>(() => {});
 export const useRevealInput = () => useContext(FocusedInput);
 type RevealSection = (view: View | null, afterScroll?: () => void) => void;
 const Section = createContext<RevealSection>(() => {});
@@ -98,13 +100,23 @@ export function KeyboardAwareScrollView({
   }, [reveal]);
   const bottomPadding =
     StyleSheet.flatten(contentContainerStyle)?.paddingBottom ?? 0;
+  const trackInput = useCallback(
+    (input: TextInput | null, blurredInput?: TextInput | null) => {
+      // Android can deliver the old field's blur after the next field's focus.
+      // That late event must not unregister the editor now above the keyboard.
+      if (
+        !input &&
+        blurredInput !== undefined &&
+        focused.current !== blurredInput
+      )
+        return;
+      focused.current = input;
+      reveal();
+    },
+    [reveal],
+  );
   return (
-    <FocusedInput.Provider
-      value={(input) => {
-        focused.current = input;
-        reveal();
-      }}
-    >
+    <FocusedInput.Provider value={trackInput}>
       <Section.Provider value={revealSection}>
         <ScrollView
           {...props}

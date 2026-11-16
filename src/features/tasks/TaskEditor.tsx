@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Text, TextInput, View } from 'react-native';
 import { Sheet } from '../../components/Sheet';
 import { Button } from '../../components/Button';
@@ -6,7 +7,10 @@ import { addDays, dateLabel } from '../../domain/dates';
 import { maxTaskLength, type DailyTask } from '../../domain/task';
 import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
-import { useRevealInput } from '../../components/KeyboardAwareScrollView';
+import {
+  useRevealInput,
+  useRevealSection,
+} from '../../components/KeyboardAwareScrollView';
 import { useTaskPostpone } from './useTaskPostpone';
 import { create } from 'zustand';
 
@@ -36,7 +40,33 @@ function DescriptionInput({
   onChangeText(value: string): void;
 }) {
   const input = useRef<TextInput>(null);
+  const section = useRef<View>(null);
   const reveal = useRevealInput();
+  const revealSection = useRevealSection();
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let attempts = 0;
+      const activate = () => {
+        if (cancelled) return;
+        revealSection(section.current, () => {
+          if (cancelled) return;
+          input.current?.focus();
+          timer = setTimeout(() => {
+            if (!cancelled && !input.current?.isFocused() && ++attempts < 6)
+              activate();
+          }, 150);
+        });
+      };
+      const frame = requestAnimationFrame(activate);
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
+    }, [revealSection]),
+  );
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       // Native autofocus can precede the JS onFocus handler inside a Modal.
@@ -45,31 +75,32 @@ function DescriptionInput({
     return () => cancelAnimationFrame(frame);
   }, [reveal]);
   return (
-    <TextInput
-      ref={input}
-      autoFocus
-      multiline
-      accessibilityLabel="Task description"
-      placeholder="What do you need to do?"
-      placeholderTextColor={colors.muted}
-      value={value}
-      onChangeText={onChangeText}
-      maxLength={maxTaskLength}
-      textAlignVertical="top"
-      onFocus={() => reveal(input.current)}
-      onSelectionChange={() => reveal(input.current)}
-      onContentSizeChange={() => reveal(input.current)}
-      onBlur={() => reveal(null)}
-      style={{
-        color: colors.text,
-        backgroundColor: colors.panelSecondary,
-        borderRadius: 14,
-        padding: 14,
-        minHeight: 100,
-        maxHeight: 180,
-        fontSize: 16,
-      }}
-    />
+    <View ref={section}>
+      <TextInput
+        ref={input}
+        multiline
+        accessibilityLabel="Task description"
+        placeholder="What do you need to do?"
+        placeholderTextColor={colors.muted}
+        value={value}
+        onChangeText={onChangeText}
+        maxLength={maxTaskLength}
+        textAlignVertical="top"
+        onFocus={() => reveal(input.current)}
+        onSelectionChange={() => reveal(input.current)}
+        onContentSizeChange={() => reveal(input.current)}
+        onBlur={() => reveal(null, input.current)}
+        style={{
+          color: colors.text,
+          backgroundColor: colors.panelSecondary,
+          borderRadius: 14,
+          padding: 14,
+          minHeight: 100,
+          maxHeight: 180,
+          fontSize: 16,
+        }}
+      />
+    </View>
   );
 }
 
