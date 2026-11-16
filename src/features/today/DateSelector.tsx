@@ -7,17 +7,21 @@ import {
   weekday,
 } from '../../domain/dates';
 import { colors } from '../../theme';
-import { NoteDateMarker } from '../../components/NoteDateMarker';
+import { DayMarkers, dayMarkerHint } from '../../components/DayMarkers';
 
 export function DateSelector({
   today,
   selected,
   noteDates,
+  missedTaskDates,
+  doneTaskDates,
   onSelect,
 }: {
   today: string;
   selected: string;
   noteDates: ReadonlySet<string>;
+  missedTaskDates: ReadonlySet<string>;
+  doneTaskDates: ReadonlySet<string>;
   onSelect(date: string): void;
 }) {
   return (
@@ -36,7 +40,11 @@ export function DateSelector({
           key={date}
           accessibilityRole="button"
           accessibilityLabel={dateLabel(date)}
-          accessibilityHint={noteDates.has(date) ? 'Has daily note' : undefined}
+          accessibilityHint={dayMarkerHint(
+            noteDates.has(date),
+            missedTaskDates.has(date),
+            doneTaskDates.has(date),
+          )}
           accessibilityState={{ selected: date === selected }}
           onPress={() => onSelect(date)}
           style={[styles.day, date === selected && styles.selected]}
@@ -60,14 +68,13 @@ export function DateSelector({
               },
             ]}
           />
-          {noteDates.has(date) && (
-            <View style={styles.note}>
-              <NoteDateMarker
-                testID={`strip-note-${date}`}
-                selected={selected === date}
-              />
-            </View>
-          )}
+          <DayMarkers
+            date={date}
+            prefix="strip"
+            note={noteDates.has(date)}
+            missed={missedTaskDates.has(date)}
+            done={doneTaskDates.has(date)}
+          />
         </Pressable>
       ))}
     </ScrollView>
@@ -76,8 +83,8 @@ export function DateSelector({
 const styles = StyleSheet.create({
   row: { flexGrow: 1, justifyContent: 'space-between', gap: 4 },
   day: {
-    width: 44,
-    minHeight: 62,
+    width: 46,
+    minHeight: 74,
     paddingVertical: 8,
     alignItems: 'center',
     gap: 2,

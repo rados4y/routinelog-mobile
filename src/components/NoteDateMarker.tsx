@@ -1,6 +1,5 @@
 import { View } from 'react-native';
 import { Icon } from './Icon';
-import { colors } from '../theme';
 
 export function NoteDateMarker({
   testID,
@@ -11,11 +10,7 @@ export function NoteDateMarker({
 }) {
   return (
     <View testID={testID} pointerEvents="none" accessible={false}>
-      <Icon
-        name="notes"
-        size={12}
-        color={selected ? colors.text : colors.accentLight}
-      />
+      <Icon name="notes" size={12} color={selected ? '#bdd0ff' : '#91acff'} />
     </View>
   );
 }

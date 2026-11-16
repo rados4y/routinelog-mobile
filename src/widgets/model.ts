@@ -90,6 +90,7 @@ export function todayWidgetModel(
     }),
     items,
     canAddTask: date >= today,
+    addRoutineUrl: 'routinelog://routine-editor',
     addTaskUrl: widgetFocusUrl({ focus: 'new-task', date }),
     tasks: tasksForDate(tasks, date).map((task) => ({
       ...task,

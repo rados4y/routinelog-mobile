@@ -21,8 +21,8 @@ import { Button } from './Button';
 import { entryBlockReason } from '../domain/entry';
 import { useNow } from '../utils/useNow';
 import { colors, common } from '../theme';
-import { NoteDateMarker } from './NoteDateMarker';
-import { useNoteDates } from '../features/notes/useNoteDates';
+import { DayMarkers, dayMarkerHint, DayMarkerLegend } from './DayMarkers';
+import { useDayHighlights } from '../features/today/useDayHighlights';
 
 export function CalendarSheet({
   visible,
@@ -40,7 +40,7 @@ export function CalendarSheet({
   const [month, setMonth] = useState(monthStart(selected));
   const [date, setDate] = useState(selected);
   const logs = useRoutines((state) => state.logs);
-  const noteDates = useNoteDates();
+
   const { cycleStatus } = useRoutineActions();
   const saving = useRoutines((state) => state.saving);
   const error = useRoutines((state) => state.error);
@@ -51,6 +51,7 @@ export function CalendarSheet({
     (_, i) => addDays(month, i),
   );
   const today = localDate(useNow());
+  const { noteDates, missedTaskDates, doneTaskDates } = useDayHighlights(today);
   const log = routine
     ? logs.find(
         (item) => item.routineId === routine.id && item.scheduledFor === date,
@@ -130,7 +131,11 @@ export function CalendarSheet({
               }
               accessibilityHint={
                 [
-                  noteDates.has(value) ? 'Has daily note' : '',
+                  dayMarkerHint(
+                    noteDates.has(value),
+                    missedTaskDates.has(value),
+                    doneTaskDates.has(value),
+                  ),
                   routine && !canCycle
                     ? entryBlockReason(
                         routine,
@@ -176,16 +181,17 @@ export function CalendarSheet({
               ]}
             >
               <Text style={common.text}>{Number(value.slice(-2))}</Text>
-              {noteDates.has(value) && (
-                <View style={{ position: 'absolute', left: 3, bottom: 3 }}>
-                  <NoteDateMarker
-                    testID={`calendar-note-${value}`}
-                    selected={date === value}
-                  />
-                </View>
-              )}
+              <View style={{ position: 'absolute', left: 3, bottom: 3 }}>
+                <DayMarkers
+                  date={value}
+                  prefix="calendar"
+                  note={noteDates.has(value)}
+                  missed={missedTaskDates.has(value)}
+                  done={doneTaskDates.has(value)}
+                />
+              </View>
               {status && (
-                <View style={{ position: 'absolute', right: 1, bottom: 1 }}>
+                <View style={{ position: 'absolute', right: 2, top: 2 }}>
                   <Icon
                     name={
                       status === 'done'
@@ -209,12 +215,7 @@ export function CalendarSheet({
           );
         })}
       </View>
-      {days.some((day) => noteDates.has(day)) && (
-        <View style={[common.row, { gap: 6 }]}>
-          <Icon name="notes" size={14} color={colors.accentLight} />
-          <Text style={common.small}>Daily note</Text>
-        </View>
-      )}
+      <DayMarkerLegend />
       {routine && (
         <>
           <Text style={common.subtitle}>
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   day: {
-    minHeight: 44,
+    minHeight: 54,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

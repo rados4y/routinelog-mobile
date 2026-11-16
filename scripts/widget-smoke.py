@@ -83,6 +83,21 @@ def widget_item(label, name):
     raise RuntimeError('Widget did not display ' + label)
 
 
+def edit_widget_row(label, name):
+    root, body = widget_item(label, name)
+    tap(body)
+    time.sleep(2)
+    root = screen(name + '-expanded')
+    # A repeated warm visit can find this row already expanded; the first tap
+    # collapses it, so expand once more before following the separate edit link.
+    if find_label(root, 'Edit in app') is None:
+        root, body = widget_item(label, name + '-toggle')
+        tap(body)
+        time.sleep(2)
+    root, edit = widget_item('Edit in app', name + '-edit')
+    tap(edit)
+
+
 def verify_note_above_keyboard(name, date, text, html_field=False, input_label=None):
     time.sleep(2)
     windows = adb('shell', 'dumpsys', 'window', 'windows')
@@ -158,7 +173,7 @@ def verify_daily_tasks(date, from_launcher=False):
     if not from_launcher:
         adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
         adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
-    root, add = wait_label('Add task', 'task-widget-add')
+    root, add = widget_item('Add task', 'task-widget-add')
     tap(add)
     root, editor = wait_label('Task description', 'task-editor')
     # Autofocus may already have opened IME and moved the field since the dump.
@@ -169,15 +184,15 @@ def verify_daily_tasks(date, from_launcher=False):
     verify_note_above_keyboard('task-editor-keyboard', date, 'Native widget task', input_label='Task description')
     adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
     root, save = wait_label('Add task', 'task-editor-save')
-    tap(save)
+    saves = [node for node in root.iter('node') if node.attrib.get('content-desc') == 'Add task']
+    tap(saves[-1] if saves else save)
     adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     root, status = widget_item('Task: Native widget task. Pending. Complete task', 'task-widget-pending')
     tap(status)
     root, status = widget_item('Task: Native widget task. Done. Undo task', 'task-widget-done')
     tap(status)
     root, status = widget_item('Task: Native widget task. Pending. Complete task', 'task-widget-undone')
-    root, title = widget_item('Open task: Native widget task', 'task-widget-open')
-    tap(title)
+    edit_widget_row('Open task: Native widget task', 'task-widget-open')
     root, editor = wait_label('Task description', 'task-widget-editor')
     if editor.attrib.get('text') != 'Native widget task':
         raise RuntimeError('The widget did not open the existing task description.')
@@ -194,8 +209,7 @@ def verify_daily_tasks(date, from_launcher=False):
     # Stopping the app returns to the launcher underneath it. Another Home
     # press here could switch away from the page that contains the widget.
     adb('shell', 'am', 'force-stop', package)
-    root, title = widget_item('Open task: Native widget task edited', 'task-widget-persisted')
-    tap(title)
+    edit_widget_row('Open task: Native widget task edited', 'task-widget-persisted')
     root, editor = wait_label('Task description', 'task-editor-restarted')
     if editor.attrib.get('text') != 'Native widget task edited':
         raise RuntimeError('The daily task did not survive process restart.')
@@ -291,15 +305,15 @@ try:
             time.sleep(2)
             root = screen('app')
             button = find_label(root, 'Add home-screen widget')
-            if button is not None and find_label(root, 'Add task') is not None:
+            if button is not None and find_label(root, 'Add routine') is not None:
                 break
-        if button is not None and find_label(root, 'Add task') is not None:
-            print('Compatible tasks OTA is loaded; native checks can start.')
+        if button is not None and find_label(root, 'Add routine') is not None:
+            print('Compatible sectioned Daily OTA is loaded; native checks can start.')
             break
         button = None
         print('Waiting for the compatible OTA download; retrying a cold launch.')
     if button is None:
-        raise RuntimeError('Compatible tasks OTA did not load. Check Expo/DNS logs; the embedded older APK was not tested.')
+        raise RuntimeError('Compatible sectioned Daily OTA did not load. Check Expo/DNS logs; the embedded older APK was not tested.')
     # Exercise inline daily notes and durable navigation on the real Android UI.
     date = adb('shell', 'date', '+%F').strip()
     if os.environ.get('ROUTINELOG_SMOKE_SCOPE') == 'tasks':
@@ -310,6 +324,8 @@ try:
     details = find_label(root, 'Routine details: Wyjście na spacer z psem')
     if details is not None:
         tap(details)
+    root, add_note = guide_control('Add or edit daily note', 'daily-note-expand')
+    tap(add_note)
     editor = None
     for _ in range(4):
         root = screen('daily-notes-editor')
@@ -414,23 +430,21 @@ try:
         if find_label(root, 'RoutineLog today') is None:
             raise RuntimeError('Routine click unexpectedly opened the app.')
     print('Native circular control cycled all four statuses without opening the app.')
-    root, body = widget_item('Open routine: ' + name, 'routine-link')
-    tap(body)
+    edit_widget_row('Open routine: ' + name, 'routine-link')
     root, _ = wait_label('Edit routine: ' + name, 'focused-routine')
     if find_label(root, 'Status: ' + name + '. Unchecked.') is None:
         raise RuntimeError('Opening a routine changed its status.')
     details = find_label(root, 'Routine details: ' + name)
     tap(details)
     adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
-    root, body = widget_item('Open routine: ' + name, 'repeat-routine-link')
-    tap(body)
+    edit_widget_row('Open routine: ' + name, 'repeat-routine-link')
     wait_label('Edit routine: ' + name, 'focused-routine-again')
     print('Routine name opened expanded details without changing status, including a repeated warm link.')
     adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
     root, note_link = widget_item('Open daily note:', 'widget-note')
     if 'Native daily note' not in note_link.attrib.get('content-desc', ''):
         raise RuntimeError('The widget did not show the saved daily-note preview.')
-    tap(note_link)
+    edit_widget_row('Open daily note:', 'widget-note-edit')
     root, editor = wait_label('Daily note for ' + date, 'widget-focused-note')
     if editor.attrib.get('focused') != 'true':
         raise RuntimeError('Widget note link did not focus the inline editor.')
@@ -446,7 +460,7 @@ try:
         root, note_link = widget_item('Open daily note:', 'widget-note-updated')
     if 'Widget edition' not in note_link.attrib.get('content-desc', ''):
         raise RuntimeError('Editing the daily note did not refresh its widget preview.')
-    tap(note_link)
+    edit_widget_row('Open daily note:', 'widget-note-edit-again')
     wait_label('Daily note for ' + date, 'widget-note-reopened')
     verify_note_above_keyboard('widget-note-reopened-keyboard', date, 'Widget edition')
     print('Widget displayed the daily note, opened its focused editor and refreshed after editing.')

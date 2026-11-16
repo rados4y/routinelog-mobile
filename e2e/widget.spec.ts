@@ -46,7 +46,10 @@ test('widget view links select dates, expand routines, focus notes and never cha
   );
   await expect(page.getByRole('alert')).toContainText('no longer scheduled');
   await page.goto('/widget-open?focus=note&date=invalid');
-  await expect(today).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Daily note details', exact: true }),
+  ).toBeVisible();
+  await expect(today).toHaveCount(0);
 });
 
 test('widget setup explains Android availability without breaking the browser preview', async ({

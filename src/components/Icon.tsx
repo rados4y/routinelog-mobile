@@ -3,6 +3,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme';
 
 const paths = {
+  missedCircle: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m-3 7 6 6m-6 0 6-6',
   settings:
     'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3m3 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
   notes: 'M5 3h14v18H5V3m3 5h8m-8 4h8m-8 4h5',

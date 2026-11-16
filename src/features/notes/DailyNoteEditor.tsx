@@ -1,6 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Text, TextInput, View, StyleSheet } from 'react-native';
+import { Text, TextInput, View, StyleSheet, Pressable } from 'react-native';
 import {
   useRevealInput,
   useRevealSection,
@@ -11,15 +11,21 @@ import { maxNoteLength } from '../../domain/note';
 import { useRoutines } from '../../store/useRoutines';
 import { useNoteDrafts } from '../../store/useNoteDrafts';
 import { colors, common } from '../../theme';
+import { DailySection, dailyStyles } from '../today/DailySection';
+import { Icon } from '../../components/Icon';
 
 export function DailyNoteEditor({
   date,
   focusRequest,
+  collapsible = false,
 }: {
   date: string;
   focusRequest?: number;
+  collapsible?: boolean;
 }) {
   const input = useRef<TextInput>(null);
+  const [open, setOpen] = useState(!collapsible || Boolean(focusRequest));
+  const [confirmClear, setConfirmClear] = useState(false);
   const card = useRef<View>(null);
   const focusedRequest = useRef<number | undefined>(undefined);
   const revealSection = useRevealSection();
@@ -36,6 +42,7 @@ export function DailyNoteEditor({
   useFocusEffect(
     useCallback(() => {
       if (!focusRequest || focusedRequest.current === focusRequest) return;
+      setOpen(true);
       let cancelled = false;
       let retry: ReturnType<typeof setTimeout> | undefined;
       let attempts = 0;
@@ -65,12 +72,14 @@ export function DailyNoteEditor({
       };
     }, [focusRequest, revealSection]),
   );
-  return (
-    <View ref={card} style={styles.card} testID={`daily-note-${date}`}>
+  const editor = (
+    <>
       <View style={common.spread}>
-        <Text accessibilityRole="header" style={common.heading}>
-          Daily note
-        </Text>
+        {!collapsible && (
+          <Text accessibilityRole="header" style={common.heading}>
+            Daily note
+          </Text>
+        )}
         <Text accessibilityLiveRegion="polite" style={common.small}>
           {error
             ? 'Not saved'
@@ -106,6 +115,37 @@ export function DailyNoteEditor({
           {error}
         </Text>
       )}
+      {collapsible && !!value && (
+        <Button
+          compact
+          label="Clear daily note"
+          tone="danger"
+          disabled={Boolean(saving)}
+          onPress={() => setConfirmClear(true)}
+        />
+      )}
+      {confirmClear && (
+        <View style={{ gap: 6 }}>
+          <Text style={common.small}>
+            Clear this day&apos;s note in the app and Notion?
+          </Text>
+          <Button
+            compact
+            label="Confirm clear note"
+            tone="danger"
+            onPress={() => {
+              edit(date, '');
+              void save(date);
+              setConfirmClear(false);
+            }}
+          />
+          <Button
+            compact
+            label="Keep note"
+            onPress={() => setConfirmClear(false)}
+          />
+        </View>
+      )}
       {(draft || error) && (
         <Button
           compact
@@ -120,6 +160,43 @@ export function DailyNoteEditor({
           characters
         </Text>
       )}
+    </>
+  );
+  if (!collapsible)
+    return (
+      <View ref={card} style={styles.card} testID={`daily-note-${date}`}>
+        {editor}
+      </View>
+    );
+  return (
+    <View ref={card} testID={`daily-note-${date}`}>
+      <DailySection
+        title="Daily note"
+        count={value.trim() ? '1 note' : 'No note'}
+        addLabel="Add or edit daily note"
+        onAdd={() => {
+          setOpen(true);
+          requestAnimationFrame(() => {
+            input.current?.focus();
+            reveal(input.current);
+          });
+        }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Daily note details"
+          accessibilityState={{ expanded: open }}
+          onPress={() => setOpen(!open)}
+          style={dailyStyles.body}
+        >
+          <Icon name="notes" size={20} />
+          <Text numberOfLines={2} style={dailyStyles.name}>
+            {value || 'Tap + to write about this day.'}
+          </Text>
+          <Icon name="chevronDown" size={14} />
+        </Pressable>
+        {open && <View style={dailyStyles.details}>{editor}</View>}
+      </DailySection>
     </View>
   );
 }
