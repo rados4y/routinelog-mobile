@@ -68,7 +68,7 @@ export function TaskSection({
             alignItems: 'stretch',
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
-            minHeight: 56,
+            minHeight: 48,
           }}
         >
           <View style={dailyStyles.row}>
@@ -83,9 +83,10 @@ export function TaskSection({
             >
               <Icon name="notes" size={20} />
               <Text
+                numberOfLines={1}
                 style={[
                   dailyStyles.name,
-                  { flex: 1, fontSize: 14 },
+                  { flex: 1 },
                   task.done && {
                     color: colors.muted,
                     textDecorationLine: 'line-through',
@@ -107,8 +108,8 @@ export function TaskSection({
               disabled={saving || date > today}
               onPress={() => void setTaskDone(task.id, !task.done)}
               style={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: date > today ? 0.4 : 1,

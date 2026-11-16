@@ -137,7 +137,8 @@ def verify_note_above_keyboard(name, date, text, html_field=False, input_label=N
     if editor is None or text not in editor.attrib.get('text', ''):
         raise RuntimeError('The focused daily note did not retain entered text.')
     left, top, right, bottom = map(int, re.findall(r'\d+', editor.attrib['bounds']))
-    if top >= keyboard_top or bottom > keyboard_top or bottom - top < 100:
+    minimum_height = 40 if input_label == 'Task description' else 100
+    if top >= keyboard_top or bottom > keyboard_top or bottom - top < minimum_height:
         raise RuntimeError(f'Note field is obscured: {editor.attrib["bounds"]}, keyboard starts at {keyboard_top}.')
     # An accessibility rectangle alone can be clipped; also check actual text
     # pixels above the IME, rather than keyboard keys or surrounding labels.

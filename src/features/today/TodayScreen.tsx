@@ -50,6 +50,7 @@ export function TodayScreen() {
     <>
       <HabitScreen
         title="Today"
+        dense
         addRoutine={false}
         tools={
           <>
@@ -77,7 +78,7 @@ export function TodayScreen() {
         fixed={
           <>
             {filter.panel}
-            <View style={{ paddingHorizontal: 10, paddingBottom: 8 }}>
+            <View style={{ paddingHorizontal: 10, paddingBottom: 0 }}>
               <DateSelector
                 today={today}
                 selected={selected}

@@ -35,6 +35,7 @@ const paths = {
   skip: 'm5 5 10 7-10 7V5m14 0v14',
   undo: 'M3 10h11a6 6 0 0 1 0 12M3 10l5-5m-5 5 5 5',
   close: 'm6 6 12 12M6 18 18 6',
+  trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
   edit: 'm16 3 5 5-12 12-6 1 1-6L16 3m-3 3 5 5',
   chevronDown: 'm6 9 6 6 6-6',
 };

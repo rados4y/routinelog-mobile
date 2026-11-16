@@ -13,6 +13,7 @@ import {
 } from '../../components/KeyboardAwareScrollView';
 import { useTaskPostpone } from './useTaskPostpone';
 import { create } from 'zustand';
+import { TaskActionRow, type TaskEditorAction } from './TaskActionRow';
 
 // Inline editors can unmount on a date/section change. Keep unsubmitted text
 // in UI state until Save or an explicit discard; it is never synchronized.
@@ -78,14 +79,15 @@ function DescriptionInput({
     <View ref={section}>
       <TextInput
         ref={input}
-        multiline
+        multiline={false}
+        returnKeyType="done"
         accessibilityLabel="Task description"
         placeholder="What do you need to do?"
         placeholderTextColor={colors.muted}
         value={value}
         onChangeText={onChangeText}
         maxLength={maxTaskLength}
-        textAlignVertical="top"
+        textAlignVertical="center"
         onFocus={() => reveal(input.current)}
         onSelectionChange={() => reveal(input.current)}
         onContentSizeChange={() => reveal(input.current)}
@@ -93,11 +95,11 @@ function DescriptionInput({
         style={{
           color: colors.text,
           backgroundColor: colors.panelSecondary,
-          borderRadius: 14,
-          padding: 14,
-          minHeight: 100,
-          maxHeight: 180,
-          fontSize: 16,
+          borderRadius: 10,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+          height: 44,
+          fontSize: 15,
         }}
       />
     </View>
@@ -135,11 +137,60 @@ export function TaskEditor({
   const postpone = useTaskPostpone((state) => state.postpone);
   const close = () =>
     description !== (task?.description ?? '') ? setDiscard(true) : finish();
+  const actions: TaskEditorAction[] = [
+    {
+      label: task ? 'Save task' : 'Add task',
+      caption: task ? 'Save' : 'Add task',
+      icon: 'check',
+      tone: 'primary',
+      disabled: saving || !description.trim(),
+      onPress: () =>
+        void (async () => {
+          if (await saveTask(date, description, task?.id)) finish();
+          else
+            setError(
+              'Could not save this task. Your text is still here. Try again.',
+            );
+        })(),
+    },
+  ];
+  if (inline)
+    actions.push({
+      label: 'Close',
+      icon: 'close',
+      disabled: saving,
+      onPress: close,
+    });
+  if (task && !task.done)
+    actions.push({
+      label: `Postpone → ${dateLabel(addDays(task.date, 1), { weekday: 'short', day: 'numeric' })}`,
+      caption: 'Postpone',
+      disabled: saving,
+      onPress: () =>
+        void (async () => {
+          if (
+            description !== task.description &&
+            !(await saveTask(date, description, task.id))
+          )
+            return;
+          if (await postpone(task.id, task.date)) finish();
+        })(),
+    });
+  if (task)
+    actions.push({
+      label: 'Delete task',
+      icon: 'trash',
+      tone: 'danger',
+      disabled: saving,
+      onPress: () => setConfirmDelete(true),
+    });
   const content = (
     <>
-      <Text style={common.small}>
-        {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}
-      </Text>
+      {!inline && (
+        <Text style={common.small}>
+          {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}
+        </Text>
+      )}
       <DescriptionInput
         value={description}
         onChangeText={(value) => {
@@ -152,53 +203,7 @@ export function TaskEditor({
           {error}
         </Text>
       )}
-      <View style={common.wrap}>
-        <Button
-          compact
-          label={task ? 'Save task' : 'Add task'}
-          tone="primary"
-          disabled={saving || !description.trim()}
-          onPress={() =>
-            void (async () => {
-              if (await saveTask(date, description, task?.id)) finish();
-              else
-                setError(
-                  'Could not save this task. Your text is still here. Try again.',
-                );
-            })()
-          }
-        />
-        {inline && <Button compact label="Close" onPress={close} />}
-      </View>
-      <View style={common.wrap}>
-        {task && !task.done && (
-          <Button
-            compact
-            label={`Postpone → ${dateLabel(addDays(task.date, 1), { weekday: 'short', day: 'numeric' })}`}
-            icon="calendar"
-            disabled={saving}
-            onPress={() =>
-              void (async () => {
-                if (
-                  description !== task.description &&
-                  !(await saveTask(date, description, task.id))
-                )
-                  return;
-                if (await postpone(task.id, task.date)) finish();
-              })()
-            }
-          />
-        )}
-        {task && (
-          <Button
-            compact
-            label="Delete task"
-            tone="danger"
-            disabled={saving}
-            onPress={() => setConfirmDelete(true)}
-          />
-        )}
-      </View>
+      <TaskActionRow actions={actions} />
       {confirmDelete && (
         <View style={{ gap: 8 }}>
           <Text style={common.text}>
@@ -228,7 +233,7 @@ export function TaskEditor({
     </>
   );
   return inline ? (
-    <View style={{ gap: 9, paddingBottom: 12 }}>{content}</View>
+    <View style={{ gap: 6, paddingBottom: 6 }}>{content}</View>
   ) : (
     <Sheet visible title={task ? 'Edit task' : 'Add task'} onClose={close}>
       {content}

@@ -78,7 +78,7 @@ export function OccurrenceCard({
             >
               {routine.name}
             </Text>
-            <Text style={common.small}>
+            <Text style={[common.small, { fontSize: 11, lineHeight: 15 }]}>
               {routine.reminderTime} · {categoryLabels[routine.category]}
             </Text>
           </View>
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   card: {
     borderBottomWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 5,
+    paddingVertical: 2,
   },
   focused: {
     borderLeftWidth: 2,
@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   name: {
-    fontSize: 14.5,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.text,
     fontWeight: '500',
   },
@@ -247,5 +247,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  details: { paddingTop: 14, paddingBottom: 4, gap: 10 },
+  details: { paddingTop: 8, paddingBottom: 4, gap: 6 },
 });

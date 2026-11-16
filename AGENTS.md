@@ -27,6 +27,7 @@ Wykonuj techniczne kroki samodzielnie; nie dawaj kodu do kopiowania ani komend u
 - Tasks: opis bez tytułu/checklisty/harmonogramu; data z wybranego dnia Today/widgetu. Today ma osobne sekcje Routines, Tasks i Daily note z własnym +, bez globalnego FAB. Taski nie przechodzą automatycznie na następny dzień; jawne Postpone przenosi ten sam rekord o jeden dzień i ma chronione Undo i nie zmieniają statystyk rutyn. Usunięcia zachowują tombstone; Notion Tasks jest osobną bazą ze stabilnym Task ID.
 - Cele elastyczne rozliczaj po zamknięciu okna tygodniowego.
 - Testuj logikę i istotne przepływy; bez testów kopiujących JSX i zbędnych snapshotów.
+- Do testów web używaj Chromium instalowanego przez Playwright (`npx playwright install chromium`), zgodnie z CI; starszy systemowy Chromium może powodować timeouty.
 - Przy zmianach ekranów/logiki aktualizuj zwięzły katalog src/features/changeRequests/catalog.ts, zachowuj stabilne ID sekcji i uruchom npm run guide:build. Nie edytuj ręcznie generated/guide.ts ani docs/change-requests/index.html; CI sprawdza ich aktualność. Guide jest lokalnym HTML w WebView, draft jest osobnym rekordem UI i nie synchronizuje się z Notion.
 - Aktualizuj README przy zmianach workflow, runtime, modeli lub architektury.
 - Końcowy komunikat krótki: wynik, commit/PR, testy/CI, deploy i jedna konkretna

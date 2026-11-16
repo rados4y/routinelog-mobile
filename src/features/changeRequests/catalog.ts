@@ -41,7 +41,7 @@ export const screens: GuideScreen[] = [
       section(
         'T3',
         'Routine rows',
-        'Routines section has a heading, done/total count and +. Compact rows expand for quick name editing and additional actions; the separate status control cycles results.',
+        'Routines section has a heading, done/total count and +. Dense rows and reduced section spacing keep more content visible. Rows expand for quick name editing and additional actions; the separate status control cycles results.',
       ),
       section(
         'T4',
@@ -61,7 +61,7 @@ export const screens: GuideScreen[] = [
       section(
         'T7',
         'Daily tasks',
-        'Tap a task to expand inline editing, Save/Close, confirmed Delete and Postpone. Postpone moves the same unfinished task exactly one assigned day forward, offers guarded Undo and syncs Date to Notion. Tasks never roll over automatically or change routine statistics. Future completion is blocked.',
+        'Single-line task rows expand into a one-line editor and one action row: Save/Close, confirmed Delete and Postpone. Full descriptions are preserved. Postpone moves the same unfinished task one assigned day forward, offers guarded Undo and syncs Date to Notion. Tasks never roll over automatically or change routine statistics. Future completion is blocked.',
       ),
     ],
   },
@@ -327,12 +327,12 @@ export const screens: GuideScreen[] = [
       section(
         'D1',
         'Description',
-        'Required plain text up to 2,000 characters; keyboard-ready on opening.',
+        'Required single-line text field up to 2,000 characters; keyboard-ready on opening, with horizontal scrolling for long descriptions.',
       ),
       section(
         'D2',
         'Save and delete',
-        'Inline Add/Save, confirmed Delete, Close with discard confirmation, and Postpone for unfinished tasks. Postpone changes the assigned date by one day with guarded Undo; there is no automatic carryover.',
+        'One compact action row: Save, Close icon, Postpone and Delete icon. Deletion and discarding edits still require confirmation. Postpone changes the assigned date by one day with guarded Undo; there is no automatic carryover.',
       ),
     ],
   },
