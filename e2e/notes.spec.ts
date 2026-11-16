@@ -5,6 +5,9 @@ test('note dates are marked in the daily strip and every calendar, without chang
   page,
 }) => {
   await openApp(page);
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
+    .click();
   const input = page.getByRole('textbox', {
     name: 'Daily note for 2026-11-02',
     exact: true,
@@ -16,12 +19,18 @@ test('note dates are marked in the daily strip and every calendar, without chang
     'Saved on device',
   );
   await page.reload();
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
+    .click();
   await expect(page.getByTestId('strip-note-2026-11-02')).toBeVisible();
   await page.getByRole('button', { name: 'Choose date', exact: true }).click();
   await expect(page.getByTestId('calendar-note-2026-11-02')).toBeVisible();
   await page
     .getByRole('button', { name: 'Monday 2 November', exact: true })
     .last()
+    .click();
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
     .click();
   await expect(input).toHaveValue('A day to remember');
   await page.getByRole('tab', { name: 'Routines', exact: true }).click();
@@ -59,6 +68,9 @@ test('daily notes edit inline, autosave, remain date-specific and appear in the 
   page,
 }) => {
   await openApp(page);
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
+    .click();
   const today = page.getByRole('textbox', {
     name: 'Daily note for 2026-11-02',
     exact: true,
@@ -125,6 +137,9 @@ test('daily notes edit inline, autosave, remain date-specific and appear in the 
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByTestId('note-entry-2026-11-01')).toHaveCount(0);
   await page.getByRole('tab', { name: 'Today', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
+    .click();
   await expect(today).toHaveValue(
     'Today: a useful conversation.\nA second line 💛',
   );
@@ -135,6 +150,9 @@ test('a failed autosave keeps the text visible and can be retried without losing
   page,
 }) => {
   await openApp(page);
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
+    .click();
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
@@ -170,5 +188,8 @@ test('a failed autosave keeps the text visible and can be retried without losing
     'Saved on device',
   );
   await page.reload();
+  await page
+    .getByRole('button', { name: 'Add or edit daily note', exact: true })
+    .click();
   await expect(input).toHaveValue('Keep this text after a failed save');
 });

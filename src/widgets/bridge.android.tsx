@@ -41,6 +41,7 @@ export async function refreshWidgets(
             return (
               <TodayWidget
                 model={model}
+                view={view}
                 height={height}
                 notice={notice ?? state.error ?? undefined}
               />

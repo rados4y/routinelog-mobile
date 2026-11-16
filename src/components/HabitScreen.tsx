@@ -46,18 +46,20 @@ export function HabitScreen({
   children,
   addRoutine = true,
   addAction,
+  dense = false,
 }: {
   title: string;
   tools?: ReactNode;
   fixed?: ReactNode;
   children: ReactNode;
   addRoutine?: boolean;
+  dense?: boolean;
   addAction?: { label: string; onPress(): void };
 }) {
   const keyboardTop = useKeyboardTop();
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.root}>
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, dense && { minHeight: 52 }]}>
         <View style={styles.brand}>
           <ToolButton
             icon="settings"
@@ -71,7 +73,12 @@ export function HabitScreen({
         <View style={styles.tools}>{tools}</View>
       </View>
       {fixed}
-      <KeyboardAwareScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={[
+          styles.content,
+          dense && { gap: 8, paddingTop: 4, paddingBottom: 24 },
+        ]}
+      >
         {children}
       </KeyboardAwareScrollView>
       {(addAction || addRoutine) && keyboardTop === undefined && (

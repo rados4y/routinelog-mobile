@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTask } from '../domain/task';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { widgetTaskHandler } from './handler';
 import { widgetName } from './model';
@@ -11,18 +12,28 @@ const mock = vi.hoisted(() => ({
   refresh: vi.fn(),
   cycle: vi.fn(),
   toggleTask: vi.fn(),
+  postponeTask: vi.fn(),
+  expand: vi.fn(),
+  setUndo: vi.fn(),
 }));
 vi.mock('../store/useRoutines', () => ({
   routineStore: { getState: mock.getState, subscribe: mock.subscribe },
 }));
 vi.mock('./TodayWidget', () => ({ TodayWidget: () => null }));
 vi.mock('./storage', () => ({
-  widgetViews: { navigate: mock.navigate, get: mock.get, remove: mock.remove },
+  widgetViews: {
+    navigate: mock.navigate,
+    get: mock.get,
+    remove: mock.remove,
+    expand: mock.expand,
+    setUndo: mock.setUndo,
+  },
 }));
 vi.mock('./bridge', () => ({ refreshWidgets: mock.refresh }));
 vi.mock('./actions', () => ({
   cycleFromWidget: mock.cycle,
   toggleTaskFromWidget: mock.toggleTask,
+  postponeTaskFromWidget: mock.postponeTask,
 }));
 const props = (): WidgetTaskHandlerProps => ({
   widgetInfo: {
@@ -45,6 +56,8 @@ const props = (): WidgetTaskHandlerProps => ({
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-08T12:00:00'));
   mock.getState.mockReturnValue({
     ready: true,
     saving: false,
@@ -54,10 +67,57 @@ beforeEach(() => {
     notes: [],
     tasks: [],
   });
-  mock.get.mockResolvedValue({ date: '2026-11-09', viewedOn: '2026-11-08' });
+  mock.get.mockResolvedValue({ date: '2026-11-08', viewedOn: '2026-11-08' });
   mock.cycle.mockResolvedValue('done');
 });
+afterEach(() => vi.useRealTimers());
 describe('widget update targeting', () => {
+  it('expands only the clicked instance with one render and no broadcast refresh', async () => {
+    const event = {
+      ...props(),
+      clickAction: 'expand',
+      clickActionData: {
+        date: '2026-11-08',
+        viewedOn: '2026-11-08',
+        kind: 'task',
+        id: 'one',
+      },
+    };
+    await widgetTaskHandler(event);
+    expect(mock.expand).toHaveBeenCalledWith(7, event.clickActionData);
+    expect(event.renderWidget).toHaveBeenCalledTimes(1);
+    expect(mock.refresh).not.toHaveBeenCalled();
+  });
+  it('persists a successful task move for Undo and refreshes other instances once', async () => {
+    const task = createTask('one', '2026-11-09', 'Move me');
+    mock.getState.mockReturnValue({
+      ready: true,
+      saving: false,
+      routines: [],
+      logs: [],
+      notes: [],
+      tasks: [task],
+    });
+    mock.postponeTask.mockResolvedValue('saved');
+    const event = {
+      ...props(),
+      clickAction: 'task_postpone',
+      clickActionData: {
+        date: '2026-11-08',
+        taskId: 'one',
+        expectedDone: false,
+      },
+    };
+    await widgetTaskHandler(event);
+    expect(mock.setUndo).toHaveBeenCalledWith(7, task, '2026-11-08');
+    expect(event.renderWidget).toHaveBeenCalledTimes(1);
+    expect(mock.refresh).toHaveBeenCalledWith(undefined, 7);
+  });
+  it('ignores a today status tap from an instance that is now showing another date', async () => {
+    mock.get.mockResolvedValue({ date: '2026-11-07', viewedOn: '2026-11-08' });
+    await widgetTaskHandler({ ...props(), clickAction: 'cycle' });
+    expect(mock.cycle).not.toHaveBeenCalled();
+  });
   it('toggles tasks separately and refreshes the other widget instances once', async () => {
     mock.toggleTask.mockResolvedValue('saved');
     const event = { ...props(), clickAction: 'task_toggle' };

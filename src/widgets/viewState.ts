@@ -1,8 +1,19 @@
 import { z } from 'zod';
 import type { KeyValueStorage } from '../data/repositories';
 import { addDays, localDate } from '../domain/dates';
+import { taskSchema, type DailyTask } from '../domain/task';
 
-const viewSchema = z.object({ date: z.iso.date(), viewedOn: z.iso.date() });
+const expansionSchema = z.object({
+  kind: z.enum(['routine', 'task', 'note']),
+  id: z.string().min(1),
+});
+const viewSchema = z.object({
+  date: z.iso.date(),
+  viewedOn: z.iso.date(),
+  expanded: expansionSchema.optional(),
+  undo: z.object({ task: taskSchema, from: z.iso.date() }).optional(),
+});
+export type WidgetView = z.infer<typeof viewSchema>;
 const actions = ['previous_day', 'next_day', 'today'] as const;
 export type WidgetNavigation = (typeof actions)[number];
 export const isWidgetNavigation = (
@@ -13,7 +24,7 @@ export const isWidgetNavigation = (
 // widget has its own date; all widgets return to Today after local midnight.
 export function createWidgetViewRepository(storage: KeyValueStorage) {
   const key = (id: number) => `@routinelog/widget-view/${id}`;
-  const current = (now: Date) => ({
+  const current = (now: Date): WidgetView => ({
     date: localDate(now),
     viewedOn: localDate(now),
   });
@@ -37,7 +48,7 @@ export function createWidgetViewRepository(storage: KeyValueStorage) {
     action: WidgetNavigation,
     payload: unknown,
     now = new Date(),
-  ) => {
+  ): Promise<WidgetView> => {
     const task = pending.then(async () => {
       const view = await get(id, now);
       const click = viewSchema.safeParse(payload);
@@ -61,5 +72,59 @@ export function createWidgetViewRepository(storage: KeyValueStorage) {
     );
     return task;
   };
-  return { get, navigate, remove: (id: number) => storage.removeItem(key(id)) };
+  const update = (
+    id: number,
+    work: (view: WidgetView) => WidgetView,
+    now = new Date(),
+  ) => {
+    const task = pending.then(async () => {
+      const next = work(await get(id, now));
+      await storage.setItem(key(id), JSON.stringify(next));
+      return next;
+    });
+    pending = task.then(
+      () => {},
+      () => {},
+    );
+    return task;
+  };
+  return {
+    get,
+    navigate,
+    remove: (id: number) => storage.removeItem(key(id)),
+    expand: (id: number, payload: unknown, now = new Date()) =>
+      update(
+        id,
+        (view) => {
+          const parsed = viewSchema
+            .extend({
+              kind: expansionSchema.shape.kind,
+              id: expansionSchema.shape.id,
+            })
+            .safeParse(payload);
+          if (
+            !parsed.success ||
+            parsed.data.date !== view.date ||
+            parsed.data.viewedOn !== localDate(now)
+          )
+            return view;
+          const target = { kind: parsed.data.kind, id: parsed.data.id };
+          return {
+            ...view,
+            expanded:
+              view.expanded?.kind === target.kind &&
+              view.expanded.id === target.id
+                ? undefined
+                : target,
+          };
+        },
+        now,
+      ),
+    setUndo: (id: number, task?: DailyTask, from?: string) =>
+      update(id, (view) => ({
+        ...view,
+        expanded: undefined,
+        undo: task && from ? { task, from } : undefined,
+      })),
+  };
 }

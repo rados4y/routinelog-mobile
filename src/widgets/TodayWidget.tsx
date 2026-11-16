@@ -9,6 +9,9 @@ import {
 import type { TodayWidgetModel } from './model';
 import { statusLabels, nextActionLabel } from '../domain/status';
 import { TaskWidgetRow } from './TaskWidgetRow';
+import { WidgetSection } from './WidgetSection';
+import { WidgetDetails } from './WidgetDetails';
+import type { WidgetView } from './viewState';
 
 // The launcher widget deliberately uses the light reference design, independent
 // of the app's dark theme. Native widget primitives render without React hooks.
@@ -30,20 +33,18 @@ export function TodayWidget({
   model,
   notice,
   height = 260,
+  view,
 }: {
   model: TodayWidgetModel;
   notice?: string;
   height?: number;
+  view?: WidgetView;
 }) {
-  const explanation =
-    notice ??
-    (!model.isToday
-      ? 'Statuses view only · tap the heading for today'
-      : undefined);
+  const explanation = notice;
   const compact = height < 150;
   const headerHeight = 44;
   // Reserve the same notice slot across dates to keep the collection in place.
-  const noticeHeight = compact ? 18 : 24;
+  const noticeHeight = explanation ? (compact ? 18 : 24) : 0;
   // Fill the launcher allocation on every day; only the collection scrolls.
   const panelHeight = height;
   // Android collections require each row to fit inside the visible list, even
@@ -101,30 +102,16 @@ export function TodayWidget({
             }
           >
             <TextWidget
-              text={model.title}
+              text={
+                model.isToday
+                  ? `Today · ${model.label.split(' ').slice(1).join(' ')}`
+                  : model.label
+              }
               maxLines={1}
               truncate="END"
               style={{ fontSize: 16, color: palette.text }}
             />
           </FlexWidget>
-          {model.canAddTask && (
-            <FlexWidget
-              style={{
-                width: 44,
-                height: headerHeight,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              clickAction="OPEN_URI"
-              clickActionData={{ uri: model.addTaskUrl }}
-              accessibilityLabel="Add task"
-            >
-              <TextWidget
-                text="+"
-                style={{ fontSize: 25, color: palette.text }}
-              />
-            </FlexWidget>
-          )}
           <FlexWidget
             style={{
               width: 44,
@@ -171,8 +158,14 @@ export function TodayWidget({
         />
         <FlexWidget style={{ width: 'match_parent', flex: 1 }}>
           <ListWidget>
+            <WidgetSection
+              title="Routines"
+              count={`${model.done}/${model.items.length}`}
+              addUrl={model.canAddTask ? model.addRoutineUrl : undefined}
+              height={Math.min(36, rowHeight)}
+            />
             {model.items.length ? (
-              model.items.map((item) => (
+              model.items.flatMap((item) => [
                 <FlexWidget
                   key={item.id}
                   style={{ width: 'match_parent', height: rowHeight }}
@@ -195,8 +188,12 @@ export function TodayWidget({
                         paddingLeft: 12,
                         paddingRight: 6,
                       }}
-                      clickAction="OPEN_URI"
-                      clickActionData={{ uri: item.openUrl }}
+                      clickAction="expand"
+                      clickActionData={{
+                        ...model.navigation,
+                        kind: 'routine',
+                        id: item.id,
+                      }}
                       accessibilityLabel={`Open routine: ${item.name}`}
                     >
                       <FlexWidget
@@ -214,7 +211,7 @@ export function TodayWidget({
                           maxLines={rowHeight < 44 ? 1 : 2}
                           truncate="END"
                           style={{
-                            fontSize: compact ? 13 : 14,
+                            fontSize: 13,
                             color: palette.text,
                             width: 'match_parent',
                           }}
@@ -247,7 +244,7 @@ export function TodayWidget({
                         style={{
                           width: circleSize,
                           height: circleSize,
-                          borderRadius: circleSize / 2,
+                          borderRadius: 6,
                           textAlign: 'center',
                           fontSize: 17,
                           color: '#ffffff',
@@ -263,8 +260,18 @@ export function TodayWidget({
                       backgroundColor: palette.divider,
                     }}
                   />
-                </FlexWidget>
-              ))
+                </FlexWidget>,
+                ...(view?.expanded?.kind === 'routine' &&
+                view.expanded.id === item.id
+                  ? [
+                      <WidgetDetails
+                        key={`details-${item.id}`}
+                        editUrl={item.openUrl}
+                        height={rowHeight}
+                      />,
+                    ]
+                  : []),
+              ])
             ) : (
               <FlexWidget
                 style={{
@@ -285,30 +292,51 @@ export function TodayWidget({
                 />
               </FlexWidget>
             )}
-            {model.tasks.length > 0 && (
-              <FlexWidget
-                style={{
-                  width: 'match_parent',
-                  height: Math.min(24, rowHeight),
-                  paddingHorizontal: 12,
-                  justifyContent: 'center',
-                }}
-              >
-                <TextWidget
-                  text="Tasks"
-                  maxLines={1}
-                  style={{ fontSize: 11, color: palette.muted }}
-                />
-              </FlexWidget>
-            )}
-            {model.tasks.map((task) => (
+            <WidgetSection
+              title="Tasks"
+              count={`${model.tasks.filter((task) => task.done).length}/${model.tasks.length}`}
+              addUrl={model.canAddTask ? model.addTaskUrl : undefined}
+              height={Math.min(36, rowHeight)}
+            />
+            {model.tasks.flatMap((task) => [
               <TaskWidgetRow
                 key={task.id}
                 task={task}
                 height={rowHeight}
                 isToday={model.isToday}
+                navigation={model.navigation}
+              />,
+              ...(view?.expanded?.kind === 'task' &&
+              view.expanded.id === task.id
+                ? [
+                    <WidgetDetails
+                      key={`details-${task.id}`}
+                      editUrl={task.openUrl}
+                      height={rowHeight}
+                      postpone={
+                        model.isToday && !task.done ? task.click : undefined
+                      }
+                    />,
+                  ]
+                : []),
+            ])}
+            {!model.tasks.length && (
+              <TextWidget
+                text="No tasks for this day"
+                style={{
+                  height: Math.min(28, rowHeight),
+                  fontSize: 11,
+                  color: palette.muted,
+                  paddingHorizontal: 12,
+                }}
               />
-            ))}
+            )}
+            <WidgetSection
+              title="Daily note"
+              count={model.note.preview ? '1 note' : 'No note'}
+              addUrl={model.note.openUrl}
+              height={Math.min(36, rowHeight)}
+            />
             <FlexWidget
               style={{
                 width: 'match_parent',
@@ -317,8 +345,12 @@ export function TodayWidget({
                 paddingVertical: 6,
                 justifyContent: 'center',
               }}
-              clickAction="OPEN_URI"
-              clickActionData={{ uri: model.note.openUrl }}
+              clickAction="expand"
+              clickActionData={{
+                ...model.navigation,
+                kind: 'note',
+                id: 'note',
+              }}
               accessibilityLabel={
                 model.note.preview
                   ? `Open daily note: ${model.note.preview}`
@@ -326,17 +358,38 @@ export function TodayWidget({
               }
             >
               <TextWidget
-                text="Daily note"
-                maxLines={1}
-                style={{ fontSize: 11, color: palette.muted, marginBottom: 3 }}
-              />
-              <TextWidget
                 text={model.note.preview || 'Tap to add a daily note'}
                 maxLines={noteHeight < 54 ? 1 : 2}
                 truncate="END"
                 style={{ fontSize: 12, color: palette.text }}
               />
             </FlexWidget>
+            {view?.expanded?.kind === 'note' && (
+              <WidgetDetails editUrl={model.note.openUrl} height={rowHeight} />
+            )}
+            {view?.undo && (
+              <FlexWidget
+                style={{
+                  width: 'match_parent',
+                  height: rowHeight,
+                  paddingHorizontal: 12,
+                  justifyContent: 'center',
+                  backgroundColor: '#e8e8e8',
+                }}
+                clickAction="task_undo_postpone"
+                clickActionData={{
+                  ...model.navigation,
+                  taskId: view.undo.task.id,
+                  updatedAt: view.undo.task.updatedAt,
+                }}
+                accessibilityLabel="Undo postpone"
+              >
+                <TextWidget
+                  text={`Moved to ${view.undo.task.date} · Undo`}
+                  style={{ fontSize: 12, color: '#a82549' }}
+                />
+              </FlexWidget>
+            )}
           </ListWidget>
         </FlexWidget>
       </FlexWidget>

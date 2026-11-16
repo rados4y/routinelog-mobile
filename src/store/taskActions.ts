@@ -1,5 +1,5 @@
 import type { Repositories } from '../data/repositories';
-import { localDate } from '../domain/dates';
+import { addDays, localDate } from '../domain/dates';
 import { EntryUnavailableError } from '../domain/entry';
 import { createTask, taskSchema, type DailyTask } from '../domain/task';
 import type { RoutineState } from './createRoutineStore';
@@ -9,6 +9,8 @@ export interface TaskActions {
   saveTask(date: string, description: string, id?: string): Promise<boolean>;
   setTaskDone(id: string, done: boolean): Promise<boolean>;
   deleteTask(id: string): Promise<boolean>;
+  postponeTask(id: string, expectedDate: string): Promise<boolean>;
+  undoTaskPostpone(expected: DailyTask, originalDate: string): Promise<boolean>;
   applySyncedTask(
     expected: DailyTask | undefined,
     next: DailyTask,
@@ -36,6 +38,38 @@ export function taskActions(
   };
   return {
     tasks: [],
+    postponeTask: (id, expectedDate) =>
+      perform(async () => {
+        const task = find(id);
+        if (task.done || task.date !== expectedDate)
+          throw new EntryUnavailableError(
+            'Task changed. Review it before postponing.',
+          );
+        await save(
+          taskSchema.parse({
+            ...task,
+            date: addDays(task.date, 1),
+            updatedAt: clock().toISOString(),
+          }),
+        );
+      }),
+    undoTaskPostpone: (expected, originalDate) =>
+      perform(async () => {
+        const task = find(expected.id);
+        if (
+          JSON.stringify(task) !== JSON.stringify(expected) ||
+          task.done ||
+          addDays(originalDate, 1) !== task.date
+        )
+          throw new EntryUnavailableError(
+            'Task changed since postponing. Review its assigned date.',
+          );
+        await save({
+          ...task,
+          date: originalDate,
+          updatedAt: clock().toISOString(),
+        });
+      }),
     saveTask: (date, description, id) =>
       perform(async () => {
         if (id) {

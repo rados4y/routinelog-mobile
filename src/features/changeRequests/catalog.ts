@@ -1,4 +1,4 @@
-export const guideVersion = '2026-11-15';
+export const guideVersion = '2026-11-16';
 export const repositoryUrl = 'https://github.com/rados4y/routinelog-mobile';
 export interface GuideSection {
   id: string;
@@ -36,32 +36,32 @@ export const screens: GuideScreen[] = [
       section(
         'T2',
         'Date strip',
-        'Select a date to change the plan and note. A note marker identifies dates with saved text.',
+        'Select a date to change all three sections. Blue note, red missed-task and green completed-task markers can coexist in the strip and calendar. Unfinished tasks become missed only after their assigned day ends.',
       ),
       section(
         'T3',
         'Routine rows',
-        'Icon, name and status circle. Tap the circle to cycle the result; tap the name to expand details.',
+        'Routines section has a heading, done/total count and +. Dense rows and reduced section spacing keep more content visible. Rows expand for quick name editing and additional actions; the separate status control cycles results.',
       ),
       section(
         'T4',
         'Expanded details',
-        'Frequency, time, category, period progress, description and direct edit icon.',
+        'Inline name edit, frequency, time, category, period progress and description, with Save/Cancel, Pause and full editor actions.',
       ),
       section(
         'T5',
         'Daily note',
-        'One editable plain-text note per date, below routines and tasks. Autosaves, reports save/retry state and stays above the keyboard.',
+        'Daily note section has a heading and + that edits the same single note. Tap its preview to expand the inline autosave editor; clearing needs confirmation. Drafts and save failures remain protected above the keyboard.',
       ),
       section(
         'T6',
         'Add task (+)',
-        'Opens a description-only task form for the selected day (today or future). Recurring routines are created on Routines.',
+        'Each of Routines, Tasks and Daily note has its own +. Tasks + opens an inline description-only composer for the selected day (today/future); there is no global Today FAB.',
       ),
       section(
         'T7',
         'Daily tasks',
-        'Compact description and Pending/Done checkbox. Tap the description to edit/delete. Tasks stay on their assigned date, never carry over or count toward routine statistics. Future tasks cannot be completed early.',
+        'Single-line task rows expand into a one-line editor and one action row: Save/Close, confirmed Delete and Postpone. Full descriptions are preserved. Postpone moves the same unfinished task one assigned day forward, offers guarded Undo and syncs Date to Notion. Tasks never roll over automatically or change routine statistics. Future completion is blocked.',
       ),
     ],
   },
@@ -298,22 +298,22 @@ export const screens: GuideScreen[] = [
       section(
         'W1',
         'Header',
-        'Date title, + task and previous/next arrows. + opens the task form in the app for the displayed day. Each widget has a separate selected date that resets after midnight.',
+        'Compact current-date header with previous/next arrows only; no date strip or legend. Tap the title to return to today. Each instance resets after midnight. Three section headings have their own + actions that open the app.',
       ),
       section(
         'W2',
         'Routine rows',
-        'Category stripe and name open focused details. Today’s status circles cycle directly; required checklists open the app.',
+        'Routines heading with +. Tap a row to expand Edit in app; the separate status control cycles today only. Required checklists open the app for confirmation.',
       ),
       section(
         'W3',
         'Daily note',
-        'Selected day’s preview or add-note prompt. Tapping opens the focused editor; saved changes refresh the preview.',
+        'Daily note heading with + and compact text preview. Tap to expand Edit in app; + and Edit open the same selected-day note. Saved changes refresh the preview.',
       ),
       section(
         'W4',
         'Task rows',
-        'Description opens the task editor. Today’s checkbox toggles Pending/Done directly; other dates are view-only. Only tasks assigned to the displayed day appear.',
+        'Tasks heading with + opens the app composer for today/future dates. Rows expand Edit in app and, today only, Postpone for unfinished tasks. Status icons toggle directly today; Postpone moves the same task one day forward and offers guarded Undo.',
       ),
     ],
   },
@@ -327,12 +327,12 @@ export const screens: GuideScreen[] = [
       section(
         'D1',
         'Description',
-        'Required plain text up to 2,000 characters; keyboard-ready on opening.',
+        'Required single-line text field up to 2,000 characters; keyboard-ready on opening, with horizontal scrolling for long descriptions.',
       ),
       section(
         'D2',
         'Save and delete',
-        'Add/Save, confirm deletion, or close and discard edits. Completed tasks can be undone on their assigned day.',
+        'One compact action row: Save, Close icon, Postpone and Delete icon. Deletion and discarding edits still require confirmation. Postpone changes the assigned date by one day with guarded Undo; there is no automatic carryover.',
       ),
     ],
   },

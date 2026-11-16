@@ -14,9 +14,12 @@ import { OccurrenceCard } from './OccurrenceCard';
 import { WidgetButton } from '../../widgets/WidgetButton';
 import { NotionButton } from '../../integrations/notion/NotionButton';
 import { DailyNoteEditor } from '../notes/DailyNoteEditor';
-import { useNoteDates } from '../notes/useNoteDates';
+import { useDayHighlights } from './useDayHighlights';
+import { DailySection } from './DailySection';
+import { router } from 'expo-router';
 import { useTodayFocus } from '../../store/useTodayFocus';
 import { TaskSection } from '../tasks/TaskSection';
+import { DayMarkerLegend } from '../../components/DayMarkers';
 
 export function TodayScreen() {
   const now = useNow();
@@ -40,25 +43,15 @@ export function TodayScreen() {
   };
   const routines = useRoutines((state) => state.routines);
   const logs = useRoutines((state) => state.logs);
-  const noteDates = useNoteDates();
+  const highlights = useDayHighlights(today);
   const planned = occurrencesForDate(routines, logs, selected, now);
   const occurrences = planned.filter((item) => filter.matches(item.routine));
   return (
     <>
       <HabitScreen
         title="Today"
+        dense
         addRoutine={false}
-        addAction={
-          selected >= today
-            ? {
-                label: 'Add task',
-                onPress: () =>
-                  useTodayFocus
-                    .getState()
-                    .open({ focus: 'new-task', date: selected }),
-              }
-            : undefined
-        }
         tools={
           <>
             <ToolButton
@@ -85,13 +78,14 @@ export function TodayScreen() {
         fixed={
           <>
             {filter.panel}
-            <View style={{ paddingHorizontal: 10, paddingBottom: 8 }}>
+            <View style={{ paddingHorizontal: 10, paddingBottom: 0 }}>
               <DateSelector
                 today={today}
                 selected={selected}
-                noteDates={noteDates}
+                {...highlights}
                 onSelect={selectDate}
               />
+              <DayMarkerLegend />
             </View>
           </>
         }
@@ -107,30 +101,38 @@ export function TodayScreen() {
         {selected > today && (
           <Text style={common.small}>Future plan preview</Text>
         )}
-        {occurrences.length ? (
-          <View>
-            {occurrences.map((occurrence) => (
-              <OccurrenceCard
-                key={occurrence.routine.id}
-                occurrence={occurrence}
-                future={selected > today}
-                focusRequest={
-                  focus?.focus === 'routine' &&
-                  focus.date === selected &&
-                  focus.routineId === occurrence.routine.id
-                    ? focus.request
-                    : undefined
-                }
-              />
-            ))}
-          </View>
-        ) : (
-          <EmptyState
-            icon="✓"
-            title="No routines for this day"
-            description="Add recurring routines on the Routines page, or change the date and filters."
-          />
-        )}
+        <DailySection
+          title="Routines"
+          count={`${occurrences.filter((item) => item.status === 'done').length}/${occurrences.length}`}
+          addLabel="Add routine"
+          onAdd={() => router.push('/routine-editor')}
+          disabled={selected < today}
+        >
+          {occurrences.length ? (
+            <View>
+              {occurrences.map((occurrence) => (
+                <OccurrenceCard
+                  key={occurrence.routine.id}
+                  occurrence={occurrence}
+                  future={selected > today}
+                  focusRequest={
+                    focus?.focus === 'routine' &&
+                    focus.date === selected &&
+                    focus.routineId === occurrence.routine.id
+                      ? focus.request
+                      : undefined
+                  }
+                />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              icon="✓"
+              title="No routines for this day"
+              description="Add recurring routines on the Routines page, or change the date and filters."
+            />
+          )}
+        </DailySection>
         <TaskSection
           key={`tasks-${selected}-${focus && (focus.focus === 'task' || focus.focus === 'new-task') ? focus.request : 'none'}`}
           date={selected}
@@ -146,6 +148,7 @@ export function TodayScreen() {
         />
         <DailyNoteEditor
           key={selected}
+          collapsible
           date={selected}
           focusRequest={
             focus?.focus === 'note' && focus.date === selected

@@ -26,6 +26,50 @@ function widgetProps(tree: WidgetTree): Record<string, unknown>[] {
 }
 
 describe('native widget rendering', () => {
+  it('expands items to Edit in app and offers postpone only for unfinished tasks today', () => {
+    const now = new Date(2026, 10, 4, 12);
+    const task = createTask('one-off', '2026-11-04', 'Buy bread', now);
+    for (const date of ['2026-11-03', '2026-11-04', '2026-11-05']) {
+      for (const height of [110, 145, 260, 420]) {
+        const model = todayWidgetModel(
+          [],
+          [],
+          now,
+          date,
+          [],
+          [{ ...task, date }],
+        );
+        const props = widgetProps(
+          buildWidgetTree(
+            createElement(TodayWidget, {
+              model,
+              height,
+              view: {
+                date,
+                viewedOn: '2026-11-04',
+                expanded: { kind: 'task', id: task.id },
+              },
+            }),
+          ),
+        );
+        expect(
+          props.find((p) => p.accessibilityLabel === 'Edit in app'),
+        ).toMatchObject({
+          clickAction: 'OPEN_URI',
+          clickActionData: { uri: model.tasks[0]!.openUrl },
+        });
+        expect(props.some((p) => p.clickAction === 'task_postpone')).toBe(
+          date === '2026-11-04',
+        );
+        expect(
+          props.filter((p) => p.accessibilityLabel === 'Previous day'),
+        ).toHaveLength(1);
+        expect(
+          props.filter((p) => p.accessibilityLabel === 'Next day'),
+        ).toHaveLength(1);
+      }
+    }
+  });
   it('renders separate task add, edit and guarded completion actions at every widget height', () => {
     const now = new Date(2026, 10, 4, 12);
     const task = createTask('one-off', '2026-11-04', 'Buy bread', now);
@@ -45,8 +89,8 @@ describe('native widget rendering', () => {
           (item) => item.accessibilityLabel === 'Open task: Buy bread',
         ),
       ).toMatchObject({
-        clickAction: 'OPEN_URI',
-        clickActionData: { uri: model.tasks[0]!.openUrl },
+        clickAction: 'expand',
+        clickActionData: { ...model.navigation, kind: 'task', id: task.id },
       });
       expect(
         props.find((item) => item.clickAction === 'task_toggle'),
@@ -73,9 +117,10 @@ describe('native widget rendering', () => {
       expect(props.some((item) => item.clickAction === 'task_toggle')).toBe(
         false,
       );
-      expect(props.some((item) => item.accessibilityLabel === 'Add task')).toBe(
-        date > '2026-11-04',
-      );
+      expect(
+        props.find((item) => item.accessibilityLabel === 'Add task')
+          ?.clickAction,
+      ).toBe(date > '2026-11-04' ? 'OPEN_URI' : undefined);
     }
   });
   it('fills the same launcher height with zero, one and many routines on every date', () => {
@@ -138,8 +183,8 @@ describe('native widget rendering', () => {
     expect(
       props.find((p) => p.accessibilityLabel === `Open routine: ${r.name}`),
     ).toMatchObject({
-      clickAction: 'OPEN_URI',
-      clickActionData: { uri: model.items[0]!.openUrl },
+      clickAction: 'expand',
+      clickActionData: { ...model.navigation, kind: 'routine', id: r.id },
     });
     expect(props.find((p) => p.clickAction === 'cycle')).toMatchObject({
       clickActionData: model.items[0]!.click,
@@ -149,8 +194,8 @@ describe('native widget rendering', () => {
         (p) => p.accessibilityLabel === 'Open daily note: Remember this day',
       ),
     ).toMatchObject({
-      clickAction: 'OPEN_URI',
-      clickActionData: { uri: model.note.openUrl },
+      clickAction: 'expand',
+      clickActionData: { ...model.navigation, kind: 'note', id: 'note' },
     });
     for (const height of [110, 145, 260]) {
       expect(() =>

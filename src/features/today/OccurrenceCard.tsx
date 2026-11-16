@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, View, Pressable, StyleSheet } from 'react-native';
+import { Text, View, Pressable, StyleSheet, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useRoutineActions } from '../../components/RoutineActionsProvider';
 import { nextActionLabel, statusLabels } from '../../domain/status';
@@ -7,12 +7,17 @@ import { ToolButton } from '../../components/HabitScreen';
 import { categoryLabels } from '../../i18n/en';
 import { Icon } from '../../components/Icon';
 import { StatusBadge } from '../../components/StatusBadge';
-import { HabitIcon, categoryColors } from '../../components/HabitIcon';
+import { HabitIcon } from '../../components/HabitIcon';
 import { scheduleLabel } from '../../domain/schedule';
 import type { Occurrence } from '../../domain/models';
 import { useRoutines } from '../../store/useRoutines';
 import { colors, common } from '../../theme';
-import { useRevealSection } from '../../components/KeyboardAwareScrollView';
+import {
+  useRevealSection,
+  useRevealInput,
+} from '../../components/KeyboardAwareScrollView';
+import { dailyStyles } from './DailySection';
+import { Button } from '../../components/Button';
 
 export function OccurrenceCard({
   occurrence,
@@ -24,6 +29,9 @@ export function OccurrenceCard({
   focusRequest?: number;
 }) {
   const { routine, status, overdue, date, windowProgress } = occurrence;
+  const [name, setName] = useState<string | null>(null);
+  const saveRoutine = useRoutines((state) => state.saveRoutine);
+  const toggleRoutine = useRoutines((state) => state.toggleRoutine);
   const [expansion, setExpansion] = useState<{
     request?: number;
     value: boolean;
@@ -33,6 +41,8 @@ export function OccurrenceCard({
       ? expansion.value
       : Boolean(focusRequest);
   const card = useRef<View>(null);
+  const nameInput = useRef<TextInput>(null);
+  const revealInput = useRevealInput();
   const reveal = useRevealSection();
   useEffect(() => {
     if (!focusRequest || !expanded) return;
@@ -43,7 +53,6 @@ export function OccurrenceCard({
   const explicitStatus = occurrence.log?.status ?? 'pending';
   const saving = useRoutines((state) => state.saving);
   const checked = status === 'done';
-  const tint = categoryColors[routine.category];
   return (
     <View
       ref={card}
@@ -59,7 +68,7 @@ export function OccurrenceCard({
           onPress={() =>
             setExpansion({ request: focusRequest, value: !expanded })
           }
-          style={styles.body}
+          style={dailyStyles.body}
         >
           <HabitIcon routine={routine} small />
           <View style={common.grow}>
@@ -69,23 +78,11 @@ export function OccurrenceCard({
             >
               {routine.name}
             </Text>
-            <View style={styles.badgeRow}>
-              <Text
-                style={[
-                  styles.badge,
-                  { color: tint, backgroundColor: `${tint}24` },
-                ]}
-              >
-                {status === 'skipped'
-                  ? 'Skipped'
-                  : explicitStatus === 'missed'
-                    ? 'Not done'
-                    : checked
-                      ? 'Done'
-                      : 'Routine'}
-              </Text>
-            </View>
+            <Text style={[common.small, { fontSize: 11, lineHeight: 15 }]}>
+              {routine.reminderTime} · {categoryLabels[routine.category]}
+            </Text>
           </View>
+          <Icon name="chevronDown" size={14} />
         </Pressable>
         <Pressable
           accessibilityRole="checkbox"
@@ -99,7 +96,7 @@ export function OccurrenceCard({
           <View
             style={[
               styles.circle,
-              checked && { backgroundColor: tint },
+              checked && { backgroundColor: colors.success },
               explicitStatus === 'skipped' && {
                 borderColor: colors.warning,
                 borderWidth: 1,
@@ -119,6 +116,42 @@ export function OccurrenceCard({
       </View>
       {expanded && (
         <View style={styles.details}>
+          <TextInput
+            ref={nameInput}
+            accessibilityLabel={`Routine name: ${routine.name}`}
+            value={name ?? routine.name}
+            onChangeText={setName}
+            onFocus={() => revealInput(nameInput.current)}
+            onSelectionChange={() => revealInput(nameInput.current)}
+            onBlur={() => revealInput(null, nameInput.current)}
+            style={{
+              color: colors.text,
+              backgroundColor: colors.panelSecondary,
+              borderRadius: 10,
+              padding: 10,
+              fontSize: 16,
+            }}
+          />
+          {name !== null && (
+            <View style={common.wrap}>
+              <Button
+                compact
+                label="Save routine name"
+                disabled={saving || !name.trim()}
+                onPress={() =>
+                  void (async () => {
+                    if (await saveRoutine({ ...routine, name }, routine.id))
+                      setName(null);
+                  })()
+                }
+              />
+              <Button
+                compact
+                label="Cancel name edit"
+                onPress={() => setName(null)}
+              />
+            </View>
+          )}
           <View style={common.spread}>
             <Text style={[common.small, common.grow]}>
               {scheduleLabel(routine.schedule)}
@@ -139,7 +172,18 @@ export function OccurrenceCard({
           {!!routine.note && (
             <Text style={common.subtitle}>{routine.note}</Text>
           )}
-          <View style={{ alignItems: 'flex-end' }}>
+          <View
+            style={[
+              common.wrap,
+              { justifyContent: 'flex-end', alignItems: 'center' },
+            ]}
+          >
+            <Button
+              compact
+              label="Pause routine"
+              disabled={saving}
+              onPress={() => void toggleRoutine(routine.id)}
+            />
             <ToolButton
               icon="edit"
               label={`Edit routine: ${routine.name}`}
@@ -157,7 +201,11 @@ export function OccurrenceCard({
   );
 }
 const styles = StyleSheet.create({
-  card: { borderBottomWidth: 1, borderColor: '#1c1c1c', paddingVertical: 13 },
+  card: {
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 2,
+  },
   focused: {
     borderLeftWidth: 2,
     borderLeftColor: colors.accent,
@@ -172,8 +220,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   name: {
-    fontSize: 14.5,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.text,
     fontWeight: '500',
   },
@@ -192,12 +240,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   circle: {
-    width: 31,
-    height: 31,
-    borderRadius: 18,
+    width: 27,
+    height: 27,
+    borderRadius: 8,
     backgroundColor: '#252525',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  details: { paddingTop: 14, paddingBottom: 4, gap: 10 },
+  details: { paddingTop: 8, paddingBottom: 4, gap: 6 },
 });

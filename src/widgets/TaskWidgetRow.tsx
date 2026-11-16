@@ -7,10 +7,12 @@ export function TaskWidgetRow({
   task,
   height,
   isToday,
+  navigation,
 }: {
   task: TodayWidgetModel['tasks'][number];
   height: number;
   isToday: boolean;
+  navigation: TodayWidgetModel['navigation'];
 }) {
   const size = Math.min(24, Math.max(18, height - 14));
   return (
@@ -25,8 +27,8 @@ export function TaskWidgetRow({
       }}
     >
       <FlexWidget
-        clickAction="OPEN_URI"
-        clickActionData={{ uri: task.openUrl }}
+        clickAction="expand"
+        clickActionData={{ ...navigation, kind: 'task', id: task.id }}
         accessibilityLabel={`Open task: ${task.description}`}
         style={{
           flex: 1,
@@ -55,7 +57,7 @@ export function TaskWidgetRow({
         }}
       >
         <TextWidget
-          text={task.done ? '✓' : ''}
+          text={task.done ? '✓' : task.date < navigation.viewedOn ? '×' : ''}
           style={{
             width: size,
             height: size,
@@ -63,7 +65,11 @@ export function TaskWidgetRow({
             textAlign: 'center',
             fontSize: 16,
             color: '#ffffff',
-            backgroundColor: task.done ? '#35b67d' : '#dddddd',
+            backgroundColor: task.done
+              ? '#35b67d'
+              : task.date < navigation.viewedOn
+                ? '#e05a5a'
+                : '#dddddd',
           }}
         />
       </FlexWidget>

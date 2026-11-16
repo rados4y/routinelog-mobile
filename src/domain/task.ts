@@ -13,6 +13,17 @@ export const taskSchema = z.object({
 });
 export type DailyTask = z.infer<typeof taskSchema>;
 
+export function taskHighlights(tasks: readonly DailyTask[], today: string) {
+  const missedTaskDates = new Set<string>();
+  const doneTaskDates = new Set<string>();
+  for (const task of tasks) {
+    if (task.deletedAt) continue;
+    if (task.done) doneTaskDates.add(task.date);
+    else if (task.date < today) missedTaskDates.add(task.date);
+  }
+  return { missedTaskDates, doneTaskDates };
+}
+
 export function tasksForDate(tasks: readonly DailyTask[], date: string) {
   return tasks
     .filter((task) => task.date === date && !task.deletedAt)

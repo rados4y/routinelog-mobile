@@ -7,7 +7,7 @@ test('Today + creates description-only tasks with durable edit, completion, undo
   await openApp(page);
   await expect(
     page.getByRole('button', { name: 'Add routine', exact: true }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Add task', exact: true }).click();
   const input = page.getByRole('textbox', {
     name: 'Task description',

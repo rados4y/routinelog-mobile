@@ -4,6 +4,53 @@ import { monday } from '../../../test/fixtures';
 import { setup } from '../testFixtures';
 
 describe('Notion daily task synchronization', () => {
+  it('postpone and Undo update Date on the same Notion row and import a Notion date move', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().saveTask(monday, 'Keep one task');
+    await sync().run();
+    const original = remote.tasks.rows[0]!;
+    expect(await store.getState().postponeTask(original.id, monday)).toBe(true);
+    const moved = store.getState().tasks[0]!;
+    await sync().run();
+    expect(remote.tasks.rows).toHaveLength(1);
+    expect(remote.tasks.rows[0]).toMatchObject({
+      id: original.id,
+      pageId: original.pageId,
+      value: { date: moved.date, description: 'Keep one task', done: false },
+    });
+    expect(
+      await store
+        .getState()
+        .undoTaskPostpone(store.getState().tasks[0]!, monday),
+    ).toBe(true);
+    await sync().run();
+    expect(remote.tasks.rows[0]?.value.date).toBe(monday);
+    remote.tasks.rows[0]!.value.date = moved.date;
+    await sync().run();
+    expect(store.getState().tasks[0]).toMatchObject({
+      id: original.id,
+      date: moved.date,
+    });
+    expect(store.getState().tasks).toHaveLength(1);
+  });
+  it('syncs postpone and undo as date changes on the same Notion row', async () => {
+    const { store, remote, sync } = await setup();
+    await store.getState().saveTask(monday, 'Move this task');
+    await sync().run();
+    const original = remote.tasks.rows[0]!;
+    await store.getState().postponeTask(original.id, monday);
+    const moved = store.getState().tasks[0]!;
+    await sync().run();
+    expect(remote.tasks.rows).toHaveLength(1);
+    expect(remote.tasks.rows[0]).toMatchObject({
+      id: original.id,
+      pageId: original.pageId,
+      value: { date: moved.date, description: 'Move this task', done: false },
+    });
+    await store.getState().undoTaskPostpone(store.getState().tasks[0]!, monday);
+    await sync().run();
+    expect(remote.tasks.rows[0]?.value.date).toBe(monday);
+  });
   it('syncs creation, description edits, completion, undo and deletion in both directions', async () => {
     const { store, remote, sync } = await setup();
     await store.getState().saveTask(monday, 'Local task');

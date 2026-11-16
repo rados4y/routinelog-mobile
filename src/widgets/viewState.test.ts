@@ -6,6 +6,29 @@ import { cycleFromWidget } from './actions';
 
 const now = () => new Date('2026-11-05T12:00:00');
 describe('widget date selection', () => {
+  it('keeps expansion per instance, toggles it and clears it on date changes or midnight', async () => {
+    const storage = new MemoryStorage();
+    const views = createWidgetViewRepository(storage);
+    const click = {
+      date: '2026-11-05',
+      viewedOn: '2026-11-05',
+      kind: 'task',
+      id: 'task-1',
+    };
+    expect((await views.expand(1, click, now())).expanded).toEqual({
+      kind: 'task',
+      id: 'task-1',
+    });
+    expect((await views.get(2, now())).expanded).toBeUndefined();
+    expect((await views.expand(1, click, now())).expanded).toBeUndefined();
+    await views.expand(1, click, now());
+    const past = await views.navigate(1, 'previous_day', click, now());
+    expect(past.expanded).toBeUndefined();
+    expect((await views.expand(1, click, now())).expanded).toBeUndefined();
+    expect(
+      (await views.get(1, new Date('2026-11-06T08:00:00'))).expanded,
+    ).toBeUndefined();
+  });
   it('persists navigation independently per widget and returns to Today on heading tap', async () => {
     const storage = new MemoryStorage();
     const views = createWidgetViewRepository(storage);
